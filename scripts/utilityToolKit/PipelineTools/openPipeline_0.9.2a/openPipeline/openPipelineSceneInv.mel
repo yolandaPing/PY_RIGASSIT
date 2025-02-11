@@ -1,0 +1,640 @@
+// 07/03/2006
+// proc name: openPipelineExistedSceneOrAsset
+// function: return a string array which can be
+//						1. the whole asset/scene list(can be the asset/scene name only, or the full path of the master file)
+//						2. only valid asset/scene list(master file existed)
+//						3. only invalid asset/scene list(no master file existed)
+//						4. array of boolean values that represents the vlidation of the asset or scene
+//
+// Need to improve: master file check for scene.
+//
+global proc string[] openPipelineExistedAsset(string $inputMode)
+{ 
+		string $validation[];
+		string $chomp[];
+		string $currentProject = `textFieldGrp -q -text projPath`;
+		
+		
+		string $thePath = `openPipelineGetPath "lib"`;
+		string $extension = "_asset.mb";
+	
+		
+		string $theFiles[] = `getFileList -folder $thePath`;
+		string $outStr[];
+		string $fullPath[];
+				
+		for($i = 0; $i < `size $theFiles`; $i++)
+			{
+				$chomp[$i]= `match "^[a-zA-Z_0-9]+" $theFiles[$i]`;
+				string $expectedMasterFile = ($thePath + $chomp[$i] + "/" + $chomp[$i] + $extension);
+				$fullPath[$i] = $expectedMasterFile;
+				
+				int $masterExists = `filetest -f $expectedMasterFile`;
+					if($masterExists)
+					{
+						$validation[$i] = "true";
+					}else{
+						$validation[$i] = "false";	
+					}			 
+			}
+
+		switch($inputMode)
+		{
+			case "fullPath":
+			$outStr = $fullPath;
+			break;
+			
+			case "list":
+			$outStr = $chomp;
+			break;
+			
+			case "validList":
+				string $tempList[];
+				int $k = 0;
+				for($i=0;$i<`size $validation`;$i++)
+				{
+					if($validation[$i] == "true")
+					{
+						$tempList[$k] = $chomp[$i];
+						$k++;
+						}
+					}
+				$outStr = $tempList;
+			break;
+			
+			case "invalidList":
+				string $tempList[];
+				int $k = 0;
+				for($i=0;$i<`size $validation`;$i++)
+				{
+					if($validation[$i] == "false")
+					{
+						$tempList[$k] = $chomp[$i];
+						$k++;
+						}
+					}
+				$outStr = $tempList;
+			break;
+			
+			case "validation":
+			$outStr = $validation;
+			break;
+		}
+		
+			 return $outStr;
+	}
+	
+//
+//existed seq
+//
+global proc string[] openPipelineExistedSeq(string $inputMode)
+{ 
+		string $validation[];
+		string $chomp[];
+		string $currentProject = `textFieldGrp -q -text projPath`;	
+		string $outStr[];
+		string $fullPath[];
+		string $extension = ".mb";
+		string $seqPath = ($currentProject + "/scenes/");			
+		string $seqFiles[] = `getFileList -folder $seqPath`;
+		int $order=0;
+		
+		int $iMax = `size $seqFiles`;		
+		for($i = 0; $i<$iMax;$i++)
+		{
+			string $shotPath = ($seqPath+$seqFiles[$i]+"/");
+			string $shotFiles[] = `getFileList -folder $shotPath`;
+			int $jMax = `size $shotFiles`;
+			for($j = 0; $j < $jMax; $j++)
+			{
+				string $typeFolderPath = ($shotPath+$shotFiles[$j]+"/");
+				string $typeFolders[] = `getFileList -folder $typeFolderPath`;
+				int $kMax = `size $typeFolders`;
+				for($k = 0; $k < $kMax ; $k++)
+				{				
+					string $typeFilePath = ($typeFolderPath+$typeFolders[$k]+"/");
+					string $typeFiles[] = `getFileList -folder $typeFilePath`;					
+					$chomp[$order]= ($seqFiles[$i]+"_"+$shotFiles[$j]+"_"+$typeFolders[$k]);
+					string $expectedMasterFile = ($typeFilePath + $chomp[$order] + $extension);
+					$fullPath[$order] = $expectedMasterFile;
+							
+					int $masterExists = `filetest -f $expectedMasterFile`;
+					if($masterExists)
+					{
+						$validation[$order] = "true";
+					}else{
+						$validation[$order] = "false";	
+					}	
+					$order++;		 
+				}				 
+			}
+		}
+
+		switch($inputMode)
+		{
+			case "fullPath":
+			$outStr = $fullPath;
+			break;
+			
+			case "list":
+			$outStr = $chomp;
+			break;
+			
+			case "validList":
+				string $tempList[];
+				int $k = 0;
+				for($i=0;$i<`size $validation`;$i++)
+				{
+					if($validation[$i] == "true")
+					{
+						$tempList[$k] = $chomp[$i];
+						$k++;
+						}
+					}
+				$outStr = $tempList;
+			break;
+			
+			case "invalidList":
+				string $tempList[];
+				int $k = 0;
+				for($i=0;$i<`size $validation`;$i++)
+				{
+					if($validation[$i] == "false")
+					{
+						$tempList[$k] = $chomp[$i];
+						$k++;
+						}
+					}
+				$outStr = $tempList;
+			break;
+			
+			case "validation":
+			$outStr = $validation;
+			break;
+		}
+		
+			 return $outStr;
+	}
+	
+//
+//
+// 07/09/2006
+// proc name: openPipelineExistedRefAsset
+// function: get the existed refence info that are related to assets
+//           can return filename, shortname, or loadingcheck 
+//
+global proc string[] openPipelineExistedRefAsset(string $inputMode)
+{
+	 string $outStr[];
+	 string $allRefAsset[],$refAssetLoaded[];
+	 string $allRefOthers[],$refOthersLoaded[];
+   int $m = $n = $k = $j = 0;
+	 string $assetShortName[], $otherShortName[];
+   string $allRef[] = `file -q -r -rfn`;
+	 string $allAssetPath[] = `openPipelineExistedAsset fullPath`;
+   
+   
+   for ( $i = 0; $i<`size $allAssetPath`; $i++)
+   {   		
+   		for($me in $allRef){
+   			string $tempMe = `match "[^{]*" $me`;
+   				   		//print $tempMe;
+   				   		//print "\n++++++++++++";
+	   		 if(`gmatch $tempMe $allAssetPath[$i]`){
+	   		
+	   			$allRefAsset[$m] = $me;
+	   			string $tempAssetName = `match "[^/]*$" $tempMe`;
+		      $tempAssetName = `match "[^.]*" $tempAssetName`;
+		      $assetShortName[$m++] = $tempAssetName;
+	   			 
+	   		  if( !`file -q -dr $me` )
+	   			{
+	         $refAssetLoaded[$n++] = "true";
+	        }else{
+	         $refAssetLoaded[$n++] = "false";
+	        }
+	        
+	   		}
+   	}
+  }
+     
+   switch($inputMode)
+   {   	
+   	case "loadingCheck":
+   		$outStr = $refAssetLoaded;
+   	break;
+   	
+   	case "fileName":   	  
+   		$outStr = $allRefAsset;   		
+   	break;  
+   	
+   	case "shortName":
+	   $outStr = $assetShortName;
+   	break; 	   	
+   }
+   	
+
+   return $outStr;
+}
+
+//
+//
+//*****
+//
+global proc string[] openPipelineExistedRefSeq(string $inputMode)
+{
+	 string $outStr[];
+	 string $allRefSeq[],$refSeqLoaded[];
+	 string $allRefOthers[],$refOthersLoaded[];
+   int $m = $n = $k = $j = 0;
+	 string $seqShortName[], $otherShortName[];
+   string $allRef[] = `file -q -r -rfn`;
+	 string $allSeqPath[] = `openPipelineExistedSeq fullPath`;
+   
+
+   for ( $i = 0; $i<`size $allSeqPath`; $i++)
+   {   		
+   		for($me in $allRef){
+   			string $tempMe = `match "[^{]*" $me`;
+   				   		
+	   		 if(`gmatch $tempMe $allSeqPath[$i]`){
+	   		
+	   			$allRefSeq[$m] = $me;
+	   			string $tempSeqName = `match "[^/]*$" $tempMe`;
+		      $tempSeqName = `match "[^.]*" $tempSeqName`;
+		      $seqShortName[$m++] = $tempSeqName;
+	   			 
+	   		  if( !`file -q -dr $me` )
+	   			{
+	         $refSeqLoaded[$n++] = "true";
+	        }else{
+	         $refSeqLoaded[$n++] = "false";
+	        }
+	        
+	   		}
+   	}
+  }
+     
+   switch($inputMode)
+   {   	
+   	case "loadingCheck":
+   		$outStr = $refSeqLoaded;
+   	break;
+   	
+   	case "fileName":   	  
+   		$outStr = $allRefSeq;   		
+   	break;  
+   	
+   	case "shortName":
+	   $outStr = $seqShortName;
+   	break; 	   	
+   }
+   	
+
+   return $outStr;
+}
+
+
+// 07/22/2006
+// 3 procs that creats the file tree UI
+// can be improved, combine into one or two proc.
+//
+global proc openPipelineSeqFileTreeUI()
+{
+	
+string $currentProject = `textFieldGrp -q -text projPath`;
+string $scenePath = $currentProject+"/scenes/";
+string $theSeqs[] = `getFileList -folder $scenePath`;
+string $uiScript="";
+
+if(!`size $theSeqs`)
+{
+	//$uiScript += "columnLayout ";
+	$uiScript += "text -en false -align \"left\" -w 175 -h 20 -l \"no Seq exists!\";";
+	//$uiScript += "setParent..;\n";	
+}else{
+for($i=0; $i<`size $theSeqs`;$i++)
+{
+$uiScript += "columnLayout ";
+$uiScript += ("col_"+$theSeqs[$i]+";\n");
+$uiScript += "rowLayout -nc 2 -cw2 20 175;\n";
+$uiScript += "columnLayout;\n";
+//	print ($uiScript+"\n******\n");
+string $expand;
+string $seqPath = $scenePath+$theSeqs[$i]+"/";
+string $theShots[] = `getFileList -folder $scenePath`;
+
+if(`size $theShots`>0)
+{
+$expand = "+";
+}else{
+$expand = "x";
+}
+
+if($expand == "x")
+{
+$uiScript += "iconTextButton -en false -w 20 -h 20 -st \"textOnly\" -l ";
+}else{
+$uiScript += "iconTextButton -en true -w 20 -h 20 -st \"textOnly\" -l ";
+	}
+
+$uiScript += "\"";
+$uiScript += $expand;
+$uiScript += "\"";
+$uiScript += " -c ";
+$uiScript += "\"openPipelineShotFileTreeUI";
+$uiScript += (" "+$theSeqs[$i]+"\" ");
+$uiScript += (" iTB_"+$theSeqs[$i]+";\n");
+
+$uiScript += "setParent..;\n";	
+$uiScript += "columnLayout ;\n";
+if($expand == "x")
+{
+$uiScript += "text -en false -align \"left\" -w 175 -h 20 -l ";
+}else{
+$uiScript += "text -en true -align \"left\" -w 175 -h 20 -l ";	
+	}
+$uiScript += "\"";
+$uiScript += $theSeqs[$i];
+$uiScript += "\";\n";
+$uiScript += "setParent..;\n";			
+$uiScript += "setParent..;\n";		
+$uiScript += "setParent..;\n";
+}
+}
+eval $uiScript;
+}
+
+
+global proc openPipelineShotFileTreeUI(string $inputSeq)
+{
+	string $uiScript;
+	string $seqiTB = ("iTB_"+$inputSeq);
+	string $expand = `iconTextButton -q -l $seqiTB`;
+
+	switch($expand)
+	{
+	case "+":
+		string $currentProject = `textFieldGrp -q -text projPath`;
+		string $seqPath = ($currentProject+"/scenes/"+$inputSeq+"/");	
+		string $theShots[] = `getFileList -folder $seqPath`;
+		
+		for($i=0;$i<`size $theShots`;$i++)
+		{	
+			$uiScript += "columnLayout -p ";
+			$uiScript += ("col_"+$inputSeq+" ");
+			$uiScript += ("col_"+$inputSeq+"_"+$theShots[$i]+";\n");		
+			$uiScript += "rowLayout -nc 2 -cw2 20 175 -ct2 \"left\" \"left\" -co2 10 10;\n";	
+			$uiScript += "columnLayout;\n";
+			
+			if(`size $theShots`>0)
+			{
+			$expand = "+";
+			}else{
+			$expand = "x";
+			}
+			
+			if($expand == "x")
+			{
+			$uiScript += "iconTextButton -en fasle -w 20 -h 20 -st \"textOnly\" -l ";
+			}else{
+			$uiScript += "iconTextButton -en true -w 20 -h 20 -st \"textOnly\" -l ";
+			}
+			
+			$uiScript += "\"";
+			$uiScript += $expand;
+			$uiScript += "\"";
+			$uiScript += " -c ";
+			$uiScript += "\"openPipelineTypeFileTreeUI";
+			$uiScript += (" "+$inputSeq+" "+$theShots[$i]+"\" ");
+			$uiScript += (" iTB_"+$inputSeq+"_"+$theShots[$i]+";\n");
+			
+			$uiScript += "setParent..;\n";	
+			
+				
+			$uiScript += "columnLayout;\n";
+			$uiScript += "text -align \"left\" -w 175 -h 20 -l ";
+			$uiScript += "\"";
+			$uiScript += $theShots[$i];
+			$uiScript += "\";\n";
+			$uiScript += "setParent..;\n";
+			$uiScript += "setParent..;\n";
+			$uiScript += "setParent..;\n";
+		}
+		
+		eval $uiScript;
+		iconTextButton -e -l "-" $seqiTB;
+	break;
+	
+	case "-":
+		string $childCol[] = `columnLayout -q -ca ("col_"+$inputSeq)`;
+		for($i=1;$i<`size $childCol`;$i++)
+		{
+			deleteUI $childCol[$i];
+			}
+		iconTextButton -e -l "+" $seqiTB;
+	break;
+}
+
+}
+
+global proc openPipelineTypeFileTreeUI(string $inputSeq, string $inputShot)
+{
+	string $uiScript;
+	string $shotiTB = ("iTB_"+$inputSeq+"_"+$inputShot);
+	string $expand = `iconTextButton -q -l $shotiTB`;
+	
+	switch($expand)
+	{
+	case "+":
+	string $currentProject = `textFieldGrp -q -text projPath`;
+	string $shotPath = ($currentProject+"/scenes/"+$inputSeq+"/"+$inputShot+"/");	
+	string $theTypes[] = `getFileList -folder $shotPath`;
+	
+	
+	for($i=0;$i<`size $theTypes`;$i++)
+	{	
+		$uiScript += "columnLayout -p ";
+		$uiScript += ("col_"+$inputSeq+"_"+$inputShot+" ");
+		$uiScript += ("col_"+$inputSeq+"_"+$inputShot+"_"+$theTypes[$i]+";\n");		
+		$uiScript += "rowLayout -nc 2 -cw2 5 185 -ct2 \"left\" \"left\";\n";	
+		$uiScript += "columnLayout;\n";
+		$uiScript += "text -w 5 -h 20 -l \"\";\n";
+		$uiScript += "setParent..;\n";	
+		
+		string $expectedMasterFile = ($shotPath+$theTypes[$i]+"/"+$inputSeq+"_"+$inputShot+"_"+$theTypes[$i]+".mb");
+		int $masterExists = `filetest -f $expectedMasterFile`;
+		
+		
+		$uiScript += "columnLayout;\n";
+		
+		if($masterExists)
+		{
+		$uiScript += "iconTextButton -en true -w 175 -h 20 -st \"textOnly\" -l ";
+		}else{
+		$uiScript += "iconTextButton -en flase -w 175 -h 20 -st \"textOnly\" -l ";
+		}
+
+		$uiScript += "\"";
+		$uiScript += $theTypes[$i];
+		$uiScript += "\" -align \"left\"";
+		$uiScript += " -c ";
+		$uiScript += "\"openPipelineCreateReference seq";
+		$uiScript += (" "+"\\"+"\""+$expectedMasterFile+"\\"+"\""+"\" ");
+		$uiScript += (" iTB_"+$inputSeq+"_"+$inputShot+"_"+$theTypes[$i]+";\n");
+		$uiScript += "setParent..;\n";
+		$uiScript += "setParent..;\n";
+		$uiScript += "setParent..;\n";
+		}
+	
+	eval $uiScript;
+	iconTextButton -e -l "-" $shotiTB;
+	break;
+	
+	case "-":
+	string $childCol[] = `columnLayout -q -ca ("col_"+$inputSeq+"_"+$inputShot)`;
+	for($i=1;$i<`size $childCol`;$i++)
+	{
+		deleteUI $childCol[$i];
+		}
+	iconTextButton -e -l "+" $shotiTB;
+	break;
+}
+
+}
+
+//
+//
+//
+global proc openPipelineAdjustScrollLayout(string $inputName, int $height)
+{
+		scrollLayout -e -h $height $inputName; 			
+	}
+
+global proc openPipelineRefLoadingBoxWrapper(string $inputName, int $inputNum)
+{
+	string $checkBoxName = $inputName+"_"+$inputNum+"_loadBox";
+	string $iconTextName = $inputName+"_"+$inputNum+"_SelButton";
+	int $load = `checkBox -q -v $checkBoxName`;
+	string $path = `iconTextRadioButton -q -ann $iconTextName `;
+	string $refNode = `file -q -rfn $path`;
+	if($load)
+	{
+		file -lr $refNode;
+	}else{
+		file -ur $refNode;
+}
+
+}
+
+global proc openPipelineCreateReference(string $inputMode, string $inputPath)
+{
+
+	switch($inputMode)
+	{
+		case "seq":
+		file -r $inputPath;
+		break;
+		
+		case "asset":
+		string $currentProject = `openPipelineGetPath "lib"`;;
+		string $path = ($currentProject + $inputPath + "/" + $inputPath + "_asset.mb");	
+		file -r -type "mayaBinary" -gl -namespace $inputPath -options "v=0" $path;
+		break;
+	}
+	
+openPipelineRefInvUI;
+	//file -r $path;
+	//then
+	//refresh ref inv.
+	//....
+	//....not yet..
+	//
+	}
+	
+global proc openPipelineRefInvUI()
+{
+	if(`scrollLayout -q -ex allRefScroll`)deleteUI allRefScroll;
+									scrollLayout -p col_RefInv -backgroundColor 1 1 1 -w 240 -hst 0 -vst 0 allRefScroll;													
+									//
+									columnLayout -cw 240 -h 200 ;
+										//text -l "Seq_Shot_Type" -h 20 -w 195;
+									rowLayout -nc 3 -h 20 -cw3 20 20 160;
+										columnLayout refC1;
+										setParent..;
+										columnLayout refC2;
+										iconTextRadioCollection allRefInventory;
+										setParent..;
+									setParent..;			
+															
+										string $existedRefSeq[] = `openPipelineExistedRefSeq shortName`;
+										string $seqLoadingCheck[] = `openPipelineExistedRefSeq loadingCheck`;
+										string $existedRefSeqPath[] = `openPipelineExistedRefSeq fileName`;
+										for($i =0;$i<`size $existedRefSeq`; $i++)
+										{
+											string $font = "plainLabelFont";
+											int $load;
+												if($seqLoadingCheck[$i]=="true")
+												{
+													$load = 1;
+												}else{
+													$load = 0;
+													}
+													string $cCommand = ("openPipelineRefLoadingBoxWrapper "+$existedRefSeq[$i]+" "+$i+";");
+												checkBox -l "" -v $load -cc $cCommand -w 20 -h 20 -p refC1 ($existedRefSeq[$i]+"_"+$i+"_"+"loadBox");							
+											
+												iconTextRadioButton 
+												-w 200 -h 20 -style "textOnly"  							
+												-l $existedRefSeq[$i]
+												-font $font
+												-onc ""
+												-ofc ""
+												-bgc 1 1 1
+												-ann $existedRefSeqPath[$i]
+												-p refC2
+												-collection allRefInventory
+												($existedRefSeq[$i]+"_"+$i+"_"+"SelButton");
+										
+												iconTextRadioButton -e -en true ($existedRefSeq[$i]+"_"+$i+"_"+"SelButton");
+										}	
+						
+										//text -l "Asset" -h 20 -w 240;
+										string $existedRefAsset[] = `openPipelineExistedRefAsset shortName`;
+										string $assetLoadingCheck[] = `openPipelineExistedRefAsset loadingCheck`;
+										string $existedRefAssetPath[] = `openPipelineExistedRefAsset fileName`;
+										for($i =0;$i<`size $existedRefAsset`; $i++)
+										{
+											string $font = "plainLabelFont";
+												
+												int $load;
+												if($assetLoadingCheck[$i]=="true")
+												{
+													$load = 1;
+												}else{
+													$load = 0;
+													}
+												checkBox -l "" -v $load -w 20 -h 20 -p refC1 ($existedRefAsset[$i]+"_"+$i+"_"+"loadBox");
+											
+												
+												iconTextRadioButton 
+												-w 200 -h 20 -style "textOnly"  							
+												-l $existedRefAsset[$i]
+												-font $font
+												-onc ""
+												-ofc ""
+												-bgc 1 1 1
+												-ann $existedRefAssetPath[$i]
+												-p refC2 
+												-collection allRefInventory
+												($existedRefAsset[$i]+"_"+$i+"_"+"SelButton");
+										
+												iconTextRadioButton -e -en true ($existedRefAsset[$i]+"_"+$i+"_"+"SelButton");
+										}				 
+									//
+									scrollLayout -e -rc "openPipelineAdjustScrollLayout allRefScroll 200" -h 200 allRefScroll;
+									setParent..;
+									setParent..;
+									
+									
+									//scrollLayout -e -p col_RefInv allRefScroll;
+}

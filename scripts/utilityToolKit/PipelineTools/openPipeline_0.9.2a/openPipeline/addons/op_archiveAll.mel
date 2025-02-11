@@ -1,0 +1,95 @@
+//openPipeline "Archive All" add-on
+//by Paris Mavroidis
+
+//UI
+global proc op_archiveAll()
+{
+	if (`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+	window -t "oP - Archive All" -w 300 -h 300 op_secondaryUI;
+	columnLayout;
+	separator -h 5 -w 220 -style "none";
+	button -w 220 -l "Archive All" -c "op_archiveAllProc" -bgc .6 .7 .9;
+	separator -h 5 -w 220 -style "none";
+	button -w 220 -l "Retrieve All Archives" -c "op_retrieveArchiveAllProc" -bgc 1 1 1;
+	separator -h 5 -w 220 -style "none";
+	button -w 220 -l "Delete All Archives" -en 1 -c "op_deleteArchiveAllProc" -bgc 1 .7 .6;
+	separator -h 30 -w 220 -style "out";
+	button -w 220 -l "Close" -c "deleteUI op_secondaryUI;";
+	window -e -w 230 -h 200 op_secondaryUI;
+	showWindow op_secondaryUI;
+}
+
+//archive all items
+global proc op_archiveAllProc()
+{
+	//tabs 2 and 3 = asset library and shot library
+	int $tabs[] = {2,3};
+	//for all tabs
+	for ($tab in $tabs)
+	{
+		string $items1[] = `openPipelineGetChildren $tab "" "" ""`;
+		//for all first-level items
+		for ($level1 in $items1)
+		{
+			string $items2[] = `openPipelineGetChildren $tab $level1 "" ""`;
+			//for all second-level items
+			for ($level2 in $items2)
+			{
+				openPipelineArchiveItem $tab $level1 $level2 "" 1 1;
+				string $items3[] = `openPipelineGetChildren $tab $level1 $level2 ""`;
+				//for all third-level items
+				for ($level3 in $items3)
+					openPipelineArchiveItem $tab $level1 $level2 $level3 1 1;
+			}
+		}
+	}
+	if (`window -q -exists openPipelineUI`)
+		openPipelineUpdateCurrentlyOpen;
+}
+
+//retrieve archive for all items
+global proc op_retrieveArchiveAllProc()
+{
+	int $tabs[] = {2,3};
+	for ($tab in $tabs)
+	{
+		string $items1[] = `openPipelineGetChildren $tab "" "" ""`;
+		for ($level1 in $items1)
+		{
+			string $items2[] = `openPipelineGetChildren $tab $level1 "" ""`;
+			for ($level2 in $items2)
+			{
+				openPipelineRetrieveArchive $tab $level1 $level2 "" 1 1;
+				string $items3[] = `openPipelineGetChildren $tab $level1 $level2 ""`;
+				for ($level3 in $items3)
+					openPipelineRetrieveArchive $tab $level1 $level2 $level3 1 1;
+			}
+		}
+	}
+	if (`window -q -exists openPipelineUI`)
+		openPipelineUpdateCurrentlyOpen;
+}
+
+//delete archive for all items
+global proc op_deleteArchiveAllProc()
+{
+	int $tabs[] = {2,3};
+	for ($tab in $tabs)
+	{
+		string $items1[] = `openPipelineGetChildren $tab "" "" ""`;
+		for ($level1 in $items1)
+		{
+			string $items2[] = `openPipelineGetChildren $tab $level1 "" ""`;
+			for ($level2 in $items2)
+			{
+				openPipelineRemoveArchive $tab $level1 $level2 "";
+				string $items3[] = `openPipelineGetChildren $tab $level1 $level2 ""`;
+				for ($level3 in $items3)
+					openPipelineRemoveArchive $tab $level1 $level2 $level3;
+			}
+		}
+	}
+	if (`window -q -exists openPipelineUI`)
+		openPipelineUpdateCurrentlyOpen;
+}

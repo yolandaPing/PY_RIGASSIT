@@ -1,0 +1,4023 @@
+// openPipeline UI functions
+
+//###########################################
+// Name: 					openPipelineUI
+// Description: 	Builds the main oP UI
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUI()
+{
+	openPipelineInitialize();
+	global string $openPipeline_scriptPath;
+	global string $openPipeline_iconFilename;
+	global string $openPipeline_name;
+	global string $openPipeline_version;
+	global string $openPipeline_userName;
+	global string $op_userNameMenu;
+	global string $openPipeline_defaultPreviewFilename;
+	global string $openPipeline_noPreviewFilename;
+
+	string $addonPath = $openPipeline_scriptPath+"/openPipeline/addons/";
+	string $addons[] = `getFileList -fld $addonPath -fs "*.mel"`;
+	string $pyAddons[] = `getFileList -fld $addonPath -fs "*.py"`;
+
+	//set platform-specific UI settings
+	string $mbString;
+	int $mbInt;
+	int $windowHeight;
+	int $infoHeight;
+	int $shotInfoHeight;
+	//windows
+	if ((`about -os`=="nt")||(`about -os`=="win64"))
+	{
+			$mbString = "left";
+			$mbInt = 3;
+			$windowHeight = 750;
+			$infoHeight = 105;
+			$shotInfoHeight = 66;
+	}
+	//mac
+	else
+	{
+			$mbString = "right";
+			$mbInt = 3;
+			$windowHeight = 780;
+			$infoHeight = 65;
+			$shotInfoHeight = 82;
+	}
+	//set annotation strings
+	string $anno_assetList=("Double-click to edit Asset. Hold " +$mbString+" mouse button for more options.");
+	string $anno_componentList="Double-click to edit Component. Hold down " +$mbString+" mouse button for more options.";
+	string $anno_shotList="Double-click to Edit Shot. Hold down " +$mbString+" mouse button for more options.";
+	string $anno_projectList="Select from the available Projects.";
+	string $anno_projectManager="Open the Project Manager, where you can add or remove Projects.";
+	string $anno_saveWorkshop="Save a workshop file for the current Asset/Shot/Component.";
+	string $anno_master="Save a master file for the current Asset/Shot/Component.";
+	string $anno_revive="Revive an old version of the current Asset/Shot/Component.";
+	string $anno_closeFile="Close the currently open file.";
+	string $anno_assetTypeList="Choose an Asset Type.";
+	string $anno_newAssetType="Create a new Asset Type";
+	string $anno_removeAssetType="Remove the selected Asset Type(s) from the inventory.";
+	string $anno_archive="Archive old workshops and versions.";
+	string $anno_newAsset="Create a new Asset for the selected Asset Type.";
+	string $anno_removeAsset="Remove the selected Asset from the inventory.";
+	string $anno_renameAsset="Rename the selected Asset.";
+	string $anno_newComponent="Create a new Component for the selected Asset.";
+	string $anno_removeComponent="Remove the selected Component from the inventory.";
+	string $anno_newShot="Create a new Shot.";
+	string $anno_removeShot="Remove the selected Shot.";
+	string $anno_shotAssetList="Choose a mastered Asset to import or reference into the current scene.";
+	string $anno_close="Close openPipeline.";
+	string $anno_editAsset="Open the Asset for editing.";
+	string $anno_viewAsset="Open the master file for the Asset.";
+	string $anno_importAssetWorkshop="Import the Asset's latest workshop file into the current scene.";
+	string $anno_importAssetMaster="Import the Asset's master file into the current scene.";
+	string $anno_referenceAssetWorkshop="Reference the Asset's latest workshop file into the current scene.";
+	string $anno_referenceAssetMaster="Reference the Asset's master file into the current scene.";
+	string $anno_editComponent="Open the Component for editing.";
+	string $anno_viewComponent="Open the master file for the Component.";
+	string $anno_importComponentWorkshop="Import the Component's latest workshop file into the current scene.";
+	string $anno_importComponentMaster="Import the Component's master file into the current scene.";
+	string $anno_referenceComponentWorkshop="Reference the Component's latest workshop file into the current scene.";
+	string $anno_referenceComponentMaster="Reference the Component's master file into the current scene.";
+	string $anno_editShot="Open the Shot for editing.";
+	string $anno_viewShot="Open the master file for the Shot.";
+	string $anno_importShotWorkshop="Import the Shot's latest workshop file into the current scene.";
+	string $anno_importShotMaster="Import the Shot's master file into the current scene.";
+	string $anno_referenceShotWorkshop="Reference the Shot's latest workshop file into the current scene.";
+	string $anno_referenceShotMaster="Reference the Shot's master file into the current scene.";
+	string $anno_sequenceList="Choose a Sequence.";
+	string $anno_newSequence="Create a new Sequence";
+	string $anno_removeSequence="Remove the selected Sequence from the inventory.";
+	string $anno_editShotComponent="Open the Component for editing.";
+	string $anno_viewShotComponent="Open the master file for the Component.";
+	string $anno_importShotComponentWorkshop="Import the Component's latest workshop file into the current scene.";
+	string $anno_importShotComponentMaster="Import the Component's master file into the current scene.";
+	string $anno_referenceShotComponentWorkshop="Reference the Component's latest workshop file into the current scene.";
+	string $anno_referenceShotComponentMaster="Reference the Component's master file into the current scene.";
+	string $anno_shotComponentList="Double-click to edit Component. Hold down " +$mbString+" mouse button for more options.";
+	string $anno_newShotComponent="Create a new Component for the selected Asset.";
+	string $anno_removeShotComponent="Remove the selected Component from the inventory.";
+
+	optionVar -iv "op_currTab" 1;
+	//get list of existing projects
+	string $projList[] = openPipelineGetProjectsData();
+	string $validProjList[];
+	int $validProjects = 0;
+	//check for projects with non-existing locations
+	int $numProjects = size($projList);
+	for($i=0; $i<$numProjects; $i++)
+	{
+		string $temp_projName = openPipelineGetXmlData($projList[$i],"name");
+		string $temp_projPath = openPipelineGetXmlData($projList[$i],"path");
+		string $temp_projStatus = openPipelineGetXmlData($projList[$i],"status");
+		if ($temp_projStatus =="")
+				$temp_projStatus = "1";
+		if (int($temp_projStatus))  //if project is active
+		{
+				if (`filetest -d $temp_projPath`) //check if project path exists
+				{
+						$validProjList[$validProjects] = $projList[$i];
+						$validProjects++;
+			}
+			else
+			{
+					string $msg = "openPipelineUI: Project folder \""+$temp_projPath+"\" could not be found. In order to work on project \""+$temp_projName+ "\" please edit the location of this project using the Project Manager.";
+				//confirmDialog -title "openPipeline: Project Folder Not Found" -bgc .9 .9 .9 -message $msg -button "Ok" -defaultButton "Ok";
+				warning $msg;
+			}
+		}
+	}
+	//if at least one valid and active project exists
+	
+	if ($validProjects)
+	{
+		//int $selectedProjectIndex = 1;
+		if (`window -q -exists openPipelineUI`)
+		{
+		//	$selectedProjectIndex = `optionMenu -q -sl op_projNameMenu`;
+			deleteUI openPipelineUI;
+		}
+
+	//window setup
+	string $window = `window -w 410 -h 650 -mxb 0 -rtf 0 -menuBar true
+		
+		-title ($openPipeline_name + " " + $openPipeline_version) openPipelineUI`;
+		
+		$op_assetMenuBarLayout00 = `menuBarLayout`;
+		
+			// menus (more can go here)
+			
+			menu -label "Maya Tools";
+				menuItem -label "Maya Reference Editor" -command "ReferenceEditor";
+				menuItem -label "Maya Project Manager" -command "projectSetup 2";
+			
+			menu -label "Add-ons";
+				for ($item in $addons)
+				{
+					int $length = size($item);
+					$length-=4;
+					string $command = `startString $item $length`;
+					menuItem -label $command -command $command;
+				}
+				
+				for ($item in $pyAddons)
+				{
+					int $length = size($item);
+					$length-=3;
+					string $pyModule = `startString $item $length`;
+					string $pyCommand = $pyModule + "." + $pyModule + "()";
+					string $command = "eval(python(\"" + $pyCommand + "\"))";
+					menuItem -label $pyModule -command $command;
+				}
+			
+			menuItem -label "How to add to this menu..." -c openPipelineAddonsDialog;
+			
+			menu -label "Help" -helpMenu true;
+				 menuItem -label "About openPipeline..." -command openPipelineAboutDialog;
+				 menuItem -label "Help..." -command openPipelineHelpLaunch;	
+		
+		
+		//--------------------------------------------
+		//basic info on the top of UI
+		//including Login User, Proj Name, Proj Path
+		//
+		
+		$op_mainUIFormLayout = `formLayout -numberOfDivisions 100 op_mainUIFormLayout`;
+			
+			//-------------------------
+			// Login User
+			
+			$op_userNameTxt = `text -al "right" -label "User Name : " -w 100`;
+			string $currProjName = `optionVar -q "op_currProjectName"`;
+			string $currProjXml = openPipelineGetSingleProjectXml($currProjName);
+			int $currUserNameMode = openPipelineGetXmlData($currProjXml,"userMode");
+			$op_userNameMenu = `optionMenu -cc "openPipelineUpdateUser" -enable $currUserNameMode -w 300 `;
+			
+			//-------------------------
+			// End of Login User
+
+			
+			//-------------------------
+			// Proj Name
+			
+			$op_projectNameTxt = `text -al "right" -label "Project Name : " -w 100`;
+			$op_projNameMenu = `optionMenu -cc "openPipelineProjSelected 1" -w 190 -h 30 -ann $anno_projectList op_projNameMenu `;
+			$op_projManagerButton = `button -label "Project Manager..." -bgc .8 0.8 .8 -c "openPipelineProjectUI" -ann $anno_projectManager -h 30 op_projManagerButton`;
+			
+			int $numProjects = size($validProjList);
+			string $currProjName = `optionVar -q "op_currProjectName"`;
+			for($i=0; $i<$numProjects; $i++)
+			{
+				string $temp_projName = openPipelineGetXmlData($validProjList[$i],"name");
+				string $temp_projPath = openPipelineGetXmlData($validProjList[$i],"path");
+				if (`filetest -d $temp_projPath`)
+				{
+					menuItem -label $temp_projName;
+					if ($currProjName==$temp_projName)
+							optionMenu -e -v $temp_projName op_projNameMenu;
+				}
+			}
+			
+			//-------------------------
+			// End of Proj Name
+			
+			
+			//-------------------------
+			// Proj Path
+			
+			$op_projectPathTxt = `text -al "right" -label "Project Path : " -w 100`;
+			$op_projectPathTxtField = `textField -editable false -w 300 -bgc .2 .2 .2 projPath`;
+			
+			// End of Proj Path
+			//-------------------------
+			
+			
+			//-------------------------
+			// Project Image
+			
+			string $iconFile = $openPipeline_scriptPath+"openPipeline/"+$openPipeline_iconFilename;
+			$op_iconImage = `image -h 50 -w 415 -i $iconFile -bgc 0 0 0 op_iconImage`;
+			
+			// End of Project Image
+			//-------------------------
+			
+			
+			//tab layout for switching btw Currently Open, Asset and Shots Inventory
+			$op_mainTabLayout = `tabLayout -scr 0 -innerMarginWidth 0 -innerMarginHeight 0 -sc "openPipelineUpdateWorkingTab" op_mainTabLayout`;
+			
+			//-------------------------
+			//"Currently Open" Tab
+			//this is the first section that will be attached to the tab layout
+			
+			$op_currOpenFormLayout = `formLayout -width 410 -numberOfDivisions 100 op_currOpenFormLayout`;
+			
+				$op_currOpenSeperator01 = `separator -style "double" -w 410`;
+				$op_currOpenTitle = `text -fn "boldLabelFont" -w 400  -label "CURRENTLY OPEN:"  -al "left"`;
+				$op_currOpenHeading = `text -fn "smallBoldLabelFont"   -w 290  -label " "  -al "left" op_currOpenHeading`;
+				
+				$op_currOpenHeadingVersion = `text -fn "smallBoldLabelFont" -w 370 -label " " -al "left" op_currOpenHeadingVersion`;
+				//$op_currOpenSeperator02 = `separator -style "none" -height 5`;
+				
+				$op_currOpenSeperator03 = `separator -style "double" -w 410`;
+				//$op_currOpenSeperator04 = `separator -style "none"  -h 5`;
+				$op_currOpenActionsTxt = `text -fn "smallBoldLabelFont" -label "Actions" -w 100 -al "left"`;
+				
+				$op_currOpenSaveWorkshopButton = `button -l "Save Workshop..." -w 164 -h 25 -bgc .8 .6 .5 -c "openPipelineSaveWorkshopGUI" -ann $anno_saveWorkshop op_saveWorkshopButton`;
+				$op_currOpenMasterButton = `button -l "MASTER..." -w 164 -h 25 -bgc .9 .7 .4 -c "openPipelineSaveMasterFileGUI" -ann $anno_master op_masterButton`;
+				$op_currOpenReviveButton = `button -l "Revive..."  -bgc .5 .7 .7 -w 82 -h 25 -c "openPipelineReviveGUI" -ann $anno_revive op_reviveButton`;
+				$op_currOpenCloseButton = `button -l "Close"  -h 25 -bgc .8 .8 .8 -c "openPipelineCloseCurrent" -ann $anno_closeFile op_closeButton`;
+				
+				$op_currOpenHistoryTxt = `text -fn "smallBoldLabelFont" -label "History" -w 180 -al "left"`;
+				$op_currOpenAssetNoteField = `scrollField -w 220 -h 103 -enable 1 -editable 0 -wordWrap 1 -font "smallPlainLabelFont" -text "" op_currentAssetNoteField`;
+				
+				$op_currOpenPreviewTxt = `text -fn "smallBoldLabelFont" -l "Preview" -w 164 -al "left"`;
+				$op_currOpenPreviewImage = `image -h 105 -w 164 -i ($openPipeline_scriptPath+"openPipeline/"+$openPipeline_defaultPreviewFilename) -bgc 0 0 0 op_currPreviewImage`;
+				$op_currOpenSnapshotButton = `button -l "Take Snapshot" -w 164 -c "openPipelineTakeSnapshot" op_snapshotButton`;
+				
+				$op_currOpenRecordPlayblastButton = `button -w 82 -h 20 -l "Rec Playblast" -c "openPipelineRecordCurrentPlayblast" op_recordPlayblastButton`;
+				$op_currOpenViewPlayblastButton = `button -w 82 -h 20 -l "View Playblast" -c "openPipelineViewPlayblastCurrent" op_viewPlayblastButton`;
+				
+				$op_currOpenNotesTxt = `text -fn "smallBoldLabelFont" -l "Notes" -w 220 -al "left"`;
+				$op_currOpenNoteField = `scrollField -w 220 -h 125 -enable 1 -editable 0 -wordWrap 1 -font "smallPlainLabelFont" -text "" -kpc "button -e -en 1 op_saveNoteButton" op_currNoteField`;
+				
+				$op_currOpenSubRegion1FormLayout = `formLayout -numberOfDivisions 100 op_currOpenSubRegion1FormLayout`;
+					
+				$op_currOpenClearNoteButton = `button -w 110 -h 20 -l "Clear" -c "openPipelineClearNote" op_clearNoteButton`;
+				$op_currOpenSaveNoteButton = `button -w 110 -h 20 -l "Save" -c "openPipelineSaveNote" -en 0 op_saveNoteButton`;
+					
+				formLayout -e
+					-ap $op_currOpenSaveNoteButton "right" 0 100
+					-ap $op_currOpenSaveNoteButton "left" 0 50
+					-ap $op_currOpenClearNoteButton "left" 0 0
+					-ap $op_currOpenClearNoteButton "right" 0 50
+					$op_currOpenSubRegion1FormLayout;
+				
+				setParent $op_currOpenFormLayout;
+				
+				$op_currOpenLocationTxt = `text -fn "smallBoldLabelFont" -l "Location" -w 395 -al "center"`;
+				$op_currOpenLocationField = `textField -editable 0 -w 350 -h 25 -bgc .2 0.2 .2 op_currLocationField`;
+				$op_currOpenExploreButton = `button -w 50  -align "center" -label "explore" -bgc .8 0.8 .8 -c "openPipelineExploreCurrent" op_currExploreButton`;
+				
+				formLayout -e
+					
+					-af $op_currOpenSeperator01 "top" 5
+					-ap $op_currOpenSeperator01 "right" 0 100
+					-ac $op_currOpenTitle "top" 5 $op_currOpenSeperator01
+					-ac $op_currOpenHeading "top" 5 $op_currOpenTitle
+					-ac $op_currOpenHeadingVersion "top" 5 $op_currOpenHeading
+					-ac $op_currOpenSeperator03 "top" 5 $op_currOpenHeadingVersion
+					-ap $op_currOpenSeperator03 "right" 0 100
+					
+					-ac $op_currOpenActionsTxt "top" 5 $op_currOpenSeperator03
+					-ac $op_currOpenSaveWorkshopButton "top" 5 $op_currOpenActionsTxt
+					-ac $op_currOpenMasterButton "top" 5 $op_currOpenSaveWorkshopButton
+					-ac $op_currOpenReviveButton "top" 5 $op_currOpenMasterButton
+					-ac $op_currOpenCloseButton "left" 5 $op_currOpenReviveButton
+					-ac $op_currOpenCloseButton "right" 20 $op_currOpenAssetNoteField
+					-ac $op_currOpenCloseButton "top" 5 $op_currOpenMasterButton
+					
+					-ac $op_currOpenHistoryTxt "top" 5 $op_currOpenSeperator03
+					-ac $op_currOpenHistoryTxt "left" 20 $op_currOpenSaveWorkshopButton
+					-ac $op_currOpenAssetNoteField "left" 20 $op_currOpenMasterButton
+					-ac $op_currOpenAssetNoteField "top" 5 $op_currOpenHistoryTxt
+					
+					-ac $op_currOpenPreviewTxt "top" 5 $op_currOpenAssetNoteField
+					-ac $op_currOpenPreviewImage "top" 5 $op_currOpenPreviewTxt
+					-ac $op_currOpenSnapshotButton "top" 0 $op_currOpenPreviewImage
+					-ac $op_currOpenRecordPlayblastButton "top" 0 $op_currOpenSnapshotButton
+					-ac $op_currOpenViewPlayblastButton "top" 0 $op_currOpenSnapshotButton
+					-ac $op_currOpenViewPlayblastButton "right" 20 $op_currOpenAssetNoteField
+					-ac $op_currOpenViewPlayblastButton "left" 5 $op_currOpenRecordPlayblastButton
+					
+					-ac $op_currOpenNotesTxt "top" 5 $op_currOpenAssetNoteField
+					-ac $op_currOpenNotesTxt "left" 20 $op_currOpenPreviewTxt
+					-ac $op_currOpenNoteField "top" 5 $op_currOpenPreviewTxt
+					-ac $op_currOpenNoteField "left" 20 $op_currOpenPreviewImage
+					
+					//-ac $op_currOpenClearNoteButton "top" 5 $op_currOpenNoteField
+					//-ac $op_currOpenClearNoteButton "left" 20 $op_currOpenViewPlayblastButton
+					//-ac $op_currOpenSaveNoteButton "top" 5 $op_currOpenNoteField
+					//-ac $op_currOpenSaveNoteButton "left" 5 $op_currOpenClearNoteButton
+					
+					-ac $op_currOpenLocationTxt "top" 5 $op_currOpenViewPlayblastButton
+					-ac $op_currOpenLocationField "top" 5 $op_currOpenLocationTxt
+					-ac $op_currOpenLocationField "right" 5 $op_currOpenExploreButton
+					-ac $op_currOpenExploreButton "top" 5 $op_currOpenLocationTxt
+					
+					-af $op_currOpenSeperator01 "right" 10
+					-af $op_currOpenSeperator01 "left" 0
+					-af $op_currOpenHeadingVersion "right" 10
+					-af $op_currOpenHeadingVersion "left" 0
+					-af $op_currOpenSeperator03 "right" 10
+					-af $op_currOpenSeperator03 "left" 0
+					
+					-ap $op_currOpenAssetNoteField "right" 0 100
+					-ap $op_currOpenNoteField "right" 0 100
+					-af $op_currOpenLocationTxt "right" 10
+					-af $op_currOpenLocationTxt "left" 10
+					-ap $op_currOpenExploreButton "right" 0 100
+					-ap $op_currOpenExploreButton "left" 0 80
+					-af $op_currOpenLocationField "left" 0
+					
+					-ac $op_currOpenSubRegion1FormLayout "top" 0 $op_currOpenNoteField
+					-ac $op_currOpenSubRegion1FormLayout "left" 20 $op_currOpenViewPlayblastButton
+					-ap $op_currOpenSubRegion1FormLayout "right" 0 100
+					
+					$op_currOpenFormLayout;
+					
+				setParent $op_mainTabLayout;
+			//-------------------------
+			//End of "Currently Open" Tab
+			
+			
+			//-------------------------
+			//"Asset Inventory" Tab
+			//this is the second section that will be attached to the tab layout
+			
+			$op_assetFormLayout = `formLayout -width 400 -numberOfDivisions 100 op_assetFormLayout`;
+				
+				$op_assetSeperator01 = `separator -style "double" -w 410`;
+				$op_assetAssetBrowserTxt = `text -fn "boldLabelFont" -label "ASSET BROWSER" -w 410 -al "left"`;
+				$op_assetSeperator02 = `separator -style "double" -w 410`;
+				
+				//-------------------------
+				//"Asset Types" - Left Column in the "Assets" Tab
+				$op_assetAssetTypesFormLayout = `formLayout -numberOfDivisions 100 op_assetAssetTypesFormLayout`;
+					$op_assetAssetTypesTxt = `text -l "Asset Types" -w 125 -fn "smallBoldLabelFont" -al "left"`;
+					$op_assetTypeScrollList = `textScrollList -h 120 -ams 0 -sc "openPipelineUpdateAssetList 0" -fn "smallPlainLabelFont" -ann $anno_assetTypeList op_assetTypeScrollList`;
+					$op_assetTypeNewButton = `button -l "New..." -bgc .6 .8 .5 -c "openPipelineNewAssetTypeUI" -ann $anno_newAssetType op_assetTypeNewButton`;
+					$op_assetTypeRemoveButton = `button -l "Delete" -bgc .8 .3 .3 -c "openPipelineRemoveProcess 2 1" -ann $anno_removeAssetType op_assetTypeRemoveButton`;
+					
+					formLayout -e
+					
+						-ap $op_assetAssetTypesTxt "left" 0 0
+						-ac $op_assetTypeScrollList "top" 5 $op_assetAssetTypesTxt
+						-ap $op_assetTypeScrollList "right" 0 100
+						-ap $op_assetTypeScrollList "left" 0 0
+						-ap $op_assetTypeNewButton "left" 0 0
+						-ap $op_assetTypeNewButton "right" 0 50
+						-ap $op_assetTypeRemoveButton "right" 0 100
+						-ac $op_assetTypeNewButton "top" 5 $op_assetTypeScrollList
+						-ap $op_assetTypeRemoveButton "left" 0 50
+						-ac $op_assetTypeRemoveButton "top" 5 $op_assetTypeScrollList
+					
+					$op_assetAssetTypesFormLayout;
+					
+				setParent $op_assetAssetTypesFormLayout;
+			setParent $op_assetFormLayout;
+			
+				//End of "Asset Types" - Left Column in the "Assets" Tab
+				//-------------------------
+					
+				//-------------------------
+				//"Assets" - Center Column in the "Assets" Tab
+				$op_assetAssetsFormLayout = `formLayout -numberOfDivisions 100 op_assetAssetsFormLayout`;
+				
+					
+					$op_assetAssetsTxt = `text -fn "smallBoldLabelFont" -l "Assets" -w 125 -al "left"`;
+					setParent $op_assetAssetsFormLayout;
+					
+					$op_assetMenuBarLayout01 = `menuBarLayout -w 125 -h 175`;
+					
+						menu -label "ACTIONS..." -aob 1 op_assetMenu;
+						menuItem -label "Edit Asset" -subMenu 0 -command "openPipelineOpenCurrentlySelected 2 2 workshop 0" -ann $anno_editAsset op_assetMenuEdit;
+						menuItem -label "Open Master" -subMenu 0 -command "openPipelineOpenCurrentlySelected 2 2 master 0" -ann $anno_viewAsset op_assetMenuView;
+						menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_assetMenuImport;
+								menuItem -label "Workshop" -command "openPipelineImportUI 0 asset workshop" -ann $anno_importAssetWorkshop op_assetMenuImportWorkshop;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 asset workshop" op_assetMenuImportWorkshopOpBox;
+								menuItem -label "Master" -command "openPipelineImportUI 0 asset master" -ann $anno_importAssetMaster op_assetMenuImportMaster;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 asset master" op_assetMenuImportMasterOpBox;
+								setParent -menu op_assetMenuImport;
+						setParent -menu op_assetMenu;
+						
+						menuItem -label "Reference"  -aob 1  -subMenu 1 -ann " " op_assetMenuReference;
+								$op_assetMenuReferenceWorkshop = `menuItem -label "Workshop" -command "openPipelineReferenceUI 0 asset workshop" -ann $anno_referenceAssetWorkshop op_assetMenuReferenceWorkshop`;
+									menuItem  -ob 1 -c "openPipelineReferenceUI 1 asset workshop" op_assetMenuReferenceWorkshopOpBox;
+								menuItem -label "Master" -command "openPipelineReferenceUI 0 asset master" -ann $anno_referenceAssetMaster op_assetMenuReferenceMaster;
+									menuItem  -ob 1 -c "openPipelineReferenceUI 1 asset master" op_assetMenuReferenceMasterOpBox;
+								setParent -menu op_assetMenuReference;
+						setParent -menu op_assetMenu;
+						menuItem -label "Archive..." -command "openPipelineArchiveDialog 2 2" op_assetMenuArchive;
+						setParent -menu op_assetMenu;
+								
+						
+						$op_assetColumnLayout01 = `columnLayout -adj 1`;
+							textScrollList -w 125 -h 100 -dcc "openPipelineOpenCurrentlySelected 2 2 workshop 0" -sc "openPipelineAssetSelected 0" -fn "smallPlainLabelFont" -ann $anno_assetList op_assetScrollList;
+							popupMenu -p op_assetScrollList -b $mbInt -mm 1 -pmc "openPipelineAssetSelected 1" op_assetPopUpMenu01;
+							menuItem -label "Edit Asset" -command "openPipelineOpenCurrentlySelected 2 2 workshop 0" -ann $anno_editAsset op_assetMenuEdit2;
+							
+							menuItem -label "Open Master" -command "openPipelineOpenCurrentlySelected 2 2 master 0" -ann $anno_viewAsset op_assetMenuView2;
+							menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_assetMenuImport2;
+								menuItem -label "Workshop" -command "openPipelineImportUI 0 asset workshop" -ann $anno_importAssetWorkshop op_assetMenuImportWorkshop2;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 asset workshop" op_assetMenuImportWorkshopOpBox2;
+								menuItem -label "Master" -command "openPipelineImportUI 0 asset master" -ann $anno_importAssetMaster op_assetMenuImportMaster2;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 asset master" op_assetMenuImportMasterOpBox2;
+								setParent -menu op_assetMenuImport2;
+							setParent -menu op_assetPopUpMenu01;
+							menuItem -label "Reference" -aob 1 -subMenu 1 -ann " " op_assetMenuReference2;
+								menuItem -label "Workshop" -command "openPipelineReferenceUI 0 asset workshop" -ann $anno_referenceAssetWorkshop op_assetMenuReferenceWorkshop2;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 asset workshop" op_assetMenuReferenceWorkshopOpBox2;
+								menuItem -label "Master" -command "openPipelineReferenceUI 0 asset master" -ann $anno_referenceAssetMaster op_assetMenuReferenceMaster2;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 asset master" op_assetMenuReferenceMasterOpBox2;
+								setParent -menu op_assetMenuReference2;
+							setParent -menu op_assetPopUpMenu01;
+							menuItem -label "Archive..." -command "openPipelineArchiveDialog 2 2" op_assetMenuArchive2;
+							setParent -menu op_assetPopUpMenu01;
+							separator -style "none" -w 125 -h 5;
+							
+							$op_assetSubFormLayout01 = `formLayout -numberOfDivisions 100 op_assetAssetTypesFormLayout`;
+								$op_assetNewButton = `button -l "New..." -bgc .6 .8 .5 -w 65 -c "openPipelineNewAssetUI" -ann $anno_newAsset op_assetNewButton`;
+								$op_assetRemoveButton = `button -l "Delete" -bgc .8 .3 .3 -w 60 -c "openPipelineRemoveProcess 2 2" -ann $anno_removeAsset op_assetRemoveButton`;
+								$op_assetRenameButton = `button -l "Rename..." -bgc .6 .8 .5 -w 65 -c "openPipelineRenameAssetUI" -ann $anno_renameAsset op_assetRenameButton`;
+								setParent $op_assetSubFormLayout01;
+							
+								formLayout -e
+								
+									-ap $op_assetNewButton "left" 0 0
+									-ap $op_assetNewButton "right" 0 50
+									-ap $op_assetRemoveButton "left" 0 50
+									-ap $op_assetRemoveButton "right" 0 100
+									-ac $op_assetRenameButton "top" 0 $op_assetNewButton
+									-ap $op_assetRenameButton "left" 0 0
+									-ap $op_assetRenameButton "right" 0 100
+								
+								$op_assetSubFormLayout01;
+					
+							setParent $op_assetColumnLayout01;
+							
+						setParent $op_assetMenuBarLayout01;
+						
+					setParent $op_assetAssetsFormLayout;
+							
+					formLayout -e
+						
+						-af $op_assetAssetsTxt "left" 0
+						-ac $op_assetMenuBarLayout01 "top" 5 $op_assetAssetsTxt
+						-af $op_assetMenuBarLayout01 "left" 0
+						-ap $op_assetMenuBarLayout01 "right" 0 100
+						
+						$op_assetAssetsFormLayout;
+						
+				setParent $op_assetFormLayout;
+				
+				//End of "Assets" - Center Column in the "Assets" Tab
+				//-------------------------
+			
+				//-------------------------
+				//"Components" - Right Column in the "Assets" Tab
+				$op_assetsComponentsFormLayout = `formLayout -numberOfDivisions 100 op_assetsComponentsFormLayout`;
+				
+					$op_assetsComponentsTxt = `text -fn "smallBoldLabelFont" -l "Components" -w 125 -al "left"`;
+				
+					$op_assetMenuBarLayout02 = `menuBarLayout -w 125 -h 175`;
+						
+						// updated for maya 2011
+						
+						$op_assetCompenentMenu = `menu -label "ACTIONS..." op_componentMenu`;
+						menuItem -label "Edit Component" -subMenu 0 -command "openPipelineOpenCurrentlySelected 2 3 workshop 0" -ann $anno_editComponent op_compMenuEdit;
+						menuItem -label "View Master" -command "openPipelineOpenCurrentlySelected 2 3 master 0" -ann $anno_viewComponent op_compMenuView;
+						
+						$op_compMenuImport = `menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_compMenuImport`;
+							menuItem -label "Workshop" -command "openPipelineImportUI 0 component workshop" -ann $anno_importComponentWorkshop op_compMenuImportWorkshop;
+							menuItem  -ob 1 -c "openPipelineImportUI 1 component workshop" op_compMenuImportWorkshopOpBox;
+							menuItem -label "Master" -command "openPipelineImportUI 0 component master" -ann $anno_importComponentMaster op_compMenuImportMaster;
+							menuItem  -ob 1 -c "openPipelineImportUI 1 component master" op_compMenuImportMasterOpBox;
+							setParent -menu $op_compMenuImport;
+						setParent -menu $op_assetCompenentMenu;
+						
+						$op_compMenuReference = `menuItem -label "Reference" -aob 1 -subMenu 1 -ann " " op_compMenuReference`;
+							menuItem -label "Workshop" -command "openPipelineReferenceUI 0 component workshop" -ann $anno_referenceComponentWorkshop op_compMenuReferenceWorkshop;
+							menuItem  -ob 1 -c "openPipelineReferenceUI 1 component workshop" op_compMenuReferenceWorkshopOpBox;
+							menuItem -label "Master" -command "openPipelineReferenceUI 0 component master" -ann $anno_referenceComponentMaster op_compMenuReferenceMaster;
+							menuItem  -ob 1 -c "openPipelineReferenceUI 1 component master" op_compMenuReferenceMasterOpBox;
+							setParent -menu $op_compMenuReference;
+						setParent -menu $op_assetCompenentMenu;
+							
+					
+						$op_assetCompMenuArchive = `menuItem -label "Archive..." -command "openPipelineArchiveDialog 2 3" op_assetCompMenuArchive`;
+						setParent -menu $op_assetCompenentMenu;
+							
+						$op_assetColumnLayout02 = `columnLayout -adj 1`;
+							textScrollList -w 125 -h 100 -en 0 -dcc "openPipelineOpenCurrentlySelected 2 3 workshop 0" -sc "openPipelineComponentSelected" -fn "smallPlainLabelFont" -ann $anno_componentList op_componentScrollList;
+							$op_assetPopupMenu02 = `popupMenu -p op_componentScrollList -b $mbInt -mm 1 -pmc "openPipelineComponentSelected" op_assetPopupMenu02`;
+							menuItem -label "Edit Component" -subMenu 0 -command "openPipelineOpenCurrentlySelected 2 3 workshop 0" -ann $anno_editComponent op_compMenuEdit2;
+							menuItem -label "View Master" -command "openPipelineOpenCurrentlySelected 2 3 master 0" -ann $anno_viewComponent op_compMenuView2;
+						
+							$op_compMenuImport2 = `menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_compMenuImport2`;
+								menuItem -label "Workshop" -command "openPipelineImportUI 0 component workshop" -ann $anno_importComponentWorkshop op_compMenuImportWorkshop2;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 component workshop" op_compMenuImportWorkshopOpBox2;
+								menuItem -label "Master" -command "openPipelineImportUI 0 component master" -ann $anno_importComponentMaster op_compMenuImportMaster2;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 component master" op_compMenuImportMasterOpBox2;
+								setParent -menu $op_compMenuImport2;
+							setParent -menu $op_assetPopupMenu02;
+						
+							$op_compMenuReference2 = `menuItem -label "Reference" -aob 1 -subMenu 1 -ann " " op_compMenuReference2`;
+								menuItem -label "Workshop" -command "openPipelineReferenceUI 0 component workshop" -ann $anno_referenceComponentWorkshop op_compMenuReferenceWorkshop2;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 component workshop" op_compMenuReferenceWorkshopOpBox2;
+								menuItem -label "Master" -command "openPipelineReferenceUI 0 component master" -ann $anno_referenceComponentMaster op_compMenuReferenceMaster2;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 component master" op_compMenuReferenceMasterOpBox2;
+								setParent -menu $op_compMenuReference2;
+							setParent -menu $op_assetPopupMenu02;
+							
+							menuItem -label "Archive..." -command "openPipelineArchiveDialog 2 3" op_assetCompMenuArchive2;
+							setParent -menu $op_assetPopupMenu02;
+							
+							$op_assetSubFormLayout02 = `formLayout -numberOfDivisions 100 op_assetAssetTypesFormLayout`;
+							
+								$op_componentNewButton = `button -l "New..." -bgc .6 .8 .5 -w 65 -c "openPipelineNewAssetComponentUI" -ann $anno_newComponent op_componentNewButton`;
+								$op_componentRemoveButton = `button -l "Delete" -bgc .8 .3 .3 -w 60 -c "openPipelineRemoveProcess 2 3" -ann $anno_removeComponent op_componentRemoveButton`;
+								
+								setParent $op_assetSubFormLayout02;
+								
+								formLayout -e
+								
+									-ap $op_componentNewButton "left" 0 0
+									-ap $op_componentNewButton "right" 0 50
+									-ap $op_componentNewButton "top" 5 0
+									-ap $op_componentRemoveButton "left" 0 50
+									-ap $op_componentRemoveButton "right" 0 100
+									-ap $op_componentRemoveButton "top" 5 0
+								
+								$op_assetSubFormLayout02;
+							setParent $op_assetColumnLayout02;
+							
+						setParent $op_assetMenuBarLayout02;
+						
+					setParent $op_assetsComponentsFormLayout;
+
+						
+					formLayout -e
+				
+						-af $op_assetsComponentsTxt "left" 0
+						-ac $op_assetMenuBarLayout02 "top" 5 $op_assetsComponentsTxt
+						-ap $op_assetMenuBarLayout02 "right" 0 100
+						-ap $op_assetMenuBarLayout02 "left" 0 0
+					
+					$op_assetsComponentsFormLayout;
+					
+				setParent $op_assetFormLayout;
+				
+				//End of "Components" - Right Column in the "Assets" Tab
+				//-------------------------
+					
+				
+				//-------------------------
+				//Lower Contents of "Asset Inventory" Tab 
+				//this includes view playblast, notes, and the explore location
+				
+				$op_assetPreviewTxt = `text -fn "smallBoldLabelFont" -l "Preview" -w 164 -al "center"`;
+				$op_assetPreviewImage = `image -h 105 -w 164 -i ($openPipeline_scriptPath+"openPipeline/defaultPreview.jpg") -bgc 0 0 0 op_assetPreviewImage`;
+				$op_assetViewPlayblastAssetButton = `button -l "View Playblast" -h ($infoHeight/3) -en 0 -w 164 -c "openPipelineViewPlayblastSelected 2" op_assetViewPlayblastAssetButton`;
+				$op_assetHistoryTxt = `text -fn "smallBoldLabelFont" -l "History" -w 225 -al "center"`;
+				$op_commentField = `scrollField -w 225 -h 80 -enable 1 -editable 0 -wordWrap 1 -font "smallPlainLabelFont" -text "" op_commentField`;
+				$op_assetNotesTxt = `text -fn "smallBoldLabelFont" -l "Notes" -w 225 -al "center"`;
+				$op_assetNoteField = `scrollField -w 225 -h 45 -enable 1 -editable 0 -wordWrap 1 -font "smallPlainLabelFont" -text "" op_assetNoteField`;
+				$op_assetLocationTxt = `text -fn "smallBoldLabelFont" -l "Location" -w 395 -al "center"`;
+				$op_assetLocationField = `textField -editable 0 -w 345 op_assetLocationField`;
+				$op_exploreAssetsButton = `button -w 50  -align "center" -label "explore..." -c "openPipelineExploreSelected 2" op_exploreAssetsButton`;
+			
+				setParent $op_assetFormLayout;
+				
+				//End of Lower Contents of "Asset Inventory" Tab 
+				//-------------------------
+				
+				formLayout -e
+				
+					-ap $op_assetSeperator01 "left" 0 0
+					-ap $op_assetSeperator01 "right" 0 100
+					-ap $op_assetSeperator01 "top" 5 0
+					-ac $op_assetAssetBrowserTxt "top" 5 $op_assetSeperator01
+					-ap $op_assetAssetBrowserTxt "left" 0 0
+					-ac $op_assetSeperator02 "top" 0 $op_assetAssetBrowserTxt
+					-ap $op_assetSeperator02 "left" 0 0
+					-ap $op_assetSeperator02 "right" 0 100
+					
+					-ap $op_assetAssetTypesFormLayout "left" 0 0
+					-ap $op_assetAssetTypesFormLayout "right" 0 33
+					-ac $op_assetAssetTypesFormLayout "top" 5 $op_assetSeperator02
+					
+					-ac $op_assetAssetsFormLayout "left" 5 $op_assetAssetTypesFormLayout
+					-ac $op_assetAssetsFormLayout "top" 5 $op_assetSeperator02
+					-ap $op_assetAssetsFormLayout "right" 0 66
+					
+					-ac $op_assetsComponentsFormLayout "left" 5 $op_assetAssetsFormLayout
+					-ac $op_assetsComponentsFormLayout "top" 5 $op_assetSeperator02
+					-ap $op_assetsComponentsFormLayout "right" 0 100
+					
+					-ac $op_assetPreviewTxt "top" 5 $op_assetAssetsFormLayout
+					-ap $op_assetPreviewTxt "left" 0 0
+					-ac $op_assetPreviewImage "top" 5 $op_assetPreviewTxt
+					-ap $op_assetPreviewImage "left" 0 0
+					-ac $op_assetHistoryTxt "left" 5 $op_assetPreviewImage
+					-ac $op_assetHistoryTxt "top" 5 $op_assetAssetsFormLayout
+					-ap $op_assetHistoryTxt "right" 0 100
+					-ac $op_commentField "left" 5 $op_assetPreviewImage
+					-ap $op_commentField "right" 0 100
+					-ac $op_commentField "top" 5 $op_assetPreviewTxt
+					-ap $op_assetViewPlayblastAssetButton "left" 0 0
+					-ac $op_assetViewPlayblastAssetButton "top" 5 $op_assetPreviewImage
+					
+					-ac $op_assetNotesTxt "top" 5 $op_commentField
+					-ac $op_assetNotesTxt "left" 5 $op_assetPreviewImage
+					-ap $op_assetNotesTxt "right" 0 100
+					-ac $op_assetNoteField "left" 5 $op_assetPreviewImage
+					-ac $op_assetNoteField "top" 5 $op_assetNotesTxt
+					-ap $op_assetNoteField "right" 0 100
+					
+					-af $op_assetLocationTxt "left" 5
+					-ac $op_assetLocationTxt "top" 5 $op_assetNoteField
+					-ap $op_assetLocationTxt "right" 0 100
+					-ac $op_assetLocationField "top" 5 $op_assetLocationTxt
+					-ap $op_assetLocationField "right" 0 80
+					-ap $op_assetLocationField "left" 0 0
+					-ac $op_exploreAssetsButton "left" 5 $op_assetLocationField
+					-ac $op_exploreAssetsButton "top" 5 $op_assetLocationTxt
+					-ap $op_exploreAssetsButton "right" 0 100
+					
+					$op_assetFormLayout;
+				
+			setParent $op_mainTabLayout;
+			
+			//-------------------------
+			//End of "Asset Inventory" Tab
+			
+			//------------------------
+			////"Shot Inventory" Tab
+			//this is the third section that will be attached to the tab layout
+			//
+			
+			$op_shotFormLayout = `formLayout -width 410 -numberOfDivisions 100 op_shotFormLayout`;
+			
+				$op_shotSeperator01 = `separator -style "double" -w 410`;
+				$op_shotTabShotBrowserTxt = `text -fn "boldLabelFont" -label "SHOT BROWSER" -w 410 -al "left"`;
+				$op_shotSeperator02 = `separator -style "double" -w 410`;
+				
+				//-------------------------
+				//"Sequence" - Left Column in the "Shot Inventory" Tab
+				
+				$op_shotSequenceFormLayout = `formLayout -numberOfDivisions 100 op_shotSequenceFormLayout`;
+					
+					$op_shotSequenceTxt = `text -l "Sequence" -w 125 -fn "smallBoldLabelFont" -al "left"`;
+					$op_sequenceScrollList = `textScrollList -w 125 -h 119 -ams 0 -sc "openPipelineUpdateShotList 0" -fn "smallPlainLabelFont" -ann $anno_sequenceList op_sequenceScrollList`;
+					$op_assetTypeNewButton = `button -l "New..." -bgc .6 .8 .5 -w 65 -c "openPipelineNewSequenceUI" -ann $anno_newSequence op_assetTypeNewButton`;
+					$op_sequenceRemoveButton = `button -l "Delete" -bgc .8 .3 .3 -w 60 -c "openPipelineRemoveProcess 3 1" -ann $anno_removeSequence op_sequenceRemoveButton`;
+					
+					setParent $op_shotSequenceFormLayout;
+				
+				formLayout -e
+					
+					-ap $op_shotSequenceTxt "left" 0 0
+					-ac $op_sequenceScrollList "top" 5 $op_shotSequenceTxt
+					-ap $op_sequenceScrollList "left" 0 0
+					-ap $op_sequenceScrollList "right" 0 100
+					
+					-ap $op_assetTypeNewButton "left" 0 0
+					-ap $op_assetTypeNewButton "right" 0 50
+					-ac $op_assetTypeNewButton "top" 5 $op_sequenceScrollList
+					
+					-ap $op_sequenceRemoveButton "left" 0 50
+					-ap $op_sequenceRemoveButton "right" 0 100
+					-ac $op_sequenceRemoveButton "top" 5 $op_sequenceScrollList
+					
+					$op_shotSequenceFormLayout;
+					
+				setParent $op_shotFormLayout;
+				
+				//End of "Sequence" - Left Column in the "Shot Inventory" Tab
+				//-------------------------
+				
+				//-------------------------
+				//"Shot" - Center Column in the "Shot Inventory" Tab
+				
+				$op_shotShotFormLayout = `formLayout -numberOfDivisions 100 op_shotShotFormLayout`;
+				
+					$op_shotShotTxt = `text -fn "smallBoldLabelFont" -l "Shot" -w 120 -al "left"`;
+					$op_shotMenuBarLayout01 = `menuBarLayout -w 125 -h 175 op_shotMenuBarLayout01`;
+					
+						$op_shotMenu = `menu -label "ACTIONS..." op_shotMenu`;
+							menuItem -label "Edit Shot" -subMenu 0 -command "openPipelineOpenCurrentlySelected 3 2 workshop 0" -ann $anno_editShot op_shotMenuEdit;
+							menuItem -label "View Master" -subMenu 0 -command "openPipelineOpenCurrentlySelected 3 2 master 0" -ann $anno_viewShot op_shotMenuView;
+							
+							$op_shotMenuImport = `menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_shotMenuImport`;
+								menuItem -label "Workshop" -command "openPipelineImportUI 0 shot workshop" -ann $anno_importShotWorkshop op_shotMenuImportWorkshop;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 shot workshop"  -en 0 op_shotMenuImportWorkshopOpBox;
+								menuItem -label "Master" -command "openPipelineImportUI 0 shot master" -ann $anno_importShotMaster op_shotMenuImportMaster;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 shot master" op_shotMenuImportMasterOpBox;
+								setParent -menu $op_shotMenuImport;
+							setParent -menu $op_shotMenu;
+							
+							$op_shotMenuReference = `menuItem -label "Reference" -aob 1 -subMenu 1 -ann " " op_shotMenuReference`;
+								menuItem -label "Workshop" -command "openPipelineReferenceUI 0 shot workshop" -ann $anno_referenceShotWorkshop op_shotMenuReferenceWorkshop;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 shot workshop" op_shotMenuReferenceWorkshopOpBox;
+								menuItem -label "Master" -command "openPipelineReferenceUI 0 shot master" -ann $anno_referenceShotMaster op_shotMenuReferenceMaster;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 shot master" op_shotMenuReferenceMasterOpBox;
+								setParent -menu $op_shotMenuReference;
+							setParent -menu $op_shotMenu;
+							
+							menuItem -label "Archive..." -command "openPipelineArchiveDialog 3 2" op_shotMenuArchive;
+							setParent -menu $op_shotMenu;
+					
+					$op_shotColumnLayout01 = `columnLayout -adj 1`;
+					
+						textScrollList -w 125 -h 100 -dcc "openPipelineOpenCurrentlySelected 3 2 workshop 0" -sc "openPipelineShotSelected 0" -fn "smallPlainLabelFont" -ann $anno_shotList op_shotScrollList;
+						$op_shotPopupMenu01 = `popupMenu -p op_shotScrollList -b $mbInt -mm 1 -pmc "openPipelineShotSelected 0"`;
+						menuItem -label "Edit Shot" -command "openPipelineOpenCurrentlySelected 3 2 workshop 0" -ann $anno_editShot op_shotMenuEdit2;
+						menuItem -label "View Master" -command "openPipelineOpenCurrentlySelected 3 2 master 0" -ann $anno_viewShot op_shotMenuView2;
+						
+						$op_shotMenuImport2 = `menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_shotMenuImport2`;
+							menuItem -label "Workshop" -command "openPipelineImportUI 0 shot workshop" -ann $anno_importShotWorkshop op_shotMenuImportWorkshop2;
+							menuItem  -ob 1 -c "openPipelineImportUI 1 shot workshop" op_shotMenuImportWorkshopOpBox2;
+							menuItem -label "Master" -command "openPipelineImportUI 0 shot master" -ann $anno_importShotMaster op_shotMenuImportMaster2;
+							menuItem  -ob 1 -c "openPipelineImportUI 1 shot master" op_shotMenuImportMasterOpBox2;
+							setParent -menu $op_shotMenuImport2;
+						setParent -menu $op_shotPopupMenu01;
+						
+						$op_shotMenuReference2 = `menuItem -label "Reference" -aob 1 -subMenu 1 -ann " " op_shotMenuReference2`;
+							menuItem -label "Workshop" -command "openPipelineReferenceUI 0 shot workshop" -ann $anno_referenceShotWorkshop op_shotMenuReferenceWorkshop2;
+							menuItem  -ob 1 -c "openPipelineReferenceUI 1 shot workshop" op_shotMenuReferenceWorkshopOpBox2;
+							menuItem -label "Master" -command "openPipelineReferenceUI 0 shot master" -ann $anno_referenceShotMaster op_shotMenuReferenceMaster2;
+							menuItem  -ob 1 -c "openPipelineReferenceUI 1 shot master" op_shotMenuReferenceMasterOpBox2;
+							setParent -menu $op_shotMenuReference2;
+						setParent -menu $op_shotPopupMenu01;
+						
+						menuItem -label "Archive..." -command "openPipelineArchiveDialog 3 2" op_shotMenuArchive2;
+						setParent -menu $op_shotPopupMenu01;
+						
+						$op_shotSubFormLayout01 = `formLayout -numberOfDivisions 100 op_assetAssetTypesFormLayout`;
+							
+							$op_shotNewButton = `button -l "New..." -bgc .6 .8 .5 -w 65 -c "openPipelineNewShotUI" -ann $anno_newShot op_shotNewButton`;
+							$op_shotRemoveButton = `button -l "Delete" -bgc .8 .3 .3 -w 60 -c "openPipelineRemoveProcess 3 2" -ann $anno_removeShot op_shotRemoveButton`;
+							
+							setParent $op_shotSubFormLayout01;
+							
+							formLayout -e
+							
+								-ap $op_shotNewButton "left" 0 0
+								-ap $op_shotNewButton "right" 0 50
+								-ap $op_shotNewButton "top" 5 0
+								-ap $op_shotRemoveButton "left" 0 50
+								-ap $op_shotRemoveButton "right" 0 100
+								-ap $op_shotRemoveButton "top" 5 0
+								
+								$op_shotSubFormLayout01;
+						
+						setParent $op_shotColumnLayout01;
+						
+					setParent $op_shotMenuBarLayout01;
+				
+				formLayout -e
+						
+					-af $op_shotShotTxt "left" 0
+					-ac $op_shotMenuBarLayout01 "top" 5 $op_shotShotTxt
+					-af $op_shotMenuBarLayout01 "left" 0
+					-ap $op_shotMenuBarLayout01 "right" 0 100
+					
+					$op_shotShotFormLayout;
+					
+				setParent $op_shotFormLayout;
+					
+			setParent $op_shotFormLayout;
+				
+				
+				//End of "Shot" - Center Column in the "Shot Inventory" Tab
+				//-------------------------
+				
+				//-------------------------
+				//"Components" - Right Column in the "Shot Inventory" Tab
+				
+				$op_shotComponentsFormLayout = `formLayout -numberOfDivisions 100 op_shotComponentsFormLayout`;
+				
+					$op_shotComponentsTxt = `text -fn "smallBoldLabelFont" -l "Components" -w 125 -al "left"`;
+						
+					$op_shotMenuBarLayout02 = `menuBarLayout -w 125 -h 175 op_shotMenuBarLayout02`;
+					
+						$op_shotComponentMenu = `menu -label "ACTIONS..." op_shotComponentMenu`;
+						
+							menuItem -label "Edit Shot Component" -subMenu 0 -command "openPipelineOpenCurrentlySelected 3 3 workshop 0" -ann $anno_editShotComponent op_shotcompMenuEdit;
+							menuItem -label "View Master" -command "openPipelineOpenCurrentlySelected 3 3 master 0" -ann $anno_viewShotComponent op_shotcompMenuView;
+							
+							$op_shotcompMenuImport = `menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_shotcompMenuImport`;
+								menuItem -label "Workshop" -command "openPipelineImportUI 0 shotComponent workshop" -ann $anno_importShotComponentWorkshop op_shotcompMenuImportWorkshop;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 shotComponent workshop" op_shotcompMenuImportWorkshopOpBox;
+								menuItem -label "Master" -command "openPipelineImportUI 0 shotComponent master" -ann $anno_importShotComponentMaster op_shotcompMenuImportMaster;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 shotComponent master" op_shotcompMenuImportMasterOpBox;
+								setParent -menu $op_shotcompMenuImport;
+							setParent -menu $op_shotComponentMenu;
+							
+							$op_shotcompMenuReference = `menuItem -label "Reference" -aob 1 -subMenu 1 -ann " " op_shotcompMenuReference`;
+								menuItem -label "Workshop" -command "openPipelineReferenceUI 0 shotComponent workshop" -ann $anno_referenceShotComponentWorkshop op_shotcompMenuReferenceWorkshop;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 shotComponent workshop" op_shotcompMenuReferenceWorkshopOpBox;
+								menuItem -label "Master" -command "openPipelineReferenceUI 0 shotComponent master" -ann $anno_referenceShotComponentMaster op_shotcompMenuReferenceMaster;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 shotComponent master" op_shotcompMenuReferenceMasterOpBox;
+								setParent -menu $op_shotcompMenuReference;
+							setParent -menu $op_shotComponentMenu;
+							
+							menuItem -label "Archive..." -command "openPipelineArchiveDialog 3 3" op_shotcompMenuArchive;
+							//kevin
+							menuItem -label "Convert to Lighting Scense" -command "op_cacheActions flattenAnim" op_shotcompMenuflattenAnim;
+							//menuItem -label "Import Animation Cache" -command "op_cacheActions importAnimCache" op_shotcompMenuImportCache;
+							//kevin end
+
+							setParent -menu $op_shotComponentMenu;
+							
+						setParent $op_shotMenuBarLayout02;
+							
+						$op_shotColumnLayout02 = `columnLayout -adj 1`;
+						
+							textScrollList -w 125 -h 100 -en 0 -dcc "openPipelineOpenCurrentlySelected 3 3 workshop 0" -sc "openPipelineShotComponentSelected" -fn "smallPlainLabelFont" -ann $anno_shotComponentList op_shotComponentScrollList;
+							$op_shotPopupMenu02 = `popupMenu -p op_shotComponentScrollList -b $mbInt -mm 1 -pmc "openPipelineShotComponentSelected" op_shotPopupMenu02`;
+							menuItem -label "Edit Shot Component" -subMenu 0 -command "openPipelineOpenCurrentlySelected 3 3 workshop 0" -ann $anno_editShotComponent op_shotcompMenuEdit2;
+							menuItem -label "View Master" -command "openPipelineOpenCurrentlySelected 3 3 master 0" -ann $anno_viewShotComponent op_shotcompMenuView2;
+							
+							$op_shotcompMenuImport2 = `menuItem -label "Import" -aob 1 -subMenu 1 -ann " " op_shotcompMenuImport2`;
+								menuItem -label "Workshop" -command "openPipelineImportUI 0 shotComponent workshop" -ann $anno_importShotComponentWorkshop op_shotcompMenuImportWorkshop2;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 shotComponent workshop" op_shotcompMenuImportWorkshopOpBox2;
+								menuItem -label "Master" -command "openPipelineImportUI 0 shotComponent master" -ann $anno_importShotComponentMaster op_shotcompMenuImportMaster2;
+								menuItem  -ob 1 -c "openPipelineImportUI 1 shotComponent master" op_shotcompMenuImportMasterOpBox2;
+								setParent -menu $op_shotcompMenuImport2;
+							setParent -menu $op_shotPopupMenu02;
+							
+							$op_shotcompMenuReference2 = `menuItem -label "Reference" -aob 1 -subMenu 1 -ann " " op_shotcompMenuReference2`;
+								menuItem -label "Workshop" -command "openPipelineReferenceUI 0 shotComponent workshop" -ann $anno_referenceShotComponentWorkshop op_shotcompMenuReferenceWorkshop2;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 shotComponent workshop" op_shotcompMenuReferenceWorkshopOpBox2;
+								menuItem -label "Master" -command "openPipelineReferenceUI 0 shotComponent master" -ann $anno_referenceShotComponentMaster op_shotcompMenuReferenceMaster2;
+								menuItem  -ob 1 -c "openPipelineReferenceUI 1 shotComponent master" op_shotcompMenuReferenceMasterOpBox2;
+								setParent -menu $op_shotcompMenuReference2;
+							setParent -menu $op_shotPopupMenu02;
+							
+								menuItem -label "Archive..." -command "openPipelineArchiveDialog 3 3" op_shotcompMenuArchive2;
+							setParent -menu $op_shotPopupMenu02;
+							
+							$op_shotSubFormLayout02 = `formLayout -numberOfDivisions 100 op_shotSubFormLayout02`;
+								
+								$op_shotComponentNewButton = `button -l "New..." -bgc .6 .8 .5 -w 65 -c "openPipelineNewShotComponentUI" -ann $anno_newShotComponent op_shotComponentNewButton`;
+								$op_shotComponentRemoveButton = `button -l "Delete" -bgc .8 .3 .3 -w 60 -c "openPipelineRemoveProcess 3 3" -ann $anno_removeShotComponent op_shotComponentRemoveButton`;
+								
+								setParent $op_shotSubFormLayout02;
+									
+								formLayout -e
+								
+									-ap $op_shotComponentNewButton "top" 5 0
+									-ap $op_shotComponentNewButton "left" 0 0
+									-ap $op_shotComponentNewButton "right" 0 50
+									-ap $op_shotComponentRemoveButton "top" 5 0
+									-ap $op_shotComponentRemoveButton "left" 0 50
+									-ap $op_shotComponentRemoveButton "right" 0 100
+									
+									$op_shotSubFormLayout02;
+									
+								setParent $op_shotColumnLayout02;
+							
+						setParent $op_shotMenuBarLayout02;
+						
+					setParent $op_shotComponentsFormLayout;
+					
+					formLayout -e
+						
+						-af $op_shotComponentsTxt "left" 0
+						-ac $op_shotMenuBarLayout02 "top" 5 $op_shotComponentsTxt
+						-af $op_shotMenuBarLayout02 "left" 0
+						-ap $op_shotMenuBarLayout02 "right" 0 100
+						
+						$op_shotComponentsFormLayout;
+						
+				setParent $op_shotFormLayout;
+				
+				//End of "Components" - Right Column in the "Shot Inventory" Tab
+				//-------------------------
+				
+				//-------------------------
+				//Lower Contents of "Shot" Tab 
+				//this includes view playblast, notes, and the explore location
+				
+				
+				$op_shotPreviewTxt = `text -fn "smallBoldLabelFont" -w 164 -l "Preview" -al "center"`;
+				$op_shotPreviewImage = `image -h 105 -w 164 -i ($openPipeline_scriptPath+"openPipeline/"+$openPipeline_defaultPreviewFilename) -bgc 0 0 0 op_shotPreviewImage`;
+				$op_shotViewPlayblastButton = `button -l "View Playblast" -h ($infoHeight/3) -w 164 -c "openPipelineViewPlayblastSelected 3" op_shotViewPlayblastButton`;
+				$op_shotHistoryTxt = `text -fn "smallBoldLabelFont" -l "History" -al "center"`;
+				$op_shotCommentField = `scrollField -w 225 -h 80 -enable 1 -editable 0 -wordWrap 1 -font "smallPlainLabelFont" -text "" op_shotCommentField`;
+				$op_shotNotesTxt = `text -fn "smallBoldLabelFont" -l "Notes" -al "center"`;
+				$op_shotInfoField = `scrollField -w 225 -h 45 -enable 1 -editable 0 -wordWrap 1 -font "smallPlainLabelFont" -text "" op_shotInfoField`;
+				$op_shotLocationTxt = `text -fn "smallBoldLabelFont" -l "Location" -al "center"`;
+				$op_shotLocationField = `textField -editable 0 -w 345 op_shotLocationField`;
+				$op_exploreShotsButton = `button -w 50  -align "center" -label "explore..." -c "openPipelineExploreSelected 3" op_exploreShotsButton`;
+				setParent $op_shotFormLayout;
+				
+				//End of Lower Contents of "Shot" Tab 
+				//this includes view playblast, notes, and the explore location
+				//-------------------------
+				
+				formLayout -e
+					
+					-ap $op_shotSeperator01 "left" 0 0
+					-ap $op_shotSeperator01 "top" 5 0
+					-ap $op_shotSeperator01 "right" 0 100
+					-ac $op_shotTabShotBrowserTxt "top" 5 $op_shotSeperator01
+					-af $op_shotTabShotBrowserTxt "left" 0
+					-ac $op_shotSeperator02 "top" 0 $op_shotTabShotBrowserTxt
+					-ap $op_shotSeperator02 "left" 0 0
+					-ap $op_shotSeperator02 "right" 0 100
+					
+					-ac $op_shotSequenceFormLayout "top" 5 $op_shotSeperator02
+					-ap $op_shotSequenceFormLayout "left" 0 0
+					-ap $op_shotSequenceFormLayout "right" 0 33
+					
+					-ac $op_shotShotFormLayout "top" 5 $op_shotSeperator02
+					-ac $op_shotShotFormLayout "left" 5 $op_shotSequenceFormLayout
+					-ap $op_shotShotFormLayout "right" 0 66
+					
+					-ac $op_shotComponentsFormLayout "top" 5 $op_shotSeperator02
+					-ac $op_shotComponentsFormLayout "left" 5 $op_shotShotFormLayout
+					-ap $op_shotComponentsFormLayout "right" 0 100
+					
+					-ac $op_shotPreviewTxt "top" 22 $op_shotSequenceFormLayout
+					-ap $op_shotPreviewTxt "left" 0 0
+					-ac $op_shotPreviewImage "top" 5 $op_shotPreviewTxt
+					-ap $op_shotPreviewImage "left" 0 0
+					-ac $op_shotViewPlayblastButton "top" 5 $op_shotPreviewImage
+					-ap $op_shotViewPlayblastButton "left" 0 0
+					
+					-ac $op_shotHistoryTxt "top" 22 $op_shotSequenceFormLayout
+					-ac $op_shotHistoryTxt "left" 5 op_shotPreviewImage
+					-ap $op_shotHistoryTxt "right" 0 100
+					-ac $op_shotCommentField "top" 5 $op_shotHistoryTxt
+					-ac $op_shotCommentField "left" 5 op_shotPreviewImage
+					-ap $op_shotCommentField "right" 0 100
+					-ac $op_shotNotesTxt "top" 5 $op_shotCommentField
+					-ac $op_shotNotesTxt "left" 5 op_shotPreviewImage
+					-ap $op_shotNotesTxt "right" 0 100
+					-ac $op_shotInfoField "top" 5 $op_shotNotesTxt
+					-ac $op_shotInfoField "left" 5 op_shotPreviewImage
+					-ap $op_shotInfoField "right" 0 100
+					
+					-ac $op_shotLocationTxt "top" 5 op_shotInfoField
+					-ap $op_shotLocationTxt "left" 0 0
+					-ap $op_shotLocationTxt "right" 0 100
+					-ap $op_shotLocationField "left" 0 0
+					-ap $op_shotLocationField "right" 0 100
+					-ac $op_shotLocationField "top" 5 $op_shotLocationTxt
+					-ap $op_shotLocationField "right" 0 80
+					-ac $op_exploreShotsButton "left" 5 $op_shotLocationField
+					-ac $op_exploreShotsButton "top" 5 $op_shotLocationTxt
+					-ap $op_exploreShotsButton "right" 0 100
+					
+					$op_shotFormLayout;
+					
+			setParent $op_mainTabLayout;
+			
+		setParent $op_mainUIFormLayout;
+			
+		//tabLayout editing, giving tabs diff names
+		//------------------------------------------
+		//
+		tabLayout -edit -tabLabel $op_assetFormLayout "Asset Browser" -tabLabel $op_shotFormLayout "Shot Browser" -tabLabel $op_currOpenFormLayout "Currently Open" op_mainTabLayout;
+		
+		//------------------------------------------
+		//end of tabLayout editing
+		
+		//columnLayout : Refresh UI
+		
+		$op_refreshUIFormLayout = `formLayout -width 410 -numberOfDivisions 100 op_refreshUIFormLayout`;
+			
+			$op_refreshUISeperator1 = `separator -style "none" -h 10`;
+			$op_refreshUIButton = `button -h 30 -label "Refresh UI" -command "openPipelineUI"`;
+			$op_closeUIButton = `button -h 30 -label "Close" -command "openPipelineCloseUI" -ann $anno_close`;
+			
+			
+			formLayout -e
+				
+				-ac $op_closeUIButton "top" 5 $op_refreshUISeperator1 
+				-ac $op_refreshUIButton "top" 5 $op_refreshUISeperator1 
+				-ap $op_refreshUIButton "right" 0 50
+				-ap $op_closeUIButton "left" 0 50
+				-ap $op_refreshUIButton "left" 0 0
+				-ap $op_refreshUIButton "bottom" 5 100
+				-ap $op_closeUIButton "right" 0 100
+				-ap $op_closeUIButton "bottom" 5 100
+					
+				$op_refreshUIFormLayout;
+			
+		setParent $op_mainUIFormLayout;
+		
+		formLayout -e
+			
+			-af $op_userNameTxt "top" 5
+			-af $op_userNameMenu "top" 5
+			
+			-af $op_userNameTxt "left" 0
+			-ac $op_userNameMenu "left" 5 $op_userNameTxt
+			-ap $op_userNameMenu "right" 0 80
+			
+			-af $op_mainTabLayout "right" 10
+			
+			-ac $op_projectNameTxt "top" 0 $op_userNameMenu
+			-ac $op_projNameMenu "top" 0 $op_userNameMenu
+			-ac $op_projNameMenu "left" 5 $op_projectNameTxt
+			-ap $op_projNameMenu "right" 0 50
+			-ac $op_projManagerButton "top" 0 $op_userNameMenu
+			-ac $op_projManagerButton "left" 5 op_projNameMenu
+			-ap $op_projManagerButton "right" 0 80
+			-af $op_projectNameTxt "left" 0
+			
+			-ac $op_projectPathTxt "top" 5 $op_projManagerButton
+			-ac $op_projectPathTxtField "top" 5 $op_projManagerButton
+			-ap $op_projectPathTxtField "right" 0 80
+			-ac $op_projectPathTxtField "left" 5 $op_projectPathTxt
+			
+			-ac $op_iconImage "top" 5 $op_projectPathTxtField
+			-af $op_iconImage "left" 10
+			-ap $op_iconImage "right" 10 100
+			
+			-ac $op_mainTabLayout "top" 15 $op_iconImage
+			-af $op_mainTabLayout "left" 10
+			-ap $op_mainTabLayout "right" 10 100
+			
+			-af $op_refreshUIFormLayout "left" 10
+			-ac $op_refreshUIFormLayout "top" 5 $op_mainTabLayout
+			-ap $op_refreshUIFormLayout "bottom" 5 100
+			-ap $op_refreshUIFormLayout "right" 10 100
+			
+			$op_mainUIFormLayout;
+			
+	setParent $window;
+
+	//-----------------------
+
+	// display final window
+
+	window -e -w 450 -h $windowHeight openPipelineUI;
+
+	openPipelineProjSelected(0);
+	openPipelineUpdateCurrentlyOpen();
+
+	showWindow $window;
+	if (`window -q -exists openPipelineProjUI`)
+			openPipelineProjectUI();
+	}
+	else
+	{
+		//if NO projects exist, open Project Manager
+			if (`window -q -exists openPipelineUI`)
+			{
+					deleteUI openPipelineUI;
+			}
+			optionVar -sv "op_currOpenType" "";
+			optionVar -sv "op_currOpenCategory" "";
+			optionVar -iv "op_currOpenVersion" 0;
+			openPipelineProjectUI();
+	}
+	if (`about -os`=="mac") //hack to correct ui bugs on mac
+	{
+			tabLayout -edit -sti 3  op_mainTabLayout;
+			tabLayout -edit -sti 2  op_mainTabLayout;
+			tabLayout -edit -sti 1  op_mainTabLayout;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineCloseUI
+// Description: 	Closes all oP-related windows
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineCloseUI()
+{
+	if (`window -q -exists openPipelineUI`)
+			deleteUI openPipelineUI;
+	openPipelineRemoveSecondaryWindows();
+	openPipelineCloseProjUI();
+}
+
+//###########################################
+// Name: 					openPipelineUpdateCurrentlyOpen
+// Description: 	Updates the "Currently Open" display
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateCurrentlyOpen()
+{
+	global string $openPipeline_scriptPath;
+	global string $openPipeline_defaultPreviewFilename;
+	global string $openPipeline_noPreviewFilename;
+	//get information about the currently open file
+	string $currType = `optionVar -q "op_currOpenType"`;
+	string $currCat = `optionVar -q "op_currOpenCategory"`;
+	int $currVersion = `optionVar -q "op_currOpenVersion"`;
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $currPath = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	if ($level1=="")//if there is NO file currently open, clear all text and disable buttons
+	{
+			openPipelineClearCurrentHistory();
+			scrollField -e -tx "" op_currNoteField;
+			image -e -i ($openPipeline_scriptPath+"openPipeline/"+$openPipeline_defaultPreviewFilename) -bgc 0 0 0 op_currPreviewImage;
+			button -e -en 0 op_saveWorkshopButton;
+			button -e -en 0 op_recordPlayblastButton;
+			button -e -en 0 op_viewPlayblastButton;
+			button -e -en 0 op_masterButton;
+			button -e -en 0 op_reviveButton;
+			button -e -en 0 op_closeButton;
+			button -e -en 0 op_clearNoteButton;
+			button -e -en 0 op_saveNoteButton;
+			button -e -en 0 op_snapshotButton;
+			button -e -en 0 op_currExploreButton;
+			textField -e -tx "" op_currLocationField;
+			text -e -label "none" op_currOpenHeading;
+			text -e -l "      " -bgc .8 .8 .8 op_currOpenHeadingVersion;
+			scrollField -e -text "" -editable 0 op_currNoteField;
+	}
+	else if (`filetest -d $currPath`)
+	{ //if there IS a file currently open...
+
+			//get the number of workshop versions for the currently open file
+
+			string $wExt = `optionVar -q "op_workshopFormat"`;
+			string $mExt = `optionVar -q "op_masterFormat"`;
+			string $wName = `optionVar -q "op_workshopName"`;
+			string $mName = `optionVar -q "op_masterName"`;
+			string $workshop = ($currPath + $wName +"/");
+			string $workshopFiles[] = `getFileList -folder $workshop -filespec ("*_"+ $wName +"_*."+$wExt)`;
+			$workshopFiles = sort($workshopFiles);
+			int $numVersions = `size($workshopFiles)`;
+			int $latestVersion = 0;
+			if ($numVersions)
+					$latestVersion = openPipelineGetVersionFromFile($workshopFiles[$numVersions-1]);
+			int $reviveEnabled = 0;
+			string $displayType;
+	if ($currType=="workshop")
+			$displayType = $wName;
+	else if ($currType=="master")
+			$displayType = $mName;
+
+			//if the number of versions exceeds 1, the "revive workshop" button will be enabled
+			if ($numVersions>1)
+					$reviveEnabled = 1;
+			string $displayString="";
+			string $versionString="";
+
+			if ($currType=="workshop") //if currently open file is a workshop...
+			{
+					//build version info to display
+					$versionString+=($wName+" version "+$currVersion);
+			}
+			else if ($currType=="master")
+			{
+					$versionString = $mName;
+			}
+			if (($currCat=="asset")||($currCat=="shot")) //if the currently open file is an ASSET or SHOT...
+			{
+					//build string to display
+					string $assetName = openPipelineGetFolderFromPath($currPath,0);
+					string $assetType = openPipelineGetFolderFromPath($currPath,1);
+					$displayString+=($assetType+": "+$assetName+"  ("+interToUI($currCat)+")");
+			}
+			else if (($currCat=="component")||($currCat=="shotComponent")) //if the currently open file is a COMPONENT or SHOT COMPONENT...
+			{
+					//build string to display
+					string $assetName = openPipelineGetFolderFromPath($currPath,2);
+					string $assetType = openPipelineGetFolderFromPath($currPath,3);
+					string $compName = openPipelineGetFolderFromPath($currPath,0);
+					$displayString+=($assetType+": "+ $assetName+": "+$compName+"  ("+interToUI($currCat)+")");
+			}
+			string $prevImg = `openPipelineGetFileName $tab $level1 $level2 $level3 "previewFile" 0 0`;
+			if (`filetest -r $prevImg`)
+					image -e -i $prevImg -bgc 0 0 0 op_currPreviewImage;
+			else
+					image -e -i ($openPipeline_scriptPath+"openPipeline/"+$openPipeline_noPreviewFilename) -bgc 0 0 0 op_currPreviewImage;
+
+			string $noteText = openPipelineGetCustomNotes($tab, $level1, $level2, $level3);
+			scrollField -e -editable 1 -text $noteText op_currNoteField;
+			openPipelineLoadCurrentHistory();
+			button -e -en $reviveEnabled  op_reviveButton;
+			button -e -en 1 op_recordPlayblastButton;
+
+			if (openPipelineHasPlayblast($tab, $level1, $level2, $level3))
+				button -e -en 1 op_viewPlayblastButton;
+			else
+				button -e -en 0 op_viewPlayblastButton;
+
+			button -e -en 1 op_closeButton;
+			button -e -en 1 op_saveWorkshopButton;
+			button -e -en 1 op_masterButton;
+			button -e -en 1 op_clearNoteButton;
+			button -e -en 0 op_saveNoteButton;
+			button -e -en 1 op_snapshotButton;
+			button -e -en 1 op_currExploreButton;
+			textField -e -tx $currPath op_currLocationField;
+							if ($latestVersion==$currVersion)
+									text -e -bgc .8 .6 .5 op_currOpenHeadingVersion;
+							else
+									text -e -bgc .5 .7 .7 op_currOpenHeadingVersion;
+							text -e -vis 1 -l $versionString op_currOpenHeadingVersion;
+
+					//update Main Heading
+					text -e -label $displayString op_currOpenHeading;
+
+			if ($currType=="master")
+			{
+					text -e -bgc .9 .7 .4 op_currOpenHeadingVersion;
+					button -e -en 0 op_saveWorkshopButton;
+					button -e -en 0 op_masterButton;
+			}
+	}
+	else
+	{
+		openPipelineCloseCurrent();
+	}
+	openPipelineRemoveSecondaryWindows;
+}
+
+
+
+//###########################################
+// Name: 					openPipelineRemoveSecondaryWindows
+// Description: 	Closes secondary oP windows
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineRemoveSecondaryWindows()
+{
+	if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+}
+
+//###########################################
+// Name: 					openPipelineProjSelected
+// Description: 	This proc is run whenever a new Project is selected.  In turn, it updates all UI elements below the project level.
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineProjSelected(int $refreshCurrOpen)
+{
+	progressWindow -min 0 -max 10 -pr 0 -st "Please Wait.." -title "Getting Project Info";
+	global string $openPipeline_userName;
+	global string $op_userNameMenu;
+	progressWindow -min 0 -max 10 -pr 0 -st "Please Wait.." -title "Getting Project Info";
+	global string $openPipeline_scriptPath;
+	global string $openPipeline_iconFilename;
+	progressWindow -e -s 1;
+	string $projName = `optionMenu -q -v op_projNameMenu`;
+	string $projXml = openPipelineGetSingleProjectXml($projName);
+	string $projPath = openPipelineGetXmlData($projXml, "path");
+	string $projUsers[] = stringToStringArray(`openPipelineGetXmlData $projXml "users"`,",");
+	string $globalUsers[] = `openPipelineGetUsers`;
+	string $returnedUserList[] = openPipelineCompareFirstToSecondList($projUsers, $globalUsers);
+		
+	int $currUserNameMode = openPipelineGetXmlData($projXml,"userMode");
+	
+	// Clear users
+	string $userMenus[] = `optionMenu -q -ill $op_userNameMenu`;
+	if ( `size $userMenus` > 0 )
+		deleteUI $userMenus;
+	
+	if ($currUserNameMode == 0) {
+	
+		$openPipeline_userName = `getenv USER`;
+		menuItem -parent $op_userNameMenu -label $openPipeline_userName;
+		optionMenu -e -en 0 $op_userNameMenu;
+		
+	} else {
+	
+		// Add default user first
+		menuItem -parent $op_userNameMenu -label "default";
+		// Add project users
+		optionMenu -e -enable 1 $op_userNameMenu;
+		for ( $user in $returnedUserList )
+			menuItem -parent $op_userNameMenu -label $user;
+		$openPipeline_userName = `optionMenu -q -v $op_userNameMenu`;
+	} 
+
+	progressWindow -e -s 1;
+	int $result = openPipelineActivateProject($projName);
+	if ($result)
+	{
+		
+		// select the default user
+		if ($currUserNameMode == 1) {
+			if (stringArrayCount(`optionVar -q "op_currentUser"`,$projUsers) > 0)
+			{
+				$openPipeline_userName = `optionVar -q "op_currentUser"`;
+				optionMenu -e -v $openPipeline_userName $op_userNameMenu;
+			}
+			else
+			{
+				$openPipeline_userName = `optionMenu -q -v $op_userNameMenu`;
+			}
+		}
+
+		textField -e -text $projPath projPath;
+		progressWindow -e -s 1;
+		openPipelineUpdateCustomUI();
+		if ($refreshCurrOpen)
+		{
+				//if necessary, the info about the currently open file is cleared
+				optionVar -sv "op_currOpenType" "";
+				optionVar -sv "op_currOpenCategory" "";
+				optionVar -iv "op_currOpenVersion" 0;
+				optionVar -sv "op_currOpenLevel1" "";
+				optionVar -sv "op_currOpenLevel2" "";
+				optionVar -sv "op_currOpenLevel3" "";
+				optionVar -iv "op_currOpenTab" 0;
+		}
+		progressWindow -e -s 1;
+		string $iconFile = $projPath+$openPipeline_iconFilename;
+		string $defIconFile = $openPipeline_scriptPath+"openPipeline/"+$openPipeline_iconFilename;
+		if (`filetest -r $iconFile`)
+			image -e -i $iconFile op_iconImage;
+		else
+			image -e -i $defIconFile op_iconImage;
+		progressWindow -e -s 1;
+		openPipelineUpdateCurrentlyOpen();
+		progressWindow -e -s 1;
+		//update asset type list and shot list
+		openPipelineUpdateAssetTypeList();
+		progressWindow -e -s 1;
+		progressWindow -e -s 1;
+		openPipelineUpdateSequenceList();
+		progressWindow -e -s 1;
+		progressWindow -ep;
+	}
+	else
+	{
+		progressWindow -ep;
+		openPipelineUI;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineUpdateCustomUI
+// Description: 	Updates the UI to reflect user-defined names for "workshop" and "master"
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateCustomUI()
+{
+	string $masterName = `optionVar -q "op_masterName"`;
+	string $workshopName = `optionVar -q "op_workshopName"`;
+	string $workshopButton = capitalizeString($workshopName);
+	string $masterButton = capitalizeString($masterName);
+	button -e -l ("Save "+$workshopButton+"...") -w 164 op_saveWorkshopButton;
+	//button -e -l ("Revive "+$workshopButton) -w 164 op_reviveButton;
+	button -e -l ("Save " + $masterButton+"...") -w 164 op_masterButton;
+
+	menuItem -e -label ("View "+$masterButton) op_assetMenuView;
+	menuItem -e -l $workshopButton op_assetMenuImportWorkshop;
+	menuItem -e -l $masterButton op_assetMenuImportMaster;
+	menuItem -e -l $workshopButton op_assetMenuReferenceWorkshop;
+	menuItem -e -l $masterButton op_assetMenuReferenceMaster;
+
+	menuItem -e -label ("View "+$masterButton) op_assetMenuView2;
+	menuItem -e -l $workshopButton op_assetMenuImportWorkshop2;
+	menuItem -e -l $masterButton op_assetMenuImportMaster2;
+	menuItem -e -l $workshopButton op_assetMenuReferenceWorkshop2;
+	menuItem -e -l $masterButton op_assetMenuReferenceMaster2;
+
+	menuItem -e -label ("View "+$masterButton) op_compMenuView;
+	menuItem -e -l $workshopButton op_compMenuImportWorkshop;
+	menuItem -e -l $masterButton op_compMenuImportMaster;
+	menuItem -e -l $workshopButton op_compMenuReferenceWorkshop;
+	menuItem -e -l $masterButton op_compMenuReferenceMaster;
+
+	menuItem -e -label ("View "+$masterButton) op_compMenuView2;
+	menuItem -e -l $workshopButton op_compMenuImportWorkshop2;
+	menuItem -e -l $masterButton op_compMenuImportMaster2;
+	menuItem -e -l $workshopButton op_compMenuReferenceWorkshop2;
+	menuItem -e -l $masterButton op_compMenuReferenceMaster2;
+
+	menuItem -e -label ("View "+$masterButton) op_shotMenuView;
+	menuItem -e -l $workshopButton op_shotMenuImportWorkshop;
+	menuItem -e -l $masterButton op_shotMenuImportMaster;
+	menuItem -e -l $workshopButton op_shotMenuReferenceWorkshop;
+	menuItem -e -l $masterButton op_shotMenuReferenceMaster;
+
+	menuItem -e -label ("View "+$masterButton) op_shotMenuView2;
+	menuItem -e -l $workshopButton op_shotMenuImportWorkshop2;
+	menuItem -e -l $masterButton op_shotMenuImportMaster2;
+	menuItem -e -l $workshopButton op_shotMenuReferenceWorkshop2;
+	menuItem -e -l $masterButton op_shotMenuReferenceMaster2;
+
+	menuItem -e -label ("View "+$masterButton) op_shotcompMenuView;
+	menuItem -e -l $workshopButton op_shotcompMenuImportWorkshop;
+	menuItem -e -l $masterButton op_shotcompMenuImportMaster;
+	menuItem -e -l $workshopButton op_shotcompMenuReferenceWorkshop;
+	menuItem -e -l $masterButton op_shotcompMenuReferenceMaster;
+
+	menuItem -e -label ("View "+$masterButton) op_shotcompMenuView2;
+	menuItem -e -l $workshopButton op_shotcompMenuImportWorkshop2;
+	menuItem -e -l $masterButton op_shotcompMenuImportMaster2;
+	menuItem -e -l $workshopButton op_shotcompMenuReferenceWorkshop2;
+	menuItem -e -l $masterButton op_shotcompMenuReferenceMaster2;
+}
+
+
+//###########################################
+// Name: 					openPipelineUpdateSequenceList
+// Description: 	Updates the list of Sequences in the UI
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateSequenceList()
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(3, 1);
+	textScrollList -e -ra "op_sequenceScrollList";
+	optionVar -ca "op_sequences";
+	string $sequenceList[] = `openPipelineGetChildren 3 "" "" ""`;
+	$sequenceList = `sort $sequenceList`;
+	for($sequence in $sequenceList)
+	{
+		optionVar -sva "op_sequences" ($sequence);
+		textScrollList -e -w 125 -a $sequence op_sequenceScrollList;
+		if ($sequence==$currSelected[0])
+			textScrollList -e -si $sequence op_sequenceScrollList;
+	}
+	openPipelineUpdateShotList(1);
+}
+
+//###########################################
+// Name: 					openPipelineUpdateShotList
+// Description: 	Updates list of shots in the UI
+// Input: 				$preserveSelection - whether the current selected item in the list should still be selected after updating (int)
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateShotList(int $preserveSelection)
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(3, 2);
+	textScrollList -e -ra "op_shotScrollList";
+	optionVar -ca "op_shots";
+	int $active = 0;
+	if (size($currSelected[0]))
+	{
+		string $shotList[] = `openPipelineGetChildren 3 $currSelected[0] "" ""`;
+		$shotList = `sort $shotList`;
+		for ($shot in $shotList)
+		{		
+			$active = 1;
+			optionVar -sva "op_shots" ($shot);
+			string $post="";
+			string $pre="";
+			int $masterExists = `openPipelineHasMaster 3 $currSelected[0] $shot ""`;
+			int $workshopExists = `openPipelineHasWorkshop 3 $currSelected[0] $shot ""`;
+			if($masterExists)
+			{
+				$post+=" +";
+			}
+			else if ($workshopExists)
+			{
+				$post+=" -";
+			}
+			string $shotPath = `openPipelineGetFileName 3 $currSelected[0] $shot "" "folder" 0 0`;
+			string $currentlyOpenPath = openPipelineGetCurrentlyOpenPath();
+			if ($shotPath == $currentlyOpenPath)
+			{
+				$pre = "*";
+				$post+=" *";
+			}
+			textScrollList -e -a ($pre+$shot+$post) "op_shotScrollList";
+			if (($currSelected[1]==$shot)&&($preserveSelection))
+				textScrollList -e -si ($pre+$shot+$post) "op_shotScrollList";				
+		}
+	}
+	button -e -en (size($currSelected[0])) op_sequenceRemoveButton;
+	button -e -en (size($currSelected[0])) op_shotNewButton;
+	textScrollList -e -en $active op_shotScrollList;
+	openPipelineShotSelected(1);
+}
+
+//###########################################
+// Name: 					openPipelineShotSelected
+// Description: 	This proc is called whenever a Shot is selected in the UI. 
+//								In turn, it updates all the UI elements affected by what Shot is selected.
+// Input: 				$preserveSelection - whether currently selected items should still be selected after updating (int)
+// Returns: 			none
+//###########################################
+global proc openPipelineShotSelected(int $preserveSelection)
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(3, 3);
+	textScrollList -e -ra "op_shotComponentScrollList";
+	optionVar -ca "op_shotComponents";
+	int $active = 0;
+	int $selected = 1;
+	if ($currSelected[1]=="")
+		$selected = 0;
+	button -e -en $selected op_shotRemoveButton;
+	menuItem -e -en $selected op_shotMenuView;
+	menuItem -e -en $selected op_shotMenuView2;
+	button -e -en $selected op_shotComponentNewButton;
+	menuItem -e -en $selected op_shotMenuEdit;
+	menuItem -e -en $selected op_shotMenuEdit2;
+	menuItem -e -en $selected op_shotMenuImport;
+	menuItem -e -en $selected op_shotMenuImport2;
+	menuItem -e -en $selected op_shotMenuReference;
+	menuItem -e -en $selected op_shotMenuReference2;
+	menuItem -e -en $selected op_shotMenuArchive;
+	menuItem -e -en $selected op_shotMenuArchive2;
+	if ($selected)
+	{
+		string $compList[] = `openPipelineGetChildren 3 $currSelected[0] $currSelected[1] ""`;
+		$compList = `sort $compList`;	
+		openPipelineUpdateShotMenus($currSelected[0], $currSelected[1]);
+		for ($component in $compList)
+		{
+			$active = 1;
+			string $post="";
+			string $pre="";
+			optionVar -sva "op_shotComponents" $component;
+			int $masterExists = openPipelineHasMaster(3, $currSelected[0], $currSelected[1], $component);
+			int $workshopExists = openPipelineHasWorkshop(3, $currSelected[0], $currSelected[1], $component);
+			if($masterExists)
+			{
+				$post+=" +";
+			}
+			else if ($workshopExists)
+			{
+				$post+=" -";
+			}
+			string $componentPath = `openPipelineGetFileName 3 $currSelected[0] $currSelected[1] $component "folder" 0 0`;
+			string $currentlyOpenPath = openPipelineGetCurrentlyOpenPath();
+			if($componentPath == $currentlyOpenPath)
+			{
+				$pre = "* ";
+				$post+=" *";
+			}
+			textScrollList -e -w 125 -a ($pre+$component+$post) "op_shotComponentScrollList";
+			if (($currSelected[2]==$component)&&($preserveSelection))
+				textScrollList -e -si ($pre+$component+$post) "op_shotComponentScrollList";
+		}
+	}
+	textScrollList -e -en $active "op_shotComponentScrollList";
+	openPipelineShotComponentSelected();
+}
+
+//###########################################
+// Name: 					openPipelineShotComponentSelected
+// Description: 	This proc is called whenever a Shot Component is selected. 
+//								It updates all the UI affected by what Shot Component is currently selected.
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineShotComponentSelected()
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(3, 3);
+	int $selected = 1;
+	if ($currSelected[2]=="")
+			$selected = 0;
+	menuItem -e -en $selected op_shotcompMenuEdit;
+	menuItem -e -en $selected op_shotcompMenuView;
+	menuItem -e -en $selected op_shotcompMenuImport;
+	menuItem -e -en $selected op_shotcompMenuReference;
+	menuItem -e -en $selected op_shotcompMenuView2;
+	menuItem -e -en $selected op_shotcompMenuImport2;
+	menuItem -e -en $selected op_shotcompMenuReference2;
+	menuItem -e -en $selected op_shotcompMenuEdit2;
+	button -e -en $selected op_shotComponentRemoveButton;
+	menuItem -e -en $selected op_shotcompMenuArchive;
+	menuItem -e -en $selected op_shotcompMenuArchive2;
+	//kevin
+	int $lighting = 0;
+	if ($currSelected[2]=="lighting"){
+		$lighting = 1;
+	}
+	menuItem -e -en $lighting op_shotcompMenuflattenAnim;
+	//menuItem -e -en $lighting op_shotcompMenuImportCache;
+	//kevin end	
+	if ($selected)
+	{
+		openPipelineUpdateShotComponentMenus($currSelected[0], $currSelected[1], $currSelected[2]);
+	}
+	openPipelineShotInformation;
+	openPipelineLoadShotHistory;
+}
+
+//###########################################
+// Name: 					openPipelineUpdateAssetTypeList
+// Description: 	Updates the list of Asset Types in the UI
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateAssetTypeList()
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(2, 1);
+	textScrollList -e -ra "op_assetTypeScrollList";
+	optionVar -ca "op_assetTypes";
+	string $assetTypeList[] = `openPipelineGetChildren 2 "" "" ""`;
+	$assetTypeList = `sort $assetTypeList`;
+	for($assetType in $assetTypeList)
+	{
+		optionVar -sva "op_assetTypes" ($assetType);
+		textScrollList -e -w 125 -a $assetType op_assetTypeScrollList;
+		if ($assetType==$currSelected[0])
+			textScrollList -e -si $assetType op_assetTypeScrollList;
+	}
+	openPipelineUpdateAssetList(1);
+}
+
+//###########################################
+// Name: 					openPipelineUpdateAssetList
+// Description: 	This proc is called whenever an Asset Type is selected. It updates all the UI elements below the Asset Type level.
+// Input: 				$preserveSelection - whether previously selected items should still be selected after the update (int)
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateAssetList(int $preserveSelection)
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(2, 2);
+	textScrollList -e -ra "op_assetScrollList";
+	optionVar -ca "op_assets";
+	int $active = 0;
+	if (size($currSelected[0]))
+	{
+		string $assetList[] = `openPipelineGetChildren 2 $currSelected[0] "" ""`;
+		$assetList = `sort $assetList`;
+		for ($asset in $assetList)
+		{
+			$active = 1;
+			optionVar -sva "op_assets" ($asset);
+			string $post="";
+			string $pre="";
+			int $masterExists = `openPipelineHasMaster 2 $currSelected[0] $asset ""`;
+			int $workshopExists = `openPipelineHasWorkshop 2 $currSelected[0] $asset ""`;
+			if($masterExists)
+			{
+				$post+=" +";
+			}
+			else if ($workshopExists)
+			{
+				$post+=" -";
+			}
+			string $assetPath = `openPipelineGetFileName 2 $currSelected[0] $asset "" "folder" 0 0`;
+			string $currentlyOpenPath = openPipelineGetCurrentlyOpenPath();
+			if ($assetPath == $currentlyOpenPath)
+			{
+				$pre = "*";
+				$post+=" *";
+			}
+			textScrollList -e -w 125 -a ($pre+$asset+$post) "op_assetScrollList";
+			if (($currSelected[1]==$asset)&&($preserveSelection))
+				textScrollList -e -si ($pre+$asset+$post) "op_assetScrollList";
+		}
+	}
+	button -e -en (size($currSelected[0])) op_assetTypeRemoveButton;
+	button -e -en (size($currSelected[0])) op_assetNewButton;
+	textScrollList -e -en $active "op_assetScrollList";
+	openPipelineAssetSelected(1);
+}
+
+//###########################################
+// Name: 					openPipelineAssetSelected
+// Description: 	This proc is called whenever an Asset is selected. It updates all the UI elements below the Asset level.
+// Input: 				$preserveSelection - Whether previously selected items should still be selected after the update (int)
+// Returns: 			none
+//###########################################
+global proc openPipelineAssetSelected(int $preserveSelection)
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(2, 3);
+	textScrollList -e -ra "op_componentScrollList";
+	optionVar -ca "op_components";
+	int $active = 0;
+	int $selected = 1;
+	if ($currSelected[1]=="")
+		$selected = 0;
+	menuItem -e -en $selected op_assetMenuEdit;
+	menuItem -e -en $selected op_assetMenuView;
+	menuItem -e -en $selected op_assetMenuImport;
+	menuItem -e -en $selected op_assetMenuReference;
+	menuItem -e -en $selected op_assetMenuEdit2;
+	menuItem -e -en $selected op_assetMenuView2;
+	menuItem -e -en $selected op_assetMenuImport2;
+	menuItem -e -en $selected op_assetMenuReference2;
+	menuItem -e -en $selected op_assetMenuArchive;
+	menuItem -e -en $selected op_assetMenuArchive2;
+	button -e -en $selected op_assetRenameButton;
+	button -e -en $selected op_assetRemoveButton;
+	button -e -en $selected op_shotViewPlayblastButton;
+	button -e -en $selected op_componentNewButton;
+	if ($selected)
+	{
+			string $compList[] = `openPipelineGetChildren 2 $currSelected[0] $currSelected[1] ""`;
+			$compList = `sort $compList`;	
+			openPipelineUpdateAssetMenus($currSelected[0], $currSelected[1]);
+			for($component in $compList)
+			{
+							$active = 1;
+							string $post="";
+							string $pre="";
+							optionVar -sva "op_components" $component;
+							int $masterExists = openPipelineHasMaster(2, $currSelected[0], $currSelected[1], $component);
+			int $workshopExists = openPipelineHasWorkshop(2, $currSelected[0], $currSelected[1], $component);
+							if($masterExists)
+							{
+									$post+=" +";
+							}
+							else if ($workshopExists)
+							{
+									$post+=" -";
+							}
+							string $componentPath = `openPipelineGetFileName 2 $currSelected[0] $currSelected[1] $component "folder" 0 0`;
+								string $currentlyOpenPath = openPipelineGetCurrentlyOpenPath();
+							if ($componentPath == $currentlyOpenPath)
+							{
+									$pre = "* ";
+									$post+=" *";
+							}
+							textScrollList -e -w 125 -a ($pre+$component+$post) "op_componentScrollList";
+							if (($currSelected[2]==$component)&&($preserveSelection))
+									textScrollList -e -si ($pre+$component+$post) "op_componentScrollList";
+					}
+			}
+	
+	textScrollList -e -en $active "op_componentScrollList";
+	openPipelineComponentSelected();
+}
+
+//###########################################
+// Name: 					openPipelineComponentSelected
+// Description: 	This proc is called whenever a Component is selected. 
+//								It updates all the UI affected by what Component is currently selected.
+// Input: 				$preserveSelection - whether currently selected items should still be selected after updating (int)
+// Returns: 			none
+//###########################################
+global proc openPipelineComponentSelected()
+{
+	string $currSelected[] =	openPipelineGetCurrentlySelectedItem(2, 3);
+	int $selected = 1;
+	if ($currSelected[2]=="")
+			$selected = 0;
+	menuItem -e -en $selected op_compMenuEdit;
+	menuItem -e -en $selected op_compMenuView;
+	menuItem -e -en $selected op_compMenuImport;
+	menuItem -e -en $selected op_compMenuReference;
+	menuItem -e -en $selected op_assetCompMenuArchive;
+	menuItem -e -en $selected op_compMenuView2;
+	menuItem -e -en $selected op_compMenuImport2;
+	menuItem -e -en $selected op_compMenuReference2;
+	menuItem -e -en $selected op_compMenuEdit2;
+	menuItem -e -en $selected op_assetCompMenuArchive2;
+	button -e -en $selected op_componentRemoveButton;
+	if ($selected)
+	{
+			openPipelineUpdateComponentMenus($currSelected[0], $currSelected[1], $currSelected[2]);
+	}
+	openPipelineAssetInformation;
+	openPipelineLoadAssetHistory;
+}
+
+//###########################################
+// Name: 					openPipelineAboutDialog
+// Description: 	Shows the "About" window, with information and credits
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineAboutDialog()
+{
+	if (`window -q -exists infoWindow`)
+	{
+			deleteUI infoWindow;
+	}
+
+	string $infoWindow = `window
+					-title "About openPipeline"
+					-widthHeight 300 250
+					infoWindow`;
+
+	columnLayout -adjustableColumn true;
+			scrollField -wordWrap true -width 300 -height 200
+					-text ("openPipeline\n\nopenPipeline is an open source, free, " +
+							"and customizable pipeline for production (in Autodesk Maya)." +
+							"\n\nCreated by:\n Rob O'Neill (roneill@dal.pratt.edu)\n " +
+							"Paris Mavroidis (paris@parismav.com)\nMeng-Han Ho (mho@pratt.edu)" +
+							"\n\nMore information may be found at:\n http://openpipeline.sourceforge.net/")
+							-editable false;
+
+			 button -label "Close" -command ("deleteUI -window " + $infoWindow);
+	 setParent ..;
+	 window -e -widthHeight 300 250 $infoWindow;
+	 showWindow $infoWindow;
+}
+
+//###########################################
+// Name: 					openPipelineAddonsDialog
+// Description: 	Shows instructions on how to add Add-ons to openPipeline
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineAddonsDialog()
+{
+	if (`window -q -exists infoWindow`)
+	{
+			deleteUI infoWindow;
+	}
+
+	string $infoWindow = `window
+					-title "openPipeline Add-ons"
+					-widthHeight 300 280
+					infoWindow`;
+
+	columnLayout -adjustableColumn true;
+			scrollField -wordWrap true -width 300 -height 230
+					-text ("openPipeline Add-ons\n\nTo add a custom command to the " +
+							"Add-ons menu, copy the mel script you want to add to the" +
+							"\"addons\" directory inside the \"openPipeline\" folder." +
+							"Make sure the mel command and the mel script file have the" +
+							" same name. \n\nIf you'd like to make your add-on a part of the openPipeline package please contact us. \n"+
+							"\n Rob O'Neill (roneill@dal.pratt.edu)\n " +
+							"Paris Mavroidis (paris@parismav.com)")
+							-editable false;
+
+			 button -label "Close" -command ("deleteUI -window " + $infoWindow);
+	 setParent ..;
+	 window -e -widthHeight 300 280 $infoWindow;
+	 showWindow $infoWindow;
+}
+
+//###########################################
+// Name: 					openPipelineHelpLaunch
+// Description: 	Launches the online Help for oP
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineHelpLaunch()
+{
+	string $URL = "http://www.openpipeline.cc/";
+	showHelp -absolute $URL;
+}
+
+//###########################################
+// Name: 					openPipelineNewAssetTypeUI
+// Description: 	Launches the UI for creating a new Asset Type
+// Input: 				none
+// Returns:				none
+//###########################################
+global proc openPipelineNewAssetTypeUI()
+{
+	string $assetType;
+	string $choice = `promptDialog
+			-title "new asset type"
+			-message "asset type name\n (no spaces or special characters):\n "
+			-button "create" -button "cancel"
+			-defaultButton "create" -cancelButton "cancel"
+			-sf 1
+			-dismissString "cancel"`;
+
+	if ($choice == "create")
+	{
+		$assetType = strip(`promptDialog -query -text`);
+		string $result = openPipelineCreateNewItem(2,$assetType,"","",0);
+		if (size($result))
+		{
+			openPipelineUpdateAssetTypeList();
+		}
+	}
+}
+
+
+//###########################################
+// Name: 					openPipelineNewSequenceUI
+// Description: 	Launches the UI for creating a new Sequence
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineNewSequenceUI()
+{
+	string $sequence;
+	string $choice = `promptDialog
+			-title "new sequence"
+			-message "sequence name: \n (no spaces or special characters)\n "
+			-button "create" -button "cancel"
+			-defaultButton "create" -cancelButton "cancel"
+			-dismissString "cancel"`;
+
+	if ($choice == "create")
+	{
+			$sequence = strip(`promptDialog -query -text`);
+			string $result = openPipelineCreateNewItem(3,$sequence,"","",0);
+			if (size($result))
+			{
+				openPipelineUpdateSequenceList();
+			}
+	}
+}
+
+//###########################################
+// Name: 					openPipelineNewAssetUI
+// Description: 	Launches the UI for creating a new Asset
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineNewAssetUI()
+{
+	if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+	window -t "Create New Asset" -w 250 -h 250 op_secondaryUI;
+			columnLayout -w 220 -rs 5 -co "both" 10;
+					text -l "asset name (no spaces or special characters):";
+					textField -editable 1 -w 220 op_newAssetNameField;
+					rowLayout -nc 2 -cw2 110 110;
+							button -l "create" -w 110 -c "openPipelineNewAssetRetrieveInfo 1" op_createAssetButton;
+							button -l "cancel" -w 110 -c "openPipelineRemoveSecondaryWindows";
+					setParent..;
+					radioCollection;
+
+					radioButton -w 220 -label "Start with empty Asset " -al "left" -sl -onc "button -e -c \"openPipelineNewAssetRetrieveInfo 1\" op_createAssetButton";
+					radioButton -w 220 -label "Export current selection into Asset" -al "left" -onc "button -e -c \"openPipelineNewAssetRetrieveInfo 2\" op_createAssetButton";
+					radioButton -w 220 -label "Export current scene into Asset" -al "left" -onc "button -e -c \"openPipelineNewAssetRetrieveInfo 3\" op_createAssetButton";
+
+	window -e -w 250 -h 180 op_secondaryUI;
+			showWindow op_secondaryUI;
+}
+
+
+/*
+ // commenting this out because it's being replaced
+//###########################################
+// Name: 					openPipelineNewAssetRetrieveInfo
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineCreateNewItem"
+// Input: 				$mode - creation mode for asset (see "openPipelineCreateNewItem")
+// Returns: 			none
+//###########################################
+global proc openPipelineNewAssetRetrieveInfo(int $mode)
+{
+	string $assetName = strip(`textField -q -tx op_newAssetNameField`);
+	string $selectedItem[] = openPipelineGetCurrentlySelectedItem(2, 1);
+	string $assetType = $selectedItem[0];
+	if (!size($assetType))
+	{
+		confirmDialog -t "Create New Asset Error" -m "No Asset Type selected. Please select an Asset Type and try again." -button "OK" ;
+	}
+	else
+	{
+		string $result = openPipelineCreateNewItem(2,$assetType,$assetName,"",$mode);
+		if (size($result))
+		{
+			openPipelineUpdateAssetList(1);
+			openPipelineRemoveSecondaryWindows();
+		}
+	}
+}
+*/
+
+//###########################################
+// Name: 					openPipelineNewAssetRetrieveInfo
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineCreateNewItem"
+// Input: 				$mode - creation mode for asset (see "openPipelineCreateNewItem")
+// Returns: 			none
+//###########################################
+global proc openPipelineNewAssetRetrieveInfo(int $mode)
+{
+	string $assetName = strip(`textField -q -tx op_newAssetNameField`);
+	string $selectedItem[] = openPipelineGetCurrentlySelectedItem(2, 1);
+	string $assetType = $selectedItem[0];
+	if (!size($assetType))
+	{
+		confirmDialog -t "Create New Asset Error" -m "No Asset Type selected. Please select an Asset Type and try again." -button "OK" ;
+	}
+	else
+	{
+		string $result = openPipelineCreateNewItem(2,$assetType,$assetName,"",$mode);
+		//kevin
+		op_autoComponent;
+
+		if (size($result))
+		{
+			// Commenting out creation of components. In future, we will have different project types and create the appropriate components.
+			/*
+			// Create components for $assetType
+			string $projType = "default";
+			string $components[] = `openPipelineGetProjectAssetTypeComponents $projType $assetType`;
+			for ( $comp in $components )
+				openPipelineCreateNewItem(2,$assetType,$assetName,$comp,$mode);
+			*/
+			// Create textures/PSD folder
+			string $assetPSDFolder = `openPipelineGetFileName 2 $assetType $assetName "" "folder" 0 0` + "textures/PSD";
+			python("import os\nos.makedirs('" + $assetPSDFolder + "')");
+			
+			openPipelineUpdateAssetList(1);
+			openPipelineRemoveSecondaryWindows();
+		}
+	}
+}
+
+//###########################################
+// Name: 		openPipelineRenameAssetUI
+// Description: 	Launches the UI for renaming an Asset
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineRenameAssetUI()
+{
+	
+	
+	if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+	window -t "Rename Asset" -w 280 -h 250 op_secondaryUI;
+			columnLayout -w 220 -rs 5 -co "both" 10;
+					text -l "new asset name (no spaces or special characters):";
+					textField -editable 1 -w 220 op_newNameField;
+					rowLayout -nc 2 -cw2 110 110;
+							button -l "rename" -w 110 -c "openPipelineRename()";
+							button -l "cancel" -w 110 -c "openPipelineRemoveSecondaryWindows";
+					setParent..;
+				
+	window -e -w 310 -h 180 op_secondaryUI;
+			showWindow op_secondaryUI;
+}
+
+
+
+//###########################################
+// Name: 		openPipelineRename
+// Description: 	Calls the python function for renaming an asset
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineRename()
+{
+	string $error="";
+	string $currSelected[] = openPipelineGetCurrentlySelectedItem(2, 2);
+	string $assetPath = openPipelineGetFileName(2, $currSelected[0], $currSelected[1], $currSelected[2], "folder", 0, 0);
+	print "$assetPath = ";
+	print $assetPath;
+	$newName = `textField -q -text op_newNameField`;
+	if (!isValidString($newName, "([a-zA-Z0-9_])*"))
+		$error+="Invalid Asset Name (no special characters or spaces allowed).\n";
+	if(size($error))
+	{
+		warning("openPipelineCreateNewItem: "+$error);
+	}
+	else
+	{
+		global string $openPipeline_scriptPath;
+		python "import os";
+		python("path = os.path.join('" + $openPipeline_scriptPath + "', 'openPipeline')");
+		//python("print 'path = %s' % path");
+		python("import sys");
+		python("sysPath = sys.path");
+		python("appendGo = 1");
+		python("for aPath in sysPath:\n if(aPath == path): appendGo = 0");
+		python("print 'appendGo = %s' % appendGo");
+		////// Append if necessary the openPipeline directory path
+		python("if appendGo:\n sys.path.append(path)\n print 'appending %s' % path");
+		
+		// And Here comes the MEL to Python work-around
+		//python("path = os.path.join('" + $openPipeline_scriptPath + "', 'openPipeline/')");
+		//python("appendGo = 1");
+		//python("for aPath in sysPath: \n if(aPath == path): appendGo = 0");
+		//python("if appendGo:\n sys.path.append(path)\n print 'appending %s' % path");
+		
+		python("import renameAsset");
+		python("renameAsset.renameAsset(\""+$assetPath+"\",\""+$newName+"\")");
+		openPipelineUpdateAssetList(1);
+		openPipelineRemoveSecondaryWindows;
+	}
+}
+
+
+//###########################################
+// Name: 					openPipelineNewAssetComponentUI
+// Description: 	Launches the UI for creating a new Component
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineNewAssetComponentUI()
+{
+	if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+	window -t "Create New Component" -w 250 -h 250 op_secondaryUI;
+			columnLayout -w 220 -rs 5 -co "both" 10;
+					text -l "component name (no spaces or special characters):";
+					textField -editable 1 -w 220 op_newComponentNameField;
+					rowLayout -nc 2 -cw2 110 110;
+							button -l "create" -w 110 -c "openPipelineNewComponentRetrieveInfo 1" op_createComponentButton;
+							button -l "cancel" -w 110 -c "openPipelineRemoveSecondaryWindows";
+					setParent..;
+					radioCollection;
+
+					radioButton -w 220 -label "Start with empty Component " -al "left" -sl -onc "button -e -c \"openPipelineNewComponentRetrieveInfo 1\" op_createComponentButton";
+					radioButton -w 220 -label "Export current selection into Component" -al "left" -onc "button -e -c \"openPipelineNewComponentRetrieveInfo 2\" op_createComponentButton";
+					radioButton -w 220 -label "Export current scene into Component" -al "left" -onc "button -e -c \"openPipelineNewComponentRetrieveInfo 3\" op_createComponentButton";
+
+	window -e -w 280 -h 180 op_secondaryUI;
+			showWindow op_secondaryUI;
+}
+
+//###########################################
+// Name: 					openPipelineNewComponentRetrieveInfo
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineCreateNewItem"
+// Input: 				$mode - creation mode for component (see "openPipelineCreateNewItem")
+// Returns: 			none
+//###########################################
+global proc openPipelineNewComponentRetrieveInfo(int $mode)
+{
+	string $compName = strip(`textField -q -tx op_newComponentNameField`);
+	string $selectedItem[] = openPipelineGetCurrentlySelectedItem(2, 2);
+	string $assetType = $selectedItem[0];
+	string $asset = $selectedItem[1];
+	if (!size($asset))
+	{
+		confirmDialog -t "Create New Component Error" -m "No Asset selected. Please select an Asset and try again." -button "OK" ;
+	}
+	else
+	{
+		string $result = openPipelineCreateNewItem(2,$assetType,$asset,$compName,$mode);
+		if (size($result))
+		{
+			openPipelineAssetSelected(1);
+			openPipelineRemoveSecondaryWindows();
+		}
+	}
+}
+
+//###########################################
+// Name: 					openPipelineNewShotComponentUI
+// Description: 	Launches the UI for creating a new Shot Component
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineNewShotComponentUI()
+{
+	if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+	window -t "Create New Component" -w 250 -h 250 op_secondaryUI;
+			columnLayout -w 220 -rs 5 -co "both" 10;
+					text -l "component name (no spaces or special characters):";
+					textField -editable 1 -w 220 op_newComponentNameField;
+					rowLayout -nc 2 -cw2 110 110;
+							button -l "create" -w 110 -c "openPipelineNewShotCompRetrieveInfo 1" op_createComponentButton;
+							button -l "cancel" -w 110 -c "openPipelineRemoveSecondaryWindows";
+					setParent..;
+					radioCollection;
+
+					radioButton -w 220 -label "Start with empty Component " -al "left" -sl -onc "button -e -c \"openPipelineNewShotCompRetrieveInfo 1\" op_createComponentButton";
+					radioButton -w 220 -label "Export current selection into Component" -al "left" -onc "button -e -c \"openPipelineNewShotCompRetrieveInfo 2\" op_createComponentButton";
+					radioButton -w 220 -label "Export current scene into Component" -al "left" -onc "button -e -c \"openPipelineNewShotCompRetrieveInfo 3\" op_createComponentButton";
+
+	window -e -w 280 -h 180 op_secondaryUI;
+			showWindow op_secondaryUI;
+}
+
+//###########################################
+// Name: 					openPipelineNewShotCompRetrieveInfo
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineCreateNewItem"
+// Input: 				$mode - creation mode for shot component (see "openPipelineCreateNewItem")
+// Returns: 			none
+//###########################################
+global proc openPipelineNewShotCompRetrieveInfo(int $mode)
+{
+	string $compName = strip(`textField -q -tx op_newComponentNameField`);
+	string $selectedItem[] = openPipelineGetCurrentlySelectedItem(3, 2);
+	string $sequence = $selectedItem[0];
+	string $shot = $selectedItem[1];
+	if (!size($shot))
+	{
+		confirmDialog -t "Create New Shot Component Error" -m "No Shot selected. Please select a Shot and try again." -button "OK" ;
+	}
+	else
+	{
+		string $result = openPipelineCreateNewItem(3, $sequence, $shot, $compName, $mode);
+		if (size($result))
+		{
+			openPipelineShotSelected(1);
+			openPipelineRemoveSecondaryWindows();
+		}
+	}
+}
+
+//###########################################
+// Name: 					openPipelineNewShotUI
+// Description: 	Launches the UI for creating a new Shot
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineNewShotUI()
+{
+	if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+	window -t "Create New Shot" -w 250 -h 250 op_secondaryUI;
+			columnLayout -w 220 -rs 5 -co "both" 10;
+					text -l "shot name (no spaces or special characters):";
+					textField -editable 1 -w 220 op_newShotNameField;
+					rowLayout -nc 2 -cw2 110 110;
+							button -l "create" -w 110 -c "openPipelineNewShotRetrieveInfo 1" op_createShotButton;
+							button -l "cancel" -w 110 -c "openPipelineRemoveSecondaryWindows";
+					setParent..;
+					radioCollection;
+					radioButton -w 220 -label "Start with empty Shot " -al "left" -sl -onc "button -e -c \"openPipelineNewShotRetrieveInfo 1\" op_createShotButton";
+					radioButton -w 220 -label "Export current selection into Shot" -al "left" -onc "button -e -c \"openPipelineNewShotRetrieveInfo 2\" op_createShotButton";
+					radioButton -w 220 -label "Export current scene into Shot" -al "left" -onc "button -e -c \"openPipelineNewShotRetrieveInfo 3\" op_createShotButton";
+
+	window -e -w 250 -h 180 op_secondaryUI;
+			showWindow op_secondaryUI;
+}
+
+/*
+ // commenting this out because it's being replaced
+//###########################################
+// Name: 					openPipelineNewShotRetrieveInfo
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineCreateNewItem"
+// Input: 				$mode - creation mode for shot (see "openPipelineCreateNewItem")
+// Returns: 			none
+//###########################################
+global proc openPipelineNewShotRetrieveInfo(int $mode)
+{
+	$shotName = strip(`textField -q -tx op_newShotNameField`);
+	string $selectedItem[] = openPipelineGetCurrentlySelectedItem(3, 1);
+	string $sequence = $selectedItem[0];
+	if (!size($sequence))
+	{
+		confirmDialog -t "Create New Shot Error" -m "No Sequence selected. Please select a Sequence and try again." -button "OK" ;
+	}
+	string $result = openPipelineCreateNewItem(3,$sequence,$shotName,"",$mode);
+	if (size($result))
+	{			
+		openPipelineUpdateShotList(1);
+		openPipelineRemoveSecondaryWindows();
+	}
+}
+*/
+
+//###########################################
+// Name: 					openPipelineNewShotRetrieveInfo
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineCreateNewItem"
+// Input: 				$mode - creation mode for shot (see "openPipelineCreateNewItem")
+// Returns: 			none
+//###########################################
+global proc openPipelineNewShotRetrieveInfo(int $mode)
+{
+	$shotName = strip(`textField -q -tx op_newShotNameField`);
+	string $selectedItem[] = openPipelineGetCurrentlySelectedItem(3, 1);
+	string $sequence = $selectedItem[0];
+	if (!size($sequence))
+	{
+		confirmDialog -t "Create New Shot Error" -m "No Sequence selected. Please select a Sequence and try again." -button "OK" ;
+	}
+	string $result = openPipelineCreateNewItem(3,$sequence,$shotName,"",$mode);
+	//kevin
+	op_autoShot;	
+
+
+	if (size($result))
+	{
+		// Commenting out creation of components. In future, we will have different project types and create the appropriate components.
+		/*
+		// Create Shot components
+		string $projType = "default";
+		string $components[] = `openPipelineGetProjectAssetTypeComponents $projType "shot"`;
+		for ( $comp in $components )
+			openPipelineCreateNewItem(3, $sequence, $shotName, $comp, $mode);
+		*/
+		openPipelineUpdateShotList(1);
+		openPipelineRemoveSecondaryWindows();
+	}
+}
+
+
+/*
+ // commenting this out because it's being replaced
+//###########################################
+// Name: 					openPipelineSaveMasterFileGUI
+// Description: 	Launches the UI for Mastering
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineSaveMasterFileGUI()
+{
+	if ( !`openPipelineCheckUser` )
+		return;
+		
+	string $type="";
+	if (`optionVar -ex op_currOpenType`)
+			$type = `optionVar -q op_currOpenType`;
+	if ($type=="workshop")
+	{
+			$switchWidth = 320;
+			$halfSwitchWidth = $switchWidth * 0.5;
+			
+			string $mName = capitalizeString(`optionVar -q "op_masterName"`);
+			string $windowExists = `window -exists op_secondaryUI`;
+			if($windowExists == 1)
+			{
+					deleteUI op_secondaryUI;
+			}
+			window -t ($mName+" File Switchboard") -w $switchWidth -h 200 op_secondaryUI;
+
+			columnLayout -rs 5 -co "both" 10;
+			rowLayout -numberOfColumns 2 -cw2 $halfSwitchWidth $halfSwitchWidth -cl2 "center" "center";
+				// flatten reference...
+				checkBox -label "Import References" -v 1 masterImportReferencesBox;
+
+				// delete layers...
+				checkBox -label "Delete Display Layers" -v 1 masterDeleteLayersBox;
+					
+			setParent..;
+
+			columnLayout -width $switchWidth;
+				radioButtonGrp -numberOfRadioButtons 3 -label "After Master Open:" -labelArray3 "Workshop" "Master" "New" -columnWidth4 100 70 60 60 -columnAlign4 "left" "left" "left" "left" -sl 1 op_afterMasterField;
+
+//					//  open new
+//					//
+//					checkBox -label ("Open New") -v 0 op_masterOpenNewFileBox;
+//					//
+//					// open master for viewing...
+//					// *
+//					checkBox -label ("Open " + $mName) -v 0 masterOpenMasterBox;
+//					//  ...
+			setParent ..;
+
+			columnLayout -co "both" 10;
+					text -l ("Custom " + $mName + " Command:");
+					textField -w 240 op_masterCommandField;
+			setParent ..;
+
+			// notes...
+			rowLayout -numberOfColumns 2 -cw2 60 230 -cl2 "center" "center";
+					text -l "comment: " -w 60 -h 20;
+					scrollField -w 190 -h 40 -ww 1 op_masterCommentField;
+			setParent..;
+
+			rowLayout -numberOfColumns 2 -cw2 $halfSwitchWidth $halfSwitchWidth -cl2 "center" "center";
+					button -w 125 -l $mName -c "openPipelineMasterCallback" -bgc .9 .7 .4;
+					button -w 125 -l "cancel" -c "deleteUI op_secondaryUI;" -bgc .8 .4 .4;
+			setParent..;
+
+			window -e -w $switchWidth -h 200 op_secondaryUI;
+			showWindow op_secondaryUI;
+	}
+	else if ($type == "master")
+	{
+			string $mName = capitalizeString(`optionVar -q "op_masterName"`);
+			confirmDialog -message ("You're currently viewing a "+$mName+" file. Action not possible.") -button "OK" -title "openPipeline message";
+	}
+	else
+			confirmDialog -message ("Nothing is currently open for editing. Action not possible.") -button "OK" -title "openPipeline message";
+}
+ */
+//###########################################
+// Name: 					openPipelineSaveMasterFileGUI
+// Description: 	Launches the UI for Mastering
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineSaveMasterFileGUI()
+{
+	string $type="";
+	if (`optionVar -ex op_currOpenType`)
+			$type = `optionVar -q op_currOpenType`;
+	if ($type=="workshop")
+	{
+			$switchWidth = 320;
+			$halfSwitchWidth = $switchWidth * 0.5;
+			
+			string $mName = capitalizeString(`optionVar -q "op_masterName"`);
+			string $windowExists = `window -exists op_secondaryUI`;
+			if($windowExists == 1)
+			{
+					deleteUI op_secondaryUI;
+			}
+			window -t ($mName+" File Switchboard") -w $switchWidth -h 200 op_secondaryUI;
+
+			columnLayout -rs 5 -co "both" 10;
+			rowLayout -numberOfColumns 2 -cw2 $halfSwitchWidth $halfSwitchWidth -cl2 "center" "center";
+				// flatten reference...
+				checkBox -label "Import References" -v 1 masterImportReferencesBox;
+
+				// delete layers...
+				checkBox -label "Delete Display Layers" -v 1 masterDeleteLayersBox;
+					
+			setParent..;
+
+			columnLayout -width $switchWidth;
+				radioButtonGrp -numberOfRadioButtons 3 -label "After Master Open:" -labelArray3 "Workshop" "Master" "New" -columnWidth4 100 70 60 60 -columnAlign4 "left" "left" "left" "left" -sl 1 op_afterMasterField;
+			//kevin
+			checkBox -label "Export Animation Cache" -v 0  masterExportCacheBox;
+          	   setParent ..;
+			//kevin end
+				
+//					//  open new
+//					//
+//					checkBox -label ("Open New") -v 0 op_masterOpenNewFileBox;
+//					//
+//					// open master for viewing...
+//					// *
+//					checkBox -label ("Open " + $mName) -v 0 masterOpenMasterBox;
+//					//  ...
+			setParent ..;
+
+			columnLayout -co "both" 10;
+					text -l ("Custom " + $mName + " Command:");
+					textField -w 240 op_masterCommandField;
+			setParent ..;
+
+			// notes...
+			rowLayout -numberOfColumns 2 -cw2 60 230 -cl2 "center" "center";
+					text -l "comment: " -w 60 -h 20;
+					scrollField -w 190 -h 40 -ww 1 op_masterCommentField;
+			setParent..;
+
+			rowLayout -numberOfColumns 2 -cw2 $halfSwitchWidth $halfSwitchWidth -cl2 "center" "center";
+					button -w 125 -l $mName -c "openPipelineMasterCallback" -bgc .9 .7 .4;
+					button -w 125 -l "cancel" -c "deleteUI op_secondaryUI;" -bgc .8 .4 .4;
+			setParent..;
+
+			window -e -w $switchWidth -h 200 op_secondaryUI;
+			showWindow op_secondaryUI;
+	}
+	else if ($type == "master")
+	{
+			string $mName = capitalizeString(`optionVar -q "op_masterName"`);
+			confirmDialog -message ("You're currently viewing a "+$mName+" file. Action not possible.") -button "OK" -title "openPipeline message";
+	}
+	else
+			confirmDialog -message ("Nothing is currently open for editing. Action not possible.") -button "OK" -title "openPipeline message";
+}
+
+ // commenting this out because it's being replaced
+//###########################################
+// Name: 					openPipelineMasterCallback
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineSaveMaster"
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineMasterCallback()
+{
+	int $flatten = `checkBox -q -v masterImportReferencesBox`;
+	int $deleteDispLayers = `checkBox -q -v  masterDeleteLayersBox`;
+	string $customCommand = `textField -q -tx op_masterCommandField`;
+	string $comment = `scrollField -q -tx op_masterCommentField`;
+
+	int $after = `radioButtonGrp -q -sl op_afterMasterField`;
+	//kevin
+	int $expAnimCache = `checkBox -q -v  masterExportCacheBox`;
+	if($expAnimCache){
+		op_cacheActions exportCache;
+	}	
+	//kevin end
+
+	
+	//int $openMaster = `checkBox -q -v masterOpenMasterBox`;
+	//int $openNew = `checkBox -q -v op_masterOpenNewFileBox`;
+
+	int $result = openPipelineSaveMaster($comment, $flatten, $deleteDispLayers, $after, $customCommand);
+	if ($result)
+	{
+		openPipelineRemoveSecondaryWindows;
+		openPipelineUpdateCurrentlyOpen;
+	}
+}
+
+/*
+//###########################################
+// Name: 					openPipelineMasterCallback
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineSaveMaster"
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineMasterCallback()
+{
+	string $customCommand = `textField -q -tx op_masterCommandField`;
+	string $comment = `scrollField -q -tx op_masterCommentField`;
+
+	int $after = `radioButtonGrp -q -sl op_afterMasterField`;
+
+	// Get array of checkBox options, after _ is the command like ksClean_option
+	string $checkBoxes[] = `layout -q -ca openPipelineSaveMasterOptionsLayout`;
+	string $cleanOptions[];
+	
+	for ( $checkBox in $checkBoxes )
+	{
+		if ( `checkBox -q -v $checkBox` )
+		{
+			string $option = `substitute "opMasterOptions_" $checkBox ""`;
+			$cleanOptions[`size $cleanOptions`] = $option;
+		}
+	}
+	
+	int $result = openPipelineSaveMasterCustom($comment, $cleanOptions, $after, $customCommand);
+	if ($result)
+	{
+		openPipelineRemoveSecondaryWindows;
+		openPipelineUpdateCurrentlyOpen;
+	}
+}
+*/
+
+//###########################################
+// Name: 					openPipelineSaveWorkshopGUI
+// Description: 	Launches the UI for Saving a Workshop
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineSaveWorkshopGUI()
+{
+	if ( !`openPipelineCheckUser` )
+		return;
+			
+	string $type="";
+	if (`optionVar -ex op_currOpenType`)
+			$type = `optionVar -q "op_currOpenType"`;
+	if ($type=="workshop")
+	{
+			string $wName = capitalizeString(`optionVar -q "op_workshopName"`);
+			string $windowExists = `window -exists op_secondaryUI`;
+			if($windowExists == 1)
+			{
+					deleteUI op_secondaryUI;
+			}
+			window -t ("Save "+$wName) -w 300 -h 85 op_secondaryUI;
+			columnLayout -rs 5 -co "both" 10;
+			// notes...
+			rowLayout -numberOfColumns 2 -cw2 60 230 -cl2 "center" "center";
+					text -l "Note: " -w 60 -h 30;
+					textField -w 200 -h 30 op_saveWorkshopCommentField;
+			setParent..;
+			rowLayout -numberOfColumns 2 -cw2 125 125 -cl2 "center" "center";
+					button -w 130  -h 30 -l ("SAVE "+$wName) -c "openPipelineSaveWorkshopCallback" -bgc .8 .6 .5;
+					button -w 130 -h 30 -l "cancel" -c "deleteUI op_secondaryUI;" -bgc .8 .4 .4;
+			setParent..;
+			window -e -w 280 -h 80 op_secondaryUI;
+			showWindow op_secondaryUI;
+	}
+	else if ($type == "master")
+	{
+			string $mName = capitalizeString(`optionVar -q "op_masterName"`);
+			confirmDialog -message ("You're currently viewing a "+$mName+" file. Action not possible.") -button "OK" -title "openPipeline message";
+	}
+	else
+			confirmDialog -message ("Nothing is currently open for editing. Action not possible.") -button "OK" -title "openPipeline message";
+}
+
+//###########################################
+// Name: 					openPipelineSaveWorkshopCallback
+// Description: 	Retrieves pertinent info from the UI before calling "openPipelineSaveWorkshop"
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineSaveWorkshopCallback()
+{
+	string $comment = `textField -q -tx op_saveWorkshopCommentField`;
+	int $result = openPipelineSaveWorkshop($comment);
+	if ($result)
+	{
+		openPipelineRemoveSecondaryWindows;
+		openPipelineUpdateCurrentlyOpen;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineReviveGUI
+// Description: 	Launches the UI for Reviving an old Workshop
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineReviveGUI()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;		
+	if (size($level1))
+	{
+			string $wName = `optionVar -q "op_workshopName"`;
+			string $workshopFiles[] = openPipelineGetWorkshops($tab, $level1, $level2, $level3, 0);
+			$workshopFiles = sort($workshopFiles);
+			int $numVersions = `size($workshopFiles)`;
+			if ($numVersions)
+			{
+					if(`window -exists op_secondaryUI`)
+							deleteUI op_secondaryUI;
+					window -t ("Revive "+$wName) -w 275 -h 85 op_secondaryUI;
+					columnLayout -rs 5 -co "both" 10;
+
+					// notes...
+					rowLayout -numberOfColumns 2 -cw2 150 50 -cl2 "left" "right";
+							text -l "Select Version to Revive : " -w 130 -h 30 -al "left";
+							optionMenu -w 80 -h 30 -cc openPipelineReviveWorkshopNotesCallback op_reviveVersionMenu;
+									int $i;
+									for ($i=0;$i<$numVersions;$i++)
+									{
+											int $version = openPipelineGetVersionFromFile($workshopFiles[$i]);
+											menuItem -l $version;
+									}
+					setParent..;
+
+					scrollField -editable 0 -wordWrap 1 -text "" -w 260 -h 100 op_reviveWorkshopNotes;
+
+					rowLayout -numberOfColumns 2 -cw2 100 100 -cl2 "center" "center";
+							button -w 100 -l "REVIVE" -c "openPipelineReviveWorkshopCallback;" -bgc .5 .7 .7;
+							button -w 100 -l "cancel" -c "deleteUI op_secondaryUI" -bgc .8 .4 .4;
+					setParent..;
+					optionMenu -e -sl $numVersions op_reviveVersionMenu;
+					window -e -w 275 -h 210 op_secondaryUI;
+					showWindow op_secondaryUI;
+					openPipelineReviveWorkshopNotesCallback;
+			}
+			else
+					warning("openPipelineReviveGUI: No previous "+$wName+" versions exist. Revive not possible.");
+	}
+	else
+			warning("openPipelineReviveGUI: Nothing is currently open for editing. Action not possible.");
+}
+
+//###########################################
+// Name: 					openPipelineReviveWorkshopCallback
+// Description: 	Reads the user input from the Revive window and calls "openPipelineOpenItem" 
+//								with the appropriate parameters to revive an old Workshop.
+// Input: none
+// Returns: none
+//###########################################
+global proc openPipelineReviveWorkshopCallback()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	int $reviveVersion = `optionMenu -q -v op_reviveVersionMenu`;
+	int $latestVersion = openPipelineGetLatestWorkshopVersion($tab, $level1, $level2, $level3);
+	int $versionOffset = $latestVersion-$reviveVersion;
+	int $result = openPipelineOpenItem("workshop", $tab, $level1, $level2, $level3, $versionOffset);
+	if ($result)
+	{
+		openPipelineRemoveSecondaryWindows;
+		openPipelineUpdateCurrentlyOpen;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineAssetInformation
+// Description: 	Updates the Notes box and the Preview box in the Asset Management tab
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineAssetInformation()
+{
+	global string $openPipeline_scriptPath;
+	global string $openPipeline_noPreviewFilename;
+	global string $openPipeline_defaultPreviewFilename;
+	string $outputText;
+	string $previewFile;
+	int $tab = 2;
+	string $currSelected[] = openPipelineGetCurrentlySelectedItem(2, 3);
+	string $level1 = $currSelected[0];
+	string $level2 = $currSelected[1];
+	string $level3 = $currSelected[2];
+	if ($level2=="")
+	{
+			$outputText = "";
+			$previewFile = $openPipeline_scriptPath+"openPipeline/"+$openPipeline_defaultPreviewFilename;
+	}
+	else
+			{
+			$previewFile = openPipelineGetThumbnail($tab, $level1, $level2, $level3);
+			$outputText = openPipelineGetCustomNotes($tab, $level1, $level2, $level3);
+			if (!`filetest -r $previewFile`)
+					$previewFile = $openPipeline_scriptPath+"openPipeline/"+$openPipeline_noPreviewFilename;
+			button -e -en (openPipelineHasPlayblast(2, $level1, $level2, $level3)) op_assetViewPlayblastAssetButton;
+			}
+	string $folder = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	textField -e -tx $folder op_assetLocationField;
+	scrollField -e -text $outputText op_assetNoteField;
+	image -e -i $previewFile -bgc 0 0 0 op_assetPreviewImage;
+}
+
+//###########################################
+// Name: 					openPipelineShotInformation
+// Description: 	Updates the Description box in the Shot Management tab
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineShotInformation()
+{
+	global string $openPipeline_scriptPath;
+	global string $openPipeline_noPreviewFilename;
+	global string $openPipeline_defaultPreviewFilename;
+	string $outputText;
+	string $previewFile;
+	int $tab = 3;
+	string $currSelected[] = openPipelineGetCurrentlySelectedItem(3, 3);
+	string $level1 = $currSelected[0];
+	string $level2 = $currSelected[1];
+	string $level3 = $currSelected[2];
+	if ($level2=="")
+	{
+		$outputText = "";
+		$previewFile = $openPipeline_scriptPath+"openPipeline/"+$openPipeline_defaultPreviewFilename;
+		button -e -en 0 op_shotViewPlayblastButton;
+	}
+	else
+	{
+		$outputText = openPipelineGetCustomNotes($tab, $level1, $level2, $level3);
+		$previewFile = openPipelineGetThumbnail($tab, $level1, $level2, $level3);
+		if (!`filetest -r $previewFile`)
+			$previewFile = $openPipeline_scriptPath+"openPipeline/"+$openPipeline_noPreviewFilename;
+		button -e -en (openPipelineHasPlayblast(3, $level1, $level2, $level3)) op_shotViewPlayblastButton;
+	}
+	string $folder = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	textField -e -tx $folder op_shotLocationField;
+	scrollField -e -text $outputText op_shotInfoField;
+	image -e -i $previewFile -bgc 0 0 0 op_shotPreviewImage;
+}
+
+//###########################################
+// Name: 					openPipelineUpdateShotMenus
+// Description: 	Updates the Pop-up menus of the given shot
+// Input: 				$level1, $level2 - the shot
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateShotMenus(string $level1, string $level2)
+{
+	int $hasMaster = `openPipelineHasMaster 3 $level1 $level2 ""`;
+	int $hasWorkshop = `openPipelineHasWorkshop 3 $level1 $level2 ""`;
+	menuItem -e -en $hasMaster op_shotMenuView;
+	menuItem -e -en $hasMaster op_shotMenuImportMasterOpBox;
+	menuItem -e -en $hasMaster op_shotMenuReferenceMasterOpBox;
+	menuItem -e -en $hasWorkshop op_shotMenuImportWorkshopOpBox;
+	menuItem -e -en $hasWorkshop op_shotMenuReferenceWorkshopOpBox;
+	menuItem -e -en $hasMaster op_shotMenuImportMaster;
+	menuItem -e -en $hasMaster op_shotMenuReferenceMaster;
+	menuItem -e -en $hasWorkshop op_shotMenuImportWorkshop;
+	menuItem -e -en $hasWorkshop op_shotMenuReferenceWorkshop;
+	menuItem -e -en $hasMaster op_shotMenuView2;
+	menuItem -e -en $hasMaster op_shotMenuImportMaster2;
+	menuItem -e -en $hasMaster op_shotMenuReferenceMaster2;
+	menuItem -e -en $hasWorkshop op_shotMenuImportWorkshop2;
+	menuItem -e -en $hasWorkshop op_shotMenuReferenceWorkshop2;
+	menuItem -e -en $hasMaster op_shotMenuImportMasterOpBox2;
+	menuItem -e -en $hasMaster op_shotMenuReferenceMasterOpBox2;
+	menuItem -e -en $hasWorkshop op_shotMenuImportWorkshopOpBox2;
+	menuItem -e -en $hasWorkshop op_shotMenuReferenceWorkshopOpBox2;
+}
+
+//###########################################
+// Name: 					openPipelineUpdateAssetMenus
+// Description: 	Updates the Pop-up menus of the given asset
+// Input: 				$level1, $level2 - the asset
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateAssetMenus(string $level1, string $level2)
+{
+	int $hasMaster = `openPipelineHasMaster 2 $level1 $level2 ""`;
+	int $hasWorkshop = `openPipelineHasWorkshop 2 $level1 $level2 ""`;
+	menuItem -e -en $hasMaster op_assetMenuView;
+	menuItem -e -en $hasMaster op_assetMenuImportMaster;
+	menuItem -e -en $hasMaster op_assetMenuImportMasterOpBox;
+	menuItem -e -en $hasMaster op_assetMenuReferenceMaster;
+	menuItem -e -en $hasMaster op_assetMenuReferenceMasterOpBox;
+	menuItem -e -en $hasWorkshop op_assetMenuImportWorkshop;
+	menuItem -e -en $hasWorkshop op_assetMenuImportWorkshopOpBox;
+	menuItem -e -en $hasWorkshop op_assetMenuReferenceWorkshop;
+	menuItem -e -en $hasWorkshop op_assetMenuReferenceWorkshopOpBox;
+	menuItem -e -en $hasMaster op_assetMenuView2;
+	menuItem -e -en $hasMaster op_assetMenuImportMaster2;
+	menuItem -e -en $hasMaster op_assetMenuImportMasterOpBox2;
+	menuItem -e -en $hasMaster op_assetMenuReferenceMaster2;
+	menuItem -e -en $hasMaster op_assetMenuReferenceMasterOpBox2;
+	menuItem -e -en $hasWorkshop op_assetMenuImportWorkshop2;
+	menuItem -e -en $hasWorkshop op_assetMenuImportWorkshopOpBox2;
+	menuItem -e -en $hasWorkshop op_assetMenuReferenceWorkshop2;
+	menuItem -e -en $hasWorkshop op_assetMenuReferenceWorkshopOpBox2;
+}
+
+//###########################################
+// Name: 					openPipelineUpdateComponentMenus
+// Description: 	Updates the Pop-up menus of the given component
+// Input: 				$level1, $level2, $level3 - the component
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateComponentMenus(string $level1, string $level2, string $level3)
+{
+	int $hasMaster = openPipelineHasMaster(2, $level1, $level2, $level3);
+	int $hasWorkshop = openPipelineHasWorkshop(2, $level1, $level2, $level3);
+	menuItem -e -en $hasMaster op_compMenuView;
+	menuItem -e -en $hasMaster op_compMenuImportMaster;
+	menuItem -e -en $hasMaster op_compMenuReferenceMaster;
+	menuItem -e -en $hasWorkshop op_compMenuImportWorkshop;
+	menuItem -e -en $hasWorkshop op_compMenuReferenceWorkshop;
+	menuItem -e -en $hasMaster op_compMenuImportMasterOpBox;
+	menuItem -e -en $hasMaster op_compMenuReferenceMasterOpBox;
+	menuItem -e -en $hasWorkshop op_compMenuImportWorkshopOpBox;
+	menuItem -e -en $hasWorkshop op_compMenuReferenceWorkshopOpBox;
+	menuItem -e -en $hasMaster op_compMenuView2;
+	menuItem -e -en $hasMaster op_compMenuImportMaster2;
+	menuItem -e -en $hasMaster op_compMenuReferenceMaster2;
+	menuItem -e -en $hasWorkshop op_compMenuImportWorkshop2;
+	menuItem -e -en $hasWorkshop op_compMenuReferenceWorkshop2;
+	menuItem -e -en $hasMaster op_compMenuImportMasterOpBox2;
+	menuItem -e -en $hasMaster op_compMenuReferenceMasterOpBox2;
+	menuItem -e -en $hasWorkshop op_compMenuImportWorkshopOpBox2;
+	menuItem -e -en $hasWorkshop op_compMenuReferenceWorkshopOpBox2;
+}
+
+//###########################################
+// Name: 					openPipelineUpdateShotComponentMenus
+// Description: 	Updates the Pop-up menus of the given shot component
+// Input: 				$level1, $level2, $level3 - the shot component
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateShotComponentMenus(string $level1, string $level2, string $level3)
+{
+	int $hasMaster = openPipelineHasMaster(3, $level1, $level2, $level3);
+	int $hasWorkshop = openPipelineHasWorkshop(3, $level1, $level2, $level3);
+	menuItem -e -en $hasMaster op_shotcompMenuView;
+	menuItem -e -en $hasMaster op_shotcompMenuImportMaster;
+	menuItem -e -en $hasMaster op_shotcompMenuReferenceMaster;
+	menuItem -e -en $hasWorkshop op_shotcompMenuImportWorkshop;
+	menuItem -e -en $hasWorkshop op_shotcompMenuReferenceWorkshop;
+	menuItem -e -en $hasMaster op_shotcompMenuImportMasterOpBox;
+	menuItem -e -en $hasMaster op_shotcompMenuReferenceMasterOpBox;
+	menuItem -e -en $hasWorkshop op_shotcompMenuImportWorkshopOpBox;
+	menuItem -e -en $hasWorkshop op_shotcompMenuReferenceWorkshopOpBox;
+	menuItem -e -en $hasMaster op_shotcompMenuView2;
+	menuItem -e -en $hasMaster op_shotcompMenuImportMaster2;
+	menuItem -e -en $hasMaster op_shotcompMenuReferenceMaster2;
+	menuItem -e -en $hasWorkshop op_shotcompMenuImportWorkshop2;
+	menuItem -e -en $hasWorkshop op_shotcompMenuReferenceWorkshop2;
+	menuItem -e -en $hasMaster op_shotcompMenuImportMasterOpBox2;
+	menuItem -e -en $hasMaster op_shotcompMenuReferenceMasterOpBox2;
+	menuItem -e -en $hasWorkshop op_shotcompMenuImportWorkshopOpBox2;
+	menuItem -e -en $hasWorkshop op_shotcompMenuReferenceWorkshopOpBox2;
+
+	//kevin
+	int $lighting = 0;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	if($level3=="lighting"){
+		$lighting = 1;
+	}
+	menuItem -e -en $lighting op_shotcompMenuflattenAnim;
+	//menuItem -e -en $lighting op_shotcompMenuImportCache;
+	//kevin end	
+
+}
+
+//###########################################
+// Name: 					openPipelineArchiveDialog
+// Description: 	Creates the Archive UI
+// Input: 				$tab, $level - the tab and level of the item to be archived
+// Returns: 			none
+//###########################################
+global proc openPipelineArchiveDialog(int $tab, int $level)
+{
+	string $currSelected[] = openPipelineGetCurrentlySelectedItem($tab, $level);
+	//int $maxWorkshops = openPipelineGetNumWorkshops($tab,$currSelected[0],$currSelected[1],$currSelected[2],0);
+	//int $maxVersions = openPipelineGetNumVersions($tab,$currSelected[0],$currSelected[1],$currSelected[2],0);	
+	string $wName = capitalizeString(`optionVar -q "op_workshopName"`);
+	string $mName = capitalizeString(`optionVar -q "op_masterName"`);
+	string $windowExists = `window -exists op_secondaryUI`;
+	if ($windowExists == 1)
+	{
+			deleteUI op_secondaryUI;
+	}
+	window -t ("Archive - "+$currSelected[0]+": "+$currSelected[1]+": "+$currSelected[2]) -w 400 -h 300 op_secondaryUI;
+	columnLayout -rs 5 -co "both" 10;
+			text -align "left" -font "smallPlainLabelFont" -l ("ARCHIVE: Archiving the selected item will clean up its working directory \nby moving old "+$wName+" files and old "+$mName+" versions to the Archive \nfolder. The most recent " + $mName + " and "+$wName +" files won't be affected \nand version numbers will remain the same.");
+			separator -h 5 -w 370 -style "none";
+	rowLayout -numberOfColumns 2 -cw2 190 190 -cl2 "center" "center";
+			checkBox -label ("Archive "+$wName+" Files") -v 1 -onc "intField -e -en 1 op_archiveField1" -ofc "intField -e -en 0 op_archiveField1" op_archiveWorkshopsCheckBox;
+			checkBox -label ("Archive "+$mName+" Versions") -v 1 -onc "intField -e -en 1 op_archiveField2" -ofc "intField -e -en 0 op_archiveField2" op_archiveVersionsCheckBox;
+	setParent..;
+	rowLayout -numberOfColumns 4 -cw4 110 80 110 80 -cl4 "left" "left" "left" "left";
+	text -l "keep most recent";
+	intField  -v 1 -min 1 /*-max $maxWorkshops*/ -step 1 -w 40 op_archiveField1;
+	text -l "keep most recent";
+	intField -v 1 -min 1 /*-max $maxVersions*/ -step 1 -w 40 op_archiveField2;
+	setParent..;
+	separator -h 5 -w 370 -style "none";
+			button -w 370 -l "Archive" -c ("openPipelineArchiveCallback "+$tab+" \""+$currSelected[0]+"\" "+" \""+$currSelected[1]+"\" "+" \""+$currSelected[2]+"\"") -bgc .6 .7 .9;
+	setParent..;
+	separator -h 10 -w 370 -style "out";
+			text -align "left" -font "smallPlainLabelFont" -l ("RETRIEVE: Retrieving archived files for the current item will return them \nto their original working directories.");
+			separator -h 5 -w 370 -style "none";
+	rowLayout -numberOfColumns 2 -cw2 190 190 -cl2 "center" "center";
+			checkBox -label ("Retrieve "+$wName+" Files") -v 0 op_retrieveWorkshopsCheckBox;
+			checkBox -label ("Retrieve "+$mName+" Versions") -v 0 op_retrieveVersionsCheckBox;
+	setParent..;
+	setParent ..;
+	separator -h 5 -w 370 -style "none";
+			button -w 370 -l "Retrieve" -c ("openPipelineRetrieveCallback "+$tab+" \""+$currSelected[0]+"\" "+" \""+$currSelected[1]+"\" "+" \""+$currSelected[2]+"\"") -bgc 1 1 1;
+	setParent..;
+	separator -h 10 -w 370 -style "out";
+	text -align "left" -font "smallPlainLabelFont" -l ("DELETE: This will move all archived files for this item to the 'deleted' folder.");
+	separator -h 5 -w 370 -style "none";
+	button -w 370 -l "Delete Archive" -en 1 -c ("openPipelineRemoveArchive "+$tab+" \""+$currSelected[0]+"\" "+" \""+$currSelected[1]+"\" "+" \""+$currSelected[2]+"\" ") -bgc 1 .7 .6;
+	separator -h 10 -w 370 -style "out";
+	button -w 370 -l "Close" -c "deleteUI op_secondaryUI;";
+	window -e -w 400 -h 490 op_secondaryUI;
+	showWindow op_secondaryUI;
+}
+
+//###########################################
+// Name: 					openPipelineArchiveCallback
+// Description: 	Retrieves the relevant info from the UI before calling "openPipelineArchiveItem"
+// Input: 				$tab, $level1, $level2, $level3 - the item to archive
+// Returns: 			none
+//###########################################
+global proc openPipelineArchiveCallback(int $tab, string $level1, string $level2, string $level3)
+{
+	int $numWorkshops=0;
+	int $numVersions=0;
+	if (`checkBox -q -v op_archiveWorkshopsCheckBox`)
+		$numWorkshops = `intField  -q -v op_archiveField1`;
+	if (`checkBox -q -v op_archiveVersionsCheckBox`);
+		$numVersions = `intField  -q -v op_archiveField2`;
+	
+	int $result = `openPipelineArchiveItem $tab $level1 $level2 $level3 $numWorkshops $numVersions`;
+	if ($result)
+	{
+		openPipelineRemoveSecondaryWindows();
+		openPipelineUpdateCurrentlyOpen();
+	}
+}
+
+//###########################################
+// Name: 					openPipelineRetrieveCallback
+// Description: 	Retrieves the relevant info from the UI before calling "openPipelineRetrieveArchive"
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			none
+//###########################################
+global proc openPipelineRetrieveCallback(int $tab, string $level1, string $level2, string $level3)
+{
+	int	$doWorkshops = `checkBox -q -v op_retrieveWorkshopsCheckBox`;
+	int	$doVersions = `checkBox -q -v op_retrieveVersionsCheckBox`;
+	int $result = `openPipelineRetrieveArchive $tab $level1 $level2 $level3 $doWorkshops $doVersions`;
+	if ($result)
+	{
+		openPipelineRemoveSecondaryWindows();
+		openPipelineUpdateCurrentlyOpen();
+	}
+}
+
+//###########################################
+// Name: 					openPipelineUpdateWorkingTab
+// Description: 	Updates the optionVar which keeps track of which tab is currently active and refreshes the elements in the tab
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateWorkingTab()
+{
+	int $tab = `tabLayout -q -selectTabIndex op_mainTabLayout`;
+	optionVar -iv "op_currTab" $tab;
+	if ($tab==1)
+			openPipelineUpdateCurrentlyOpen();
+	else if ($tab==2)
+			openPipelineUpdateAssetTypeList();
+	else if ($tab==3)
+			openPipelineUpdateSequenceList();
+}
+
+//###########################################
+// Name: 					openPipelineSaveNote
+// Description: 	Saves the user-specified note of the currently open item
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineSaveNote()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $newText = `scrollField -q -tx op_currNoteField`;
+	openPipelineSetCustomNotes($tab, $level1, $level2, $level3, $newText);
+	button -e -en 0 op_saveNoteButton;
+}
+
+//###########################################
+// Name: 					openPipelineClearNote
+// Description: 	Clears the note of the currently open item
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineClearNote()
+{
+	scrollField  -e -tx "" op_currNoteField;
+	openPipelineSaveNote;
+}
+//###########################################
+// Name: 					openPipelineLoadAssetHistory
+// Description: 	Updates the "History" section of the Asset Management tab, depending on what item is currently selected
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineLoadAssetHistory()
+{
+	string $currSelected[] = openPipelineGetCurrentlySelectedItem(2, 3);
+	string $historyText = `openPipelineGetEventNotes 2 $currSelected[0] $currSelected[1] $currSelected[2]`;
+	scrollField -edit -text $historyText op_commentField;
+}
+
+//###########################################
+// Name: 					openPipelineLoadShotHistory
+// Description: 	Updates the "History" section of the Shot Management tab, depending on what item is currently selected
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineLoadShotHistory()
+{
+	string $currSelected[] = openPipelineGetCurrentlySelectedItem(3, 3);
+	string $historyText = `openPipelineGetEventNotes 3 $currSelected[0] $currSelected[1] $currSelected[2]`;
+	scrollField -edit -text $historyText op_shotCommentField;
+}
+
+//###########################################
+// Name: 					openPipelineLoadCurrentHistory
+// Description: 	Updates the "History" section of the Currently Open tab, depending on what item is currently open
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineLoadCurrentHistory()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $historyText = `openPipelineGetEventNotes $tab $level1 $level2 $level3`;
+	scrollField -edit -text $historyText op_currentAssetNoteField;
+}
+
+//###########################################
+// Name: 					openPipelineClearCurrentHistory
+// Description: 	Clears the "History" section of the Currently Open tab
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineClearCurrentHistory()
+{
+	scrollField -edit -text "" op_currentAssetNoteField;
+}
+
+//###########################################
+// Name: 					openPipelineTakeSnapshot
+// Description: 	Takes a snapshot and saves it as the currently open scene's preview
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineTakeSnapshot()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $image = `openPipelineCreateThumbnail $tab $level1 $level2 $level3`;
+	if (`filetest	-r $image`)
+					image	-e -i	$image -bgc	0	0	0	op_currPreviewImage;
+
+}
+
+//###########################################
+// Name: 					openPipelineRecordCurrentPlayblast
+// Description: 	Records a playblast for the current scene
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineRecordCurrentPlayblast()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	openPipelineRecordPlayblast $tab $level1 $level2 $level3;
+	openPipelineUpdateCurrentlyOpen;
+}
+
+//###########################################
+// Name: 					openPipelineViewPlayblastSelected
+// Description: 	Opens the playblast of the currently selected item from the given tab
+// Input: 				$tab - the tab
+// Returns: 			none
+//###########################################
+global proc openPipelineViewPlayblastSelected(int $tab)
+{
+	string $selectedItem[];
+	$selectedItem = openPipelineGetCurrentlySelectedItem($tab,3);
+	openPipelineViewPlayblast $tab $selectedItem[0] $selectedItem[1] $selectedItem[2];
+}
+
+//###########################################
+// Name: 					openPipelineViewPlayblastCurrent
+// Description: 	Opens the playblast of the currently open item
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineViewPlayblastCurrent()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	openPipelineViewPlayblast($tab, $level1, $level2, $level3);
+}
+
+//###########################################
+// Name: 					openPipelineExploreCurrent
+// Description: 	Explore the folder of the currently open item
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineExploreCurrent()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	openPipelineOpenLocation $tab $level1 $level2 $level3;
+}
+
+//###########################################
+// Name: 					openPipelineExploreCurrent
+// Description: 	Explore the folder of the currently selected item from the given tab
+// Input: 				$tab - the tab
+// Returns: 			none
+//###########################################
+global proc openPipelineExploreSelected(int $tab)
+{
+	string $selectedItem[];
+	$selectedItem = openPipelineGetCurrentlySelectedItem($tab,3);
+	openPipelineOpenLocation $tab $selectedItem[0] $selectedItem[1] $selectedItem[2];
+}
+
+//###########################################
+// Name: 					openPipelineReferenceUI
+// Description: 	Open the Reference UI
+// Input: 				$options - whether to provide additional options or use defaults
+//								$category - the category of the item being referenced
+//								$type - "workshop" or "master"
+// Returns: 			none
+//###########################################
+global proc openPipelineReferenceUI(int $options, string $category, string $type)
+{
+	int $tab;
+	string $itemName, $namespace;
+	string $selectedItem[];
+	if ($category=="component")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(2,3);
+		$itemName = $selectedItem[2];
+		$namespace = $selectedItem[1] + "_" + $selectedItem[2];
+		$tab=2;
+	}
+	else if ($category=="asset")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(2,2);
+		$itemName = $selectedItem[1];
+		$namespace = $selectedItem[1];
+		$tab=2;
+	}
+	else if ($category=="shot")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(3,2);
+		$itemName = $selectedItem[1];
+		$namespace = $selectedItem[1];
+		$tab=3;
+	}
+	else if ($category=="shotComponent")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(3,3);
+		$itemName = $selectedItem[2];
+		$namespace = $selectedItem[1] + "_" + $selectedItem[2];
+		$tab=3;
+	}
+
+	//if name starts with numerical characters, append appropriate letters at the beginning to create a valid namespace for importing and referencing
+	if (!isValidString($namespace, "([a-zA-Z]+)([a-zA-Z0-9_])*"))
+		$namespace = ($category+"_"+$namespace);
+	optionVar -sv op_ns $namespace;
+	if (!`optionVar -ex op_refGr`)
+		optionVar -iv op_refGr 0;
+	if (!`optionVar -ex op_refGl`)
+		optionVar -iv op_refGl 0;
+	if (!`optionVar -ex op_refGn`)
+		optionVar -iv op_refGn 0;
+	if (!`optionVar -ex op_refUseNamespaces`)
+		optionVar -iv op_refUseNamespaces 1;
+	if (!`optionVar -ex op_refSrf`)
+		optionVar -iv op_refSrf 0;
+	if (!`optionVar -ex op_refShd`)
+		optionVar -iv op_refShd 0;
+	if (!`optionVar -ex op_refShdOp1`)
+		optionVar -iv op_refShdOp1 0;
+	if (!`optionVar -ex op_refShdOp2`)
+		optionVar -iv op_refShdOp2 0;
+	if (!`optionVar -ex op_refShdOp3`)
+		optionVar -iv op_refShdOp3 0;
+	if (!`optionVar -ex op_refShdOp4`)
+		optionVar -iv op_refShdOp4 0;
+	if ($options)
+	{
+		if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+		window -t ("Reference "+$category) -w 250 -h 250 op_secondaryUI;
+			columnLayout -w 220 -rs 5 -co "both" 10;
+				text -l ("Referencing: "+$itemName +" ("+$type+")");
+				separator -style "out" -h 5 -w 220;
+				rowLayout -nc 2 -cw2 110 110;
+					checkBox -l "group reference" -v `optionVar -q op_refGr` -cc "openPipelineUpdateReferenceUI" op_groupRefCheckBox;
+					checkBox -l "group under locator" -v `optionVar -q op_refGl` -cc "openPipelineUpdateReferenceUI" op_groupRefLocatorCheckBox;
+					setParent..;
+				separator -style "out" -h 5 -w 220;
+				checkBox -l "use namespace" -v `optionVar -q op_refUseNamespaces` -cc "openPipelineUpdateReferenceUI" op_useNamespacesCheckBox;
+				rowLayout -nc 2 -cw2 75 145;
+					text -l "namespace:";
+					textField  -tx `optionVar -q op_ns` -cc "openPipelineUpdateReferenceUI" -w 145 op_refNamespaceField;
+					setParent..;
+				separator -style "out" -h 5 -w 220;
+				checkBox -l "shared reference" -v `optionVar -q op_refSrf` -cc "openPipelineUpdateReferenceUI" op_shareAllCheckBox;
+				checkBox -l "share select nodes:" -v `optionVar -q op_refShd` -cc "openPipelineUpdateReferenceUI" op_shareSelectCheckBox;
+				rowLayout -nc 2 -cw2 130 90;
+					checkBox -l "display layers" -v `optionVar -q op_refShdOp1` -cc "openPipelineUpdateReferenceUI" op_shareDisLayersCheckBox;
+					checkBox -l "shading networks" -v `optionVar -q op_refShdOp2` -cc "openPipelineUpdateReferenceUI" op_shareShadingCheckBox;
+					setParent..;
+				rowLayout -nc 2 -cw2 130 90;
+					checkBox -l "render layers by name" -v `optionVar -q op_refShdOp3` -cc "openPipelineUpdateReferenceUI" op_shareRenLayersByNameCheckBox;
+					checkBox -l "render layers by ID" -v `optionVar -q op_refShdOp4` -cc "openPipelineUpdateReferenceUI" op_shareRenLayersByIdCheckBox;
+					setParent..;
+				separator -style "out" -h 10 -w 220;
+				rowLayout -nc 2 -cw2 110 110;	
+					button -l "Reference" -w 110 -c ("openPipelineReferenceCallback "+$tab+" \""+$selectedItem[0]+"\" \""+$selectedItem[1]+"\" \""+$selectedItem[2]+"\" "+$type);
+					button -l "Cancel" -w 110 -c "openPipelineRemoveSecondaryWindows";
+				setParent..;
+		window -e -w 270 -h 320 op_secondaryUI;
+		showWindow op_secondaryUI;
+		openPipelineUpdateReferenceUI;
+	}
+	else
+	{
+		eval("openPipelineReferenceCallback "+$tab+" \""+$selectedItem[0]+"\" \""+$selectedItem[1]+"\" \""+$selectedItem[2]+"\" "+$type);
+	}
+}
+
+//###########################################
+// Name: 					openPipelineReferenceCallback
+// Description: 	Retrieve the relevant info from the UI before calling "openPipelineReferenceItem"
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$type - "workshop" or "master"
+// Returns: 			none
+//###########################################
+global proc openPipelineReferenceCallback(int $tab, string $level1, string $level2, string $level3, string $type)
+{
+	  string $sharedFlags="";
+    if (`optionVar -q op_refShdOp1`)
+    	$sharedFlags+="-shd displayLayers ";
+    if (`optionVar -q op_refShdOp2`)
+    	$sharedFlags+="-shd shadingNetworks ";
+    if (`optionVar -q op_refShdOp3`)
+     	$sharedFlags+="-shd renderLayersByName ";
+    if (`optionVar -q op_refShdOp4`)
+     	$sharedFlags+="-shd renderLayersById ";
+    string $flags = "";
+    $flags+=$sharedFlags;
+    if (`optionVar -q op_refGr`)
+    	$flags+="-gr ";
+    if (`optionVar -q op_refGl`)
+    	$flags+="-gl ";
+    if (`optionVar -q op_refUseNamespaces`)
+       $flags+="-ns "+ `optionVar -q op_ns` + " ";
+    if (`optionVar -q op_refSrf`)
+       $flags+="-srf ";	
+    int $result = openPipelineReferenceItem($type, $tab, $level1, $level2, $level3, $flags);
+    if ($result)
+    	openPipelineRemoveSecondaryWindows;
+}
+
+//###########################################
+// Name: 					openPipelineUpdateReferenceUI
+// Description: 	Update the Reference UI
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateReferenceUI()
+{
+	if (`checkBox -q -v op_groupRefCheckBox`)
+	{
+		checkBox -e -en 1 op_groupRefLocatorCheckBox;
+		optionVar -iv op_refGr 1;
+	}
+	else
+	{
+		checkBox -e -en 0 op_groupRefLocatorCheckBox;
+		optionVar -iv op_refGr 0;
+	}
+	if (`checkBox -q -v op_useNamespacesCheckBox`)
+	{
+		textField -e -en 1 op_refNamespaceField;
+		checkBox -e -en 1 op_shareAllCheckBox;
+		optionVar -iv op_refUseNamespaces 1;
+		checkBox -e -en 1 op_shareSelectCheckBox;
+	}
+	else
+	{
+		textField -e -en 0 op_refNamespaceField;
+		checkBox -e -en 0 op_shareAllCheckBox;
+		checkBox -e -en 0 op_shareSelectCheckBox;
+		optionVar -iv op_refUseNamespaces 0;
+	}
+	if (`checkBox -q -v op_shareAllCheckBox`&&`checkBox -q -en op_shareAllCheckBox`)
+	{
+		checkBox -e -en 0 op_shareSelectCheckBox;
+		optionVar -iv op_refSrf 1;
+	}
+	else
+	{
+		if (`checkBox -q -v op_useNamespacesCheckBox`)
+		checkBox -e -en 1 op_shareSelectCheckBox;
+		optionVar -iv op_refSrf 0;
+	}
+	if (`checkBox -q -v op_shareSelectCheckBox`&&`checkBox -q -en op_shareSelectCheckBox`)
+	{
+		checkBox -e -en 0 op_shareAllCheckBox;
+		optionVar -iv op_refShd 1;
+		if (`checkBox -q -v op_shareRenLayersByNameCheckBox`)
+			checkBox -e -en 0 op_shareRenLayersByIdCheckBox;
+		else
+			checkBox -e -en 1 op_shareRenLayersByIdCheckBox;
+		if (`checkBox -q -v op_shareRenLayersByIdCheckBox`)
+			checkBox -e -en 0 op_shareRenLayersByNameCheckBox;
+		else
+			checkBox -e -en 1 op_shareRenLayersByNameCheckBox;
+		checkBox -e -en 1 op_shareDisLayersCheckBox;
+		checkBox -e -en 1 op_shareShadingCheckBox;
+		optionVar -iv op_refShdOp1 `checkBox -q -v op_shareDisLayersCheckBox`;
+		optionVar -iv op_refShdOp2 `checkBox -q -v op_shareShadingCheckBox`;
+		optionVar -iv op_refShdOp3 `checkBox -q -v op_shareRenLayersByNameCheckBox`;
+		optionVar -iv op_refShdOp4 `checkBox -q -v op_shareRenLayersByIdCheckBox`;
+	}
+	else
+	{
+		if (`checkBox -q -v op_useNamespacesCheckBox`)
+			checkBox -e -en 1 op_shareAllCheckBox;
+		optionVar -iv op_refShd 0;
+		checkBox -e -en 0 op_shareDisLayersCheckBox;
+		checkBox -e -en 0 op_shareShadingCheckBox;
+		checkBox -e -en 0 op_shareRenLayersByNameCheckBox;
+		checkBox -e -en 0 op_shareRenLayersByIdCheckBox;
+		optionVar -iv op_refShdOp1 0;
+		optionVar -iv op_refShdOp2 0;
+		optionVar -iv op_refShdOp3 0;
+		optionVar -iv op_refShdOp4 0;
+		$sharedFlag = "";
+	}
+	if (`checkBox -q -v op_groupRefLocatorCheckBox`&&`checkBox -q -en op_groupRefLocatorCheckBox`)
+	{
+		optionVar -iv op_refGl 1;
+	}
+	else
+	{
+		optionVar -iv op_refGl 0;
+	}
+	optionVar -sv op_ns (`textField  -q -tx op_refNamespaceField`);
+}
+
+//###########################################
+// Name: 					openPipelineImportUI
+// Description: 	Open the Import UI
+// Input: 				$options - whether to provide additional options or use defaults
+//								$category - the category of the item being imported
+//								$type - "workshop" or "master"
+// Returns: 			none
+//###########################################
+global proc openPipelineImportUI(int $options, string $category, string $type)
+{
+	int $tab;
+	string $itemName;
+	string $selectedItem[];
+	if ($category=="component")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(2,3);
+		$itemName = $selectedItem[2];
+		$tab=2;
+	}
+	else if ($category=="asset")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(2,2);
+		$itemName = $selectedItem[1];
+		$tab=2;
+	}
+	else if ($category=="shot")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(3,2);
+		$itemName = $selectedItem[1];
+		$tab=3;
+	}
+	else if ($category=="shotComponent")
+	{
+		$selectedItem = openPipelineGetCurrentlySelectedItem(3,3);
+		$itemName = $selectedItem[2];
+		$tab=3;
+	}
+	string $namespace = $itemName;;
+	//if name starts with numerical characters, append appropriate letters at the beginning to create a valid namespace for importing and referencing
+	if (!isValidString($namespace, "([a-zA-Z]+)([a-zA-Z0-9_])*"))
+		$namespace = ($category+"_"+$namespace);
+
+	optionVar -sv op_impNs $namespace;
+	if (!`optionVar -ex op_impGr`)
+		optionVar -iv op_impGr 0;
+	if (!`optionVar -ex op_impPr`)
+		optionVar -iv op_impPr 1;
+	if (!`optionVar -ex op_impUseNamespaces`)
+		optionVar -iv op_impUseNamespaces 1;
+	if (!`optionVar -ex op_impRenameAll`)
+		optionVar -iv op_impRenameAll 0;
+	if ($options)
+	{
+		if(`window -exists op_secondaryUI`)
+			deleteUI op_secondaryUI;
+		window -t ("Import "+$category) -w 250 -h 250 op_secondaryUI;
+			columnLayout -w 220 -rs 5 -co "both" 10;
+				text -l ("Importing: "+$itemName+" ("+$type+")");
+				separator -style "out" -h 5 -w 220;
+				rowLayout -nc 2 -cw2 110 110;
+					checkBox -l "group" -v `optionVar -q op_impGr` -cc "openPipelineUpdateImportUI" op_groupImpCheckBox;
+					checkBox -l "preserve references" -v `optionVar -q op_impPr` -cc "openPipelineUpdateImportUI" op_impPreserveRefsCheckBox;
+					setParent..;
+				separator -style "out" -h 5 -w 220;
+				checkBox -l "use namespace" -v `optionVar -q op_impUseNamespaces` -cc "openPipelineUpdateImportUI" op_impUseNamespacesCheckBox;
+				rowLayout -nc 2 -cw2 75 145;
+					text -l "namespace:";
+					textField  -tx `optionVar -q op_impNs` -w 145 op_impNamespaceField;
+					setParent..;
+				separator -style "out" -h 5 -w 220;
+				checkBox -l "rename all nodes" -v `optionVar -q op_impRenameAll` -cc "openPipelineUpdateImportUI" op_impRenameAll;
+				separator -style "out" -h 10 -w 220;
+				rowLayout -nc 2 -cw2 110 110;
+					button -l "Import" -w 110 -c ("openPipelineImportCallback "+$tab+" \""+$selectedItem[0]+"\" \""+$selectedItem[1]+"\" \""+$selectedItem[2]+"\" "+$type);
+					button -l "Cancel" -w 110 -c "openPipelineRemoveSecondaryWindows";
+					setParent..;
+		window -e -w 270 -h 320 op_secondaryUI;
+		showWindow op_secondaryUI;
+		openPipelineUpdateImportUI;
+	}
+	else
+		eval("openPipelineImportCallback "+$tab+" \""+$selectedItem[0]+"\" \""+$selectedItem[1]+"\" \""+$selectedItem[2]+"\" "+$type);
+}
+
+//###########################################
+// Name: 					openPipelineImportCallback
+// Description: 	Retrieve the relevant info from the UI before calling "openPipelineImportItem"
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$type - "workshop" or "master"
+// Returns: 			none
+//###########################################
+global proc openPipelineImportCallback(int $tab, string $level1, string $level2, string $level3, string $type)
+{
+	string $flags = "";
+	if (`optionVar -q op_impGr`)
+    	$flags+="-gr ";
+    if (`optionVar -q op_impPr`)
+    	$flags+="-pr ";
+    if (`optionVar -q op_impUseNamespaces`)
+				$flags+="-ns "+ `optionVar -q op_impNs`+" ";
+  	if (`optionVar -q op_impRenameAll`)
+  		$flags+="-ra ";
+  	int $result = openPipelineImportItem($type, $tab, $level1, $level2, $level3, $flags);
+    if ($result)
+    	openPipelineRemoveSecondaryWindows;
+}
+
+//###########################################
+// Name: 					openPipelineUpdateImportUI
+// Description: 	Update the Import UI
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineUpdateImportUI()
+{
+	if (`checkBox -q -v op_groupImpCheckBox`)
+		optionVar -iv op_impGr 1;
+	else
+		optionVar -iv op_impGr 0;
+	if (`checkBox -q -v op_impPreserveRefsCheckBox`)
+		optionVar -iv op_impPr 1;
+	else
+		optionVar -iv op_impPr 0;
+	if (`checkBox -q -v op_impUseNamespacesCheckBox`)
+	{
+		optionVar -iv op_impUseNamespaces 1;
+		textField -e -editable 1 op_impNamespaceField;
+		optionVar -sv op_impNs `textField -q -tx op_impNamespaceField`;
+	}
+	else
+	{
+		optionVar -iv op_impUseNamespaces 0;
+		textField -e -editable 0 op_impNamespaceField;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineRemoveProcess
+// Description: 	Finds the currently selected item and calls "openPipelineRemoveItem" on it
+// Input: 				$tab, $depth - the tab and depth to look at when finding the selected item
+// Returns: 			none
+//###########################################
+global proc openPipelineRemoveProcess(int $tab, int $depth)
+{
+	string $currSelected[] = openPipelineGetCurrentlySelectedItem($tab, $depth);
+	int $result = `openPipelineRemoveItem $tab $currSelected[0] $currSelected[1] $currSelected[2]`;
+	if ($result)
+	{
+		openPipelineUpdateCurrentlyOpen;
+		openPipelineUpdateAssetTypeList();
+		openPipelineUpdateSequenceList();
+	}
+}
+
+//###########################################
+// Name: 					openPipelineCloseCurrent
+// Description: 	Calls "openPipelineCloseFile" and updates the appropriate parts of the UI
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineCloseCurrent()
+{
+	int $result = openPipelineCloseFile();
+	if ($result)
+	{
+		openPipelineUpdateShotList(1);
+		openPipelineUpdateAssetList(1);
+		openPipelineUpdateCurrentlyOpen();
+	}
+}
+
+//###########################################
+// Name: 					openPipelineOpenCurrentlySelected
+// Description: 	Finds the currently selected item and calls "openPipelineOpenItem" on it
+// Input: 				$tab, $depth - the tab and depth to look at when finding the selected item
+// Returns: 			none
+//###########################################
+global proc openPipelineOpenCurrentlySelected(int $tab, int $level, string $type, int $versionOffset)
+{
+	string $levels[] = openPipelineGetCurrentlySelectedItem($tab, $level);
+	int $result = openPipelineOpenItem($type, $tab, $levels[0], $levels[1], $levels[2], $versionOffset);
+	if ($result)
+	{
+		openPipelineUpdateAssetList(1);
+		openPipelineUpdateShotList(1);
+		openPipelineUpdateCurrentlyOpen();
+
+		// Switch tabs to show currently open
+		tabLayout -e -sti 1 op_mainTabLayout;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineReviveWorkshopNotesCallback
+// Description: 	Updates the notes in the "Revive Workshop" dialog depending on the version the user has selected.
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineReviveWorkshopNotesCallback()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $notePath = `openPipelineGetFileName $tab $level1 $level2 $level3 "historyFile" 0 0`;
+	string $outputString[];
+	string $selectedVersionNumber = `optionMenu -q -v op_reviveVersionMenu`;
+	int $version = $selectedVersionNumber;
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $assetNoteTextArray[] = `openPipelineReadNotesByEvent $notePath $wName`;
+	string $notes[] = `openPipelineCullNotesByVersion $assetNoteTextArray $version`;
+	// format string for display...
+	int $i=0;
+	for($note in $notes)
+	{
+		$outputString[$i] = openPipelineFormatXML($note);
+		$i++;
+	}
+	string $assetNoteText = stringArrayToString($outputString, "");
+	scrollField -edit -text $assetNoteText op_reviveWorkshopNotes;
+}
+
+
+
+
+global proc int openPipelineCheckUser()
+{
+	global string $openPipeline_userName;
+	// Check / Warn about default user
+	if ( $openPipeline_userName == "default" )
+	{
+		if ( `confirmDialog -title "Saving as default user" -message "Are you sure you want to save as 'default'?\n\nThis dialog won't show up if you\nchoose a user"
+		    -button "Yes" -button "No" -defaultButton "Yes"
+		    -cancelButton "No" -dismissString "No"` != "Yes" )
+		    return false;
+	}	
+
+	return true;
+}
+
+
+global proc openPipelineSaveMasterFileToggleCustomCommand()
+{
+	int $state = `checkBox -q -v op_masterCommandToggle`;
+	textField -e -enable $state op_masterCommandField;
+}
+
+global proc string openPipelineSaveMasterFileCreateOptions( string $parent, string $level1, string $level2, string $level3 )
+{
+	setParent $parent;
+	
+	string $layout = `scrollLayout`;
+		columnLayout openPipelineSaveMasterOptionsLayout;
+		// Setup default checkboxes
+		// Options are a list like {'action', 'label'}
+		string $defaultOptions[] = `openPipelineGetMasterCleanOptions`;
+		for ( $i = 0; $i < `size $defaultOptions`; $i+=2 )
+			checkBox -v 1 -l $defaultOptions[$i+1] ("opMasterOptions_" + $defaultOptions[$i]);
+
+		// Turn on / off checkBoxes based on current assetType / Component
+		string $projType = "default";
+		string $options[] = `openPipelineGetProjectAssetTypeComponentsMasteringOptions $projType $level1 $level3`;
+		if ( `size $options` > 0 )
+		{
+			for ( $option in $options )
+			{
+				// Since by default, everything's on, any option will turn off
+				checkBox -e -v 0 ("opMasterOptions_" + $option);	
+			}
+		}
+		
+	return $layout;	
+}
+
+global proc checkAllSaveMasterOptions(int $checkVal)
+{
+	$checkBoxChildren = `layout -q -childArray openPipelineSaveMasterOptionsLayout`;
+	for ($child in $checkBoxChildren)
+		if (`checkBox -q -exists $child`)
+			checkBox -e -v $checkVal $child;
+}
+
+// Procedure to verify mastering is considered ok to continue
+// Includes dialog box with override
+global proc int openPipelineSaveMasterFilePreCheck()
+{
+	global string $openPipelineFixMasterIssues[];
+	clear $openPipelineFixMasterIssues;
+	
+	string $issuesMessage;
+	string $issues[];
+	// Check textures
+	//string $fixTextures[] = `ksClean_texturePaths`;
+	//if ( `size $fixTextures` > 0 )
+	//{
+	//	$issues[`size $issues`] = "texturePaths";
+	//	$issuesMessage += "Must remap textures to master!\n";
+	//}
+	
+	if ( `size $issuesMessage` > 0 )
+	{
+		if ( `confirmDialog -title "Pre-Check Warnings" 
+				-message ("You should resolve these issues before continuing.\n\n" + $issuesMessage + "\nCheck script editor for details.")
+    			-button "Ignore + Master" -button "Cancel + Fix" -defaultButton "Cancel + Fix"
+    			-cancelButton "Cancel + Fix" -dismissString "Cancel + Fix"` == "Cancel + Fix" )
+    	{
+			// User chose to fix issues, bring up issue fix ui
+			$openPipelineFixMasterIssues = $issues;
+			if ( `layoutDialog -ui "openPipelineFixMasterIssuesPrompt"` == "dismiss" )
+				return false;	
+    	}
+	}
+	
+	return true;
+}
+
+
+
+//###########################################
+// Name: 					openPipelineSaveMaster
+// Description: 	Saves a master for the currently open item
+// Input: 				$comment - a comment to accompany the version being mastered
+//								$$cleanOptions - array of functions defined by ksClean_FUNCTION
+//								$openMaster - whether to open the master file after saving
+//								$customCommand - an optional custom mel command to execute before mastering
+// Returns: 			success - 1  failure - 0
+//###########################################
+global proc int openPipelineSaveMasterCustom(string $comment, string $cleanOptions[], int $after, string $customCommand)
+{
+	string $ext = `optionVar -q "op_masterFormat"`;
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $masterName = `optionVar -q "op_masterName"`;
+	string $masterFile = openPipelineGetFileName($tab,$level1,$level2,$level3,"master",0,0);
+	string $destinationFile = openPipelineGetFileName($tab,$level1,$level2,$level3,"nextVersion",0,0);
+	openPipelineSaveWorkshop($comment);
+	sysFile -rename $destinationFile $masterFile;
+
+	// Peform cleanup command for each option
+	for ( $option in $cleanOptions )
+		catch(`ksCleanType $option`);	
+
+	if($customCommand != "")
+	{
+		print ("openPipeline: begin custom command " + $customCommand + "\n");
+		evalEcho $customCommand;
+		print ("openPipeline: end custom command " + $customCommand + "\n");
+	}
+	// save the current file to the master location
+	file -rename $masterFile;
+	
+	string $type;
+	if ($ext == "ma")
+	    $type = "mayaAscii";
+	else if ($ext == "mb")
+	    $type = "mayaBinary";
+	else
+	{
+	    $type = "mayaBinary";
+	    warning ("openPipelineSaveMaster: Invalid file format ("+$ext+")specified: saving to Maya Binary");
+	}   
+	file -save -type $type;
+
+	if($after == 1)
+	{
+		openPipelineOpenItem("workshop", $tab, $level1, $level2, $level3, 0);
+	}else if($after == 2){
+		optionVar -sv "op_currOpenType" "master";
+	}else if($after == 3){
+		openPipelineCloseCurrent;
+		file -new;
+	}
+
+	openPipelineAddEventNote($tab, $level1, $level2, $level3, $masterName, 0, $comment);
+	return 1;
+}
+
+
+// Basic UI to add / remove users in global list
+global proc openPipelineProjEditUsers()
+{
+	if ( `window -exists openPipelineEditUsersUI` ) deleteUI openPipelineEditUsersUI;
+	string $window = `window -w 338 -h 229 -mnb 0 -mxb 0 -title "Add / Remove Users" openPipelineEditUsersUI`;
+	string $form = `formLayout`;
+	string $list = `textScrollList -allowMultiSelection true openPipelineEditUsersList`;
+	string $users[] = `openPipelineGetUsers`;
+	for ($user in $users)
+		textScrollList -e -append $user openPipelineEditUsersList;
+
+	string $addUsrBtn = `button -w 100 -l "Add user" -c "openPipelineEditUsersAdd"`;
+	string $removeUserBtn = `button -w 100 -l "Remove Selected" -c "openPipelineEditUsersRemove"`;
+	string $closeBtn = `button -w 100 -l "Close" -c "deleteUI openPipelineEditUsersUI"`;
+
+	formLayout -e
+		-af $list "top" 0 
+		-af $list "left" 0
+		-af $list "right" 0
+		-ac $list "bottom" 0 $addUsrBtn
+		
+		-af $addUsrBtn "left" 0
+		-af $addUsrBtn "bottom" 0
+		-ap $addUsrBtn "right" 0 33
+	
+		-ap $removeUserBtn "left" 0 33
+		-af $removeUserBtn "bottom" 0
+		-ap $removeUserBtn "right" 0 66
+	
+		-ap $closeBtn "left" 0 66
+		-af $closeBtn "right" 0
+		-af $closeBtn "bottom" 0
+		$form;
+		
+	showWindow $window;
+}
+
+global proc openPipelineEditUsersAdd()
+{
+	// Ask for Name
+	string $name;
+	string $result = `promptDialog
+	    -title "Add User"
+	    -message "Enter Name:"
+	    -button "OK" -button "Cancel"
+	    -defaultButton "OK" -cancelButton "Cancel"
+	    -dismissString "Cancel"`;
+	
+	if ($result != "OK")
+		return;
+		
+	// Get Name
+	$name = `promptDialog -query -text`;
+	
+	// Add user to list and fileId
+	textScrollList -e -append $name openPipelineEditUsersList;
+	
+	// Update main file
+	string $users[] = `textScrollList -q -ai openPipelineEditUsersList`;
+	openPipelineEditUsersSaveFile $users;
+	
+	// If openPipelineEditUsersUI was accessed through openPipelineProjSetUsersPrompt
+	// (via openPipelineProjDialog), update that UI to reflect new user list
+	if ( `window -exists openPipelineUsersPromptUI` ) {
+		textScrollList -e -removeAll openPipelineProjSetUsersPromptUserList;
+		string $users[] = `openPipelineGetUsers`;
+		for ($user in $users)
+			textScrollList -e -append $user openPipelineProjSetUsersPromptUserList;
+	}
+}
+
+global proc openPipelineEditUsersRemove()
+{
+	// Remove selected users from list and main file
+	string $selected[] = `textScrollList -q -si openPipelineEditUsersList`;
+	for ( $sel in $selected )
+		textScrollList -e -ri $sel openPipelineEditUsersList;	
+	
+	// Update main file
+	string $users[] = `textScrollList -q -ai openPipelineEditUsersList`;
+	openPipelineEditUsersSaveFile $users;
+	
+	// If openPipelineEditUsersUI was accessed through openPipelineProjSetUsersPrompt
+	// (via openPipelineProjDialog), update that UI to reflect new user list
+	if ( `window -exists openPipelineUsersPromptUI` ) {
+		textScrollList -e -removeAll openPipelineProjSetUsersPromptUserList;
+		string $users[] = `openPipelineGetUsers`;
+		for ($user in $users)
+			textScrollList -e -append $user openPipelineProjSetUsersPromptUserList;
+	}
+}
+
+// Updates user.xml file with $users, overwrites existing
+global proc openPipelineEditUsersSaveFile( string $users[] )
+{
+	global string $openPipeline_projectFilePath;
+	string $usersFile = $openPipeline_projectFilePath+"openPipeline_users.xml";
+	
+	$fileId = `fopen $usersFile "w"`;
+	for ( $user in $users )
+		fprint $fileId ($user + "\n");
+	fclose $fileId;
+}
+
+// Read the users.xml file
+global proc string[] openPipelineGetUsers()
+{
+	global string $openPipeline_projectFilePath;
+	string $usersFile =  $openPipeline_projectFilePath+"openPipeline_users.xml";
+	
+	$fileId = `fopen $usersFile "r"`;
+	string $nextLine = `fgetline $fileId`;
+	string $users[];
+	while ( size( $nextLine ) > 0 ) {
+	    $users[`size $users`] = strip($nextLine);
+	    $nextLine = `fgetline $fileId`;
+	}
+	fclose $fileId;
+	
+	return $users;
+}
+
+global proc openPipelineUpdateUser()
+{
+	global string $openPipeline_userName;
+	global string $op_userNameMenu;
+	$openPipeline_userName = `optionMenu -q -v $op_userNameMenu`;
+	optionVar -sv "op_currentUser" $openPipeline_userName;
+}
+
+
+/*
+// Creates a framLayout for fixing each issue
+// Clean button should delete layout if delete is successful
+// IssuesUI will return true / false based on if layouts exist still
+global proc string openPipelineFixMasterIssueLayout( string $parent, string $issue )
+{
+	setParent $parent;
+	string $layout = `frameLayout -cll 1 -label $issue -labelAlign "top" -borderStyle "in"`;
+	switch( $issue )
+	{
+		case "texturePaths":
+			columnLayout;
+				text -label "Copy textures into project";
+				button -w 100 -l "FIX" -c ("if ( `openPipelineFixMasterIssue " + $issue + "`) deleteUI " + $layout);
+				break;
+	}
+	
+	return $layout;
+}
+
+
+global proc int openPipelineFixMasterIssue( string $issue )
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	
+	switch( $issue )
+	{
+		case "texturePaths":
+			string $fileNodes[] = `ksClean_texturePaths`;
+			string $assetTextureFolder = `openPipelineGetFileName $tab $level1 $level2 "" "folder" 0 0` + "textures";
+			for ( $fileNode in $fileNodes )
+			{
+				string $file = `getAttr ($fileNode + ".ftn")`;
+				string $fileName = `basename $file ""`;
+				string $destFile = $assetTextureFolder + "/" + $fileName;
+				print ("Copying file: " + $file + " to " + $destFile + "\n");
+				if ( !`sysFile -copy $destFile $file` )
+					continue;
+					
+				// Update fileTextureNode
+				setAttr -type "string" ($fileNode + ".ftn") $destFile;									
+			}
+			return true;
+	}	
+	
+	return false;
+}
+
+
+
+global proc openPipelineFixMasterIssuesPrompt()
+{
+	global string $openPipelineFixMasterIssues[];
+	
+    // Get the dialog's formLayout.
+    //
+    string $form = `setParent -q`;
+	formLayout -e -w 150 -h 200 $form;
+	
+    string $label = `text -l "Fix issues preventing mastering."`;
+    string $issuesLayout = `columnLayout`;
+	for ($issue in $openPipelineFixMasterIssues)
+		openPipelineFixMasterIssueLayout $issuesLayout $issue;
+
+	setParent $form;
+    string $cancelBtn = `button -w 100 -l "Cancel" -c "layoutDialog -dismiss \"dismiss\""`;
+    string $setBtn = `button -w 100 -l "Done" -c ("openPipelineFixMasterIssuesPromptDone \"" + $issuesLayout + "\"")`;
+
+	formLayout -e
+		-af $label "top" 0
+		-af $label "left" 0
+		-af $label "right" 0
+		
+		-ac $issuesLayout "top" 0 $label
+		-af $issuesLayout "left" 0
+		-af $issuesLayout "right" 0
+		-ac $issuesLayout "bottom" 0 $cancelBtn
+		
+		-af $cancelBtn "left" 0
+		-af $cancelBtn "bottom" 0
+		
+		-af $setBtn "right" 0
+		-af $setBtn "bottom" 0
+		$form;
+		
+	formLayout -e -w 200 -h 140 $form;
+}
+
+
+global proc openPipelineFixMasterIssuesPromptDone( string $layout )
+{
+	// Checks if any layouts exist, sends "done" only if no layouts exist
+	if ( size(`layout -q -ca $layout`) > 0 )
+	{
+		layoutDialog -dismiss "dismiss";
+		return;
+	}
+
+	layoutDialog -dismiss "done";	
+}
+
+*/

@@ -1,0 +1,131 @@
+// ---------------------------------------------------------------------
+// brTransferWeightsProperties.res.mel
+// ---------------------------------------------------------------------
+
+displayString -replace
+              -value "Transfer affects only the selected vertices. When off only unselected vertices are affected."
+              m_brTransferWeightsProperties.kAffectSelected;
+
+displayString -replace
+              -value "The color of the brush circle."
+              m_brTransferWeightsProperties.kColor;
+
+displayString -replace
+              -value "No falloff"
+              m_brTransferWeightsProperties.kCurveNone;
+
+displayString -replace
+              -value "Linear falloff"
+              m_brTransferWeightsProperties.kCurveLinear;
+
+displayString -replace
+              -value "Smooth falloff"
+              m_brTransferWeightsProperties.kCurveSmooth;
+
+displayString -replace
+              -value "Narrow falloff"
+              m_brTransferWeightsProperties.kCurveNarrow;
+
+displayString -replace
+              -value "The number of overlapping surfaces considered for transferring in surface mode."
+              m_brTransferWeightsProperties.kDepth;
+
+displayString -replace
+              -value "The index of the first overlapping surface considered for transferring in surface mode."
+              m_brTransferWeightsProperties.kDepthStart;
+
+displayString -replace
+              -value "Displays the brush circle while transferring."
+              m_brTransferWeightsProperties.kDrawBrush;
+
+displayString -replace
+              -value ("Applies the transfer to the current selection with the strength value. " +
+                      "When only the mesh is selected the entire mesh will be considered.")
+              m_brTransferWeightsProperties.kFlood;
+
+displayString -replace
+              -value ("Extends the transfer or selection across a shell boundary by trying to " +
+                      "find an equivalent vertex on a neighbouring shell boundary in surface mode.")
+              m_brTransferWeightsProperties.kKeepShellsTogether;
+
+displayString -replace
+              -value "The line width of the brush display."
+              m_brTransferWeightsProperties.kLineWidth;
+
+displayString -replace
+              -value "The type of in-view message to display while the tool is active."
+              m_brTransferWeightsProperties.kMessage;
+
+displayString -replace
+              -value ("Replace the current weight instead of adding the weight from the source influence " +
+                      "to the existing weight.")
+              m_brTransferWeightsProperties.kReplace;
+
+displayString -replace
+              -value ("Reverse the order of source and destination influences for the transfer.")
+              m_brTransferWeightsProperties.kReverse;
+
+displayString -replace
+              -value "The radius of the brush in which vertices are transferred."
+              m_brTransferWeightsProperties.kSize;
+
+displayString -replace
+              -value "The overall strength of the brush."
+              m_brTransferWeightsProperties.kStrength;
+
+displayString -replace
+              -value ("The maximum distance to find an equivalent vertex on a neighbouring " +
+                      "shell boundary in surface mode.")
+              m_brTransferWeightsProperties.kTolerance;
+
+displayString -replace
+              -value "Evaluates only every nth drag iteration. Higher values lead to a staggered evaluation."
+              m_brTransferWeightsProperties.kUndersampling;
+
+displayString -replace
+              -value ("Enables the volume mode where weights are transferred based on the vertex distance. " +
+                      "Since it's volume based the weights can also spread across shells and nearby surfaces. " +
+                      "When off the weights are transferred based on the connected neighbours in surface mode.")
+              m_brTransferWeightsProperties.kVolume;
+
+
+displayString -replace
+              -value ("Transfer all weights to the destination influence and replace the previous values. " +
+                      "Brute force version of flood.")
+              m_brTransferWeightsProperties.kAbsolute;
+
+displayString -replace
+              -value "Display tool tips for all tool settings."
+              m_brTransferWeightsProperties.kAnnotations;
+
+displayString -replace
+              -value "Enter search string. Use + for combinations."
+              m_brTransferWeightsProperties.kSearch;
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2021 Ingo Clemens, brave rabbit
+// brTransferWeights is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------

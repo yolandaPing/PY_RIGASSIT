@@ -1,0 +1,1055 @@
+// openPipeline Actions
+//
+//These procedures provide all of the main functionality of openPipeline. 
+//This includes the creation and management of projects, shots and assets.
+
+// Note: Parameters with the names "$tab, $level1, $level2, $level3" always describe an item. 
+// 	The $tab integer refers to the Asset Inventory tab (2) or the Shot Inventory tab (3)
+// 	The three $level strings describe the hierarchy of an item, for example "characters" "bob" "model" 
+//	$level strings can be left blank, for example "props" "spatula" ""
+
+
+//###########################################
+// Name: 					openPipelineActivateProject
+// Description: 	Selects a project to work in.
+// Input: 				$projName - the name of the project
+// Returns: 			success - 1, failure - 0
+//###########################################
+global proc int openPipelineActivateProject(string $projName)
+{
+	string $projXml = openPipelineGetSingleProjectXml($projName);
+	string $projPath = openPipelineGetXmlData($projXml, "path");
+	$projPath = `openPipelineAddSlash $projPath`;
+	if (`filetest -d $projPath`)
+	{
+		string $projLib = openPipelineGetXmlData($projXml, "libraryfolder");
+		string $projShots = openPipelineGetXmlData($projXml, "scenesfolder");
+		string $projScripts = openPipelineGetXmlData($projXml, "scriptsfolder");
+		string $projRenders = openPipelineGetXmlData($projXml, "rendersfolder");
+		string $projParticles = openPipelineGetXmlData($projXml, "particlesfolder");
+		string $projTextures = openPipelineGetXmlData($projXml, "texturesfolder");
+		string $projArchive = openPipelineGetXmlData($projXml, "archivefolder");
+		string $projDeleted = openPipelineGetXmlData($projXml, "deletedfolder");
+		string $projMFormat = openPipelineGetXmlData($projXml, "masterformat");
+		string $projWFormat = openPipelineGetXmlData($projXml, "workshopformat");
+		string $projMName = openPipelineGetXmlData($projXml, "mastername");
+		string $projWName = openPipelineGetXmlData($projXml, "workshopname");
+			
+		string $projUsers = openPipelineGetXmlData($projXml, "users");
+		
+		string $libPath = ($projPath + $projLib + "/");
+		string $shotPath = ($projPath + $projShots + "/");
+		string $scriptsPath = ($projPath + $projScripts + "/");
+		string $rendersPath = ($projPath + $projRenders + "/");
+		string $particlesPath = ($projPath + $projParticles + "/");
+		string $texturesPath = ($projPath + $projTextures + "/");
+		string $archivePath="";
+		string $deletePath="";
+		if (`filetest -d $projArchive`)
+			$archivePath = $projArchive;
+		else	
+			$archivePath = ($projPath + $projArchive);
+		$archivePath = `openPipelineAddSlash $archivePath`;
+		if (`filetest -d $projDeleted`)
+			$deletePath = $projDeleted;
+		else	
+			$deletePath = ($projPath + $projDeleted + "/");
+		$deletePath = `openPipelineAddSlash $deletePath`;
+		optionVar -sv "op_currProjectName" $projName;
+		optionVar -sv "op_currProjectPath" $projPath;
+		optionVar -sv "op_libPath" $libPath;
+		optionVar -sv "op_shotPath" $shotPath;
+		optionVar -sv "op_scriptsPath" $scriptsPath;
+		optionVar -sv "op_rendersPath" $rendersPath;
+		optionVar -sv "op_particlesPath" $particlesPath;
+		optionVar -sv "op_texturesPath" $texturesPath;
+		optionVar -sv "op_masterFormat" $projMFormat;
+		optionVar -sv "op_workshopFormat" $projWFormat;
+		optionVar -sv "op_masterName" $projMName;
+		optionVar -sv "op_workshopName" $projWName;
+		optionVar -sv "op_deletePath" $deletePath;
+		optionVar -sv "op_archivePath" $archivePath;
+
+		optionVar -sv "op_users" $projUsers;
+		
+		if (size($projScripts))
+		{
+			openPipelineSourceModule $scriptsPath;
+			//workspace -rt "mel" $projScripts;
+			workspace -fileRule "mel" $projScripts;  //kevin
+		}
+		//workspace -ot "scene" $projShots;
+		workspace -fileRule "scene" $projShots;   //kevin
+		if (size($projTextures))
+			//workspace -rt "textures" $projTextures;
+			workspace -fileRule "textures" $projTextures;  //kevin
+		if (size($projParticles))
+			//workspace -rt "particles" $projParticles;
+			workspace -fileRule "particles" $projParticles;  //kevin
+		if (size($projRenders))
+			//workspace -rt "renderScenes" $projRenders;
+			workspace -fileRule "renderScenes" $projRenders;  //kevin
+
+		setProject $projPath;
+		return 1;
+	}
+	else
+	{
+		warning ("openPipelineSelectProject: Couldn't select project "+$projName+". Path "+$projPath+" couldn't be found.");
+		return 0;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineCreateOrEditProject
+// Description: 	Creates a new project or edits the properties of an existing project.
+// Input: 				$mode - 0 to create a new project, 1 to edit an existing project
+//								$oldName - if editing a project, the name of the project to edit
+//								$new____ - the remaining parameters correspond to the various 
+//								properties of the project, such as name, path and sub-folder names
+// Returns: 			success - 1, failure - 0
+//###########################################
+global proc int openPipelineCreateOrEditProject(int $mode, string $oldName, string $newName, string $newPath, string $newDescription, 
+int $newStatus, string $newDate, string $newDeadline, string $newMasterName, string $newMasterFormat, string $newWorkshopName, 
+string $newWorkshopFormat, string $newLibraryLocation, string $newShotLocation, string $newRendersLocation, string $newScriptsLocation, 
+string $newTexturesLocation, string $newParticlesLocation, string $newArchiveLocation, string $newDeletedLocation, string $newUsers, string $userMode)
+{
+	string $projType = "default";
+	string $activeProjectName = `optionVar -q "op_currProjectName"`;
+	string $projData[] = openPipelineGetProjectsData();
+	//input validation
+	string $error = "";
+	string $modeName[] = {"created","edited"};
+	if (size($newName)>22)//
+	    $error += "Project name cannot exceed 22 characters.\n";
+	if (size($newMasterName)>18)
+	    $error += "Master name cannot exceed 18 characters.\n";
+    if (size($newWorkshopName)>18)
+	    $error += "Workshop name cannot exceed 18 characters.\n";
+	if (size($newLibraryLocation)>22)
+	    $error += "Library sub-folder name cannot exceed 22 characters.\n";
+	if (size($newShotLocation)>22)
+	    $error += "Shot sub-folder name cannot exceed 22 characters.\n";
+	if (size($newScriptsLocation)>22)
+	    $error += "Scripts sub-folder name cannot exceed 22 characters.\n";
+ 	if (size($newRendersLocation)>22)
+	    $error += "Renders sub-folder name cannot exceed 22 characters.\n";
+ 	if (size($newParticlesLocation)>22)
+	    $error += "Particles sub-folder name cannot exceed 22 characters.\n";
+ 	if (size($newTexturesLocation)>22)
+	    $error += "Textures sub-folder name cannot exceed 22 characters.\n";
+	if (size($newDate)>18)
+	    $error += "Date cannot exceed 18 characters.\n";
+	if (size($newDeadline)>18)
+	    $error += "Deadline exceeds 18 characters.\n";
+	if (size($newDescription)>250)
+	    $error += "Description exceeds 250 characters.\n";
+	    
+	$testPath = `python("'"+$newPath+"'.rstrip('"+$newName+"')")`;
+	// print ("here is our test path '"+$testPath+"'");
+	python("import os\n");
+	if (!python("os.path.exists('"+$testPath+"')"))
+	   $error += "Project path is not valid (a valid path is required).\n";
+	
+	if (!isValidString($newName,"([a-zA-Z0-9_])*"))
+	    $error += "Project name is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newMasterName,"([a-zA-Z0-9_])*"))
+	    $error += "Master name is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newWorkshopName,"([a-zA-Z0-9_])*"))
+	    $error += "Workshop name is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newLibraryLocation,"([a-zA-Z0-9_])*"))
+	    $error += "Library sub-folder is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newShotLocation,"([a-zA-Z0-9_])*"))
+	    $error += "Shot sub-folder is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newTexturesLocation,"([a-zA-Z0-9_])*"))
+	    $error += "Textures sub-folder is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newScriptsLocation,"([a-zA-Z0-9_])*"))
+	    $error += "Scripts sub-folder is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newRendersLocation,"([a-zA-Z0-9_])*"))
+	    $error += "Renders sub-folder is not valid (remove spaces and special characters ).\n";
+	if (!isValidString($newParticlesLocation,"([a-zA-Z0-9_])*"))
+	    $error += "Particles sub-folder is not valid (remove spaces and special characters ).\n";
+	$newPath = `openPipelineAddSlash $newPath`;
+	string $testFolders[] = {$newParticlesLocation,$newRendersLocation,$newScriptsLocation,$newTexturesLocation,$newShotLocation,$newLibraryLocation,$newArchiveLocation,$newDeletedLocation};
+	if (`openPipelineArrayHasRepeats $testFolders`)
+		$error += "Sub-folders must have unique names.";
+	string $archiveFolderTest = `openPipelineAddSlash $newArchiveLocation`;
+	string $deletedFolderTest = `openPipelineAddSlash $newDeletedLocation`;
+	$testFolders = {$newPath+$newParticlesLocation+"/",$newPath+$newRendersLocation+"/",$newPath+$newScriptsLocation+"/",$newPath+$newTexturesLocation+"/",$newPath+$newShotLocation+"/",$newPath+$newLibraryLocation+"/",$archiveFolderTest,$deletedFolderTest, $newPath};
+	if (`openPipelineArrayHasRepeats $testFolders`)
+		$error += "Paths must be unique.\n";
+	int $result = `openPipelineCreateNewFolder $newPath`;
+	if ($result)
+	{
+		$result = `openPipelineCreateNewFolder $newArchiveLocation`;
+		if (!$result)
+		{
+			$result = `openPipelineCreateNewFolder ($newPath+$newArchiveLocation)`;
+			if (!$result)
+				$error += "Archive Path is invalid. It does not exist and could not be created.\n";
+		}
+		$result = `openPipelineCreateNewFolder $newDeletedLocation`;
+		if (!$result)
+		{
+			$result = `openPipelineCreateNewFolder ($newPath+$newDeletedLocation)`;
+			if (!$result)
+				$error += "Deleted Items Path is invalid. It does not exist and could not be created.\n";
+		}
+		$result = `openPipelineCreateNewFolder ($newPath+$newLibraryLocation)`;
+		if (!$result)
+				$error += "Asset Library Sub-folder is invalid. It does not exist and could not be created.\n";
+		$result = `openPipelineCreateNewFolder ($newPath+$newShotLocation)`;
+		if (!$result)
+				$error += "Shot Library Sub-folder is invalid. It does not exist and could not be created.\n";
+		$result = `openPipelineCreateNewFolder ($newPath+$newTexturesLocation)`;
+		if (!$result)
+				$error += "Textures Sub-folder is invalid. It does not exist and could not be created.\n";
+		$result = `openPipelineCreateNewFolder ($newPath+$newRendersLocation)`;
+		if (!$result)
+				$error += "Renders Sub-folder is invalid. It does not exist and could not be created.\n";
+		$result = `openPipelineCreateNewFolder ($newPath+$newScriptsLocation)`;
+		if (!$result)
+				$error += "Scripts Sub-folder is invalid. It does not exist and could not be created.\n";
+		$result = `openPipelineCreateNewFolder ($newPath+$newParticlesLocation)`;
+		if (!$result)
+				$error += "Particles Sub-folder is invalid. It does not exist and could not be created.\n";
+	}
+	else
+		$error += "Project Path is invalid. It does not exist and could not be created.\n";
+	int $i=0;
+  int $found=0;
+  string $currProjName;
+  while ((!$found) && ($i<size($projData)))
+  {
+    $currProjName = openPipelineGetXmlData($projData[$i],"name");
+    if (($newName==$currProjName)&&($currProjName != $oldName))
+    {
+      $found=1;
+  	}
+  	$i++;
+  }        
+	if ($found)
+	{
+		$error+="Project name already exists. Please try a different name.";   
+	}
+	//end of input validation
+
+	//if input is valid
+	if (size($error)==0)
+	{
+    	string $newLine = "<name>" + $newName + "</name>" +
+    	                  "<path>" + $newPath + "</path>" +
+    	                  "<description>" + $newDescription + "</description>" +
+    	                  "<date>" + $newDate + "</date>" +
+    	                  "<deadline>" + $newDeadline + "</deadline>" +
+    	                  "<status>" + $newStatus + "</status>" +
+    	                  "<mastername>" + $newMasterName + "</mastername>" +
+    	                  "<masterformat>" + $newMasterFormat + "</masterformat>" +
+    	                  "<workshopname>" + $newWorkshopName + "</workshopname>" +
+    	                  "<workshopformat>" + $newWorkshopFormat + "</workshopformat>" +
+    	                  "<libraryfolder>" + $newLibraryLocation + "</libraryfolder>" +
+    	                  "<scenesfolder>" + $newShotLocation + "</scenesfolder>" +
+    	                  "<archivefolder>" + $newArchiveLocation + "</archivefolder>"+
+    	                  "<deletedfolder>" + $newDeletedLocation + "</deletedfolder>"+
+    	                  "<scriptsfolder>" + $newScriptsLocation + "</scriptsfolder>"+
+    	                  "<rendersfolder>" + $newRendersLocation + "</rendersfolder>"+
+    	                  "<particlesfolder>" + $newParticlesLocation + "</particlesfolder>"+
+    	                  "<texturesfolder>" + $newTexturesLocation + "</texturesfolder>"+
+    	                  "<users>" + $newUsers + "</users>"+
+    	                  "<userMode>" + $userMode + "</userMode>";
+    	int $index;
+    	//create new project mode
+    	if (!$mode)
+    	    $index = size($projData);
+    	//edit existing project mode
+    	else
+    	{
+        	int $i=0;
+    	    int $found=0;
+        	while ((!$found) && ($i<size($projData)))
+        	    {
+        	        string $currProjName = openPipelineGetXmlData($projData[$i],"name");
+        	        if ($currProjName == $oldName)
+        	        	$found=1;
+        	        $i++;
+    	    }
+    	    $index = $i-1;
+    	    if (!$found)
+    	    {
+    	    	error("openPipelineCreateOrEditProject: Couldn't edit Project. Can't find Project with name \""+$oldName+"\".");
+    	    	return 0;
+    	    }
+    	}
+    	$projData[$index] = $newLine;
+    	openPipelineRewriteProjFile($projData);
+    	if ($activeProjectName==$oldName)
+    	{
+    		optionVar -sv "op_currProjectName" $newName;
+    		openPipelineActivateProject $newName;
+    	}
+    	print("Project "+$modeName[$mode]+".\n");
+    	return 1;
+	}
+	//if input isn't valid
+	else
+	{
+	    string $error_msg = "openPipeline error - Project could not be "+$modeName[$mode]+" because:\n"+$error;
+	    error $error_msg;
+	    return 0;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineRemoveProject
+// Description: 	Removes a project. This will not delete any files, but will remove
+//								the project and its properties from the openPipeline project list.
+// Input: 				$projName - the name of the project.
+// Returns: 			success - 1, failure - 0
+//###########################################
+global proc int openPipelineRemoveProject(string $projName)
+{
+	string $currProjectName = `optionVar -q "op_currProjectName"`;
+	string $projectsData[] = openPipelineGetProjectsData();
+	string $newProjectsData[];
+	int $i=0;
+	int $removed=0;
+	for ($project in $projectsData)
+	{
+		string $currProjName = openPipelineGetXmlData($project,"name");
+		if ($currProjName != $projName)
+		{
+		  $newProjectsData[$i] = $project;   
+		  $i++;
+		}
+		else
+		{
+		 	$removed = 1;
+		}
+	}
+	if ($removed)
+	{
+		if ($currProjectName == $projName)
+			optionVar -sv "op_currProjectName" "";
+		optionVar -sv "op_currProjectPath" "";
+		openPipelineRewriteProjFile($newProjectsData);
+	}
+	else
+		warning ("openPipelineRemoveProject: Couldn't remove project "+$projName+". Project not found.");
+	return $removed;
+}
+
+//###########################################
+// Name: 					openPipelineCreateNewItem
+// Description: 	Creates a new item within the currently active project
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$mode - 1: empty scene, 2:export selected as first workshop, 3:export all as first workshop
+// Returns: 			success - the path of the created item. failure - an empty string.
+//###########################################
+global proc string openPipelineCreateNewItem(int $tab, string $level1, string $level2, string $level3, int $mode)
+{
+	string $error = "";
+	string $itemPath = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	int $depth = `openPipelineGetDepth $level1 $level2 $level3`;
+	string $itemName = `basename $itemPath ""`;
+	string $parentPath = `openPipelineGetFileName $tab $level1 $level2 $level3 "parentFolder" 0 0`;
+	string $versionFolder = `openPipelineGetFileName $tab $level1 $level2 $level3 "versionFolder" 0 0`;
+	string $componentFolder = `openPipelineGetFileName $tab $level1 $level2 $level3 "componentFolder" 0 0`;
+	string $noteFolder = `openPipelineGetFileName $tab $level1 $level2 $level3 "noteFolder" 0 0`;
+	string $workshopFolder = `openPipelineGetFileName $tab $level1 $level2 $level3 "workshopFolder" 0 0`;
+	string $destinationFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "nextWorkshop" 0 0`;
+	string $category = openPipelineGetCategory($tab, $level1, $level2, $level3);
+	string $wName = `optionVar -q "op_workshopName"`;
+	if ($depth&&size($itemPath))
+	{
+		if (!isValidString($itemName, "([a-zA-Z0-9_])*"))
+			$error+="Invalid "+interToUI($category)+" Name (no special characters or spaces allowed).\n";
+		else if (`filetest -d $itemPath`)
+			$error+=(interToUI($category)+" \""+$itemName+"\" already exists!\n");
+		else if (!`filetest -d $parentPath`)
+		{
+			if ($depth==2)
+				openPipelineCreateNewItem $tab $level1 "" "" 1;
+			else if ($depth==3)
+				openPipelineCreateNewItem $tab $level1 $level2 "" 1;
+			else
+				$error+=("Item\""+$parentPath+"\" doesn't exist. Can't create new "+interToUI($category)+" under it.\n");
+		}
+		if(size($error))
+		{
+			warning("openPipelineCreateNewItem: "+$error);
+			return "";
+		}
+	 	else
+	 	{
+			sysFile -makeDir $itemPath;
+			
+			if ($depth==2)
+				sysFile -makeDir $componentFolder;
+			if ($depth>1)
+			{
+				sysFile -makeDir $workshopFolder;
+				sysFile -makeDir $versionFolder;	
+				sysFile -makeDir $noteFolder;
+				optionVar -sv "op_creationPath" ($itemPath+"/");
+				optionVar -sv "op_creationType" $category;
+				openPipelineAddEventNote($tab, $level1, $level2, $level3, "created",0, "");
+				string $ext = `optionVar -q "op_workshopFormat"`;
+				string $fileType;
+				if ($ext=="mb")
+					$fileType = "mayaBinary";
+				else if ($ext=="ma")
+					$fileType = "mayaAscii";
+				if ($mode==2)
+				{
+					//export selected as first workshop
+					file -exportSelected -type $fileType $destinationFile;
+					openPipelineAddEventNote($tab, $level1, $level2, $level3, $wName, 1, ("Selection exported as first "+$wName+" file."));
+				}
+				else if ($mode==3)
+				{
+					//export all as first workshop
+					file -exportAll -pr -type $fileType -ch 1 -chn 1 -con 1 -exp 1 -sh 1 $destinationFile;
+					openPipelineAddEventNote($tab, $level1, $level2, $level3, $wName, 1, ("Scene exported as first "+$wName+" file."));
+				}
+				openPipelineSetCustomNotes $tab $level1 $level2 $level3 " ";
+			}
+	 		return $itemPath;
+	 	}
+	}
+	else
+	{
+		warning "openPipelineCreateNewItem: Parameters incorrect, no new item created.";
+		return "";
+	}
+}
+
+//###########################################
+// Name: 					openPipelineOpenItem
+// Description: 	Opens an item for editing.
+// Input: 				$type - "workshop" or "master"
+//								$tab, $level1, $level2, $level3 - the item
+//								$versionOffset - if opening a workshop, the offset from the latest version
+//																 (use 0 for latest version)
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineOpenItem(string $type, int $tab, string $level1, string $level2, string $level3, int $versionOffset)
+{
+	string $folder = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	int $depth = `openPipelineGetDepth $level1 $level2 $level3`;
+	if (($depth>1)&&(`filetest -d $folder`)&&($type=="workshop"||$type=="master"))
+	{
+		int $version = 0;
+		string $currLevel1 = `optionVar -q op_currOpenLevel1`;
+		if ((`file -q -mf`)&&(size($currLevel1)))
+		{		
+			string $confirm;
+			string $wName = `optionVar -q "op_workshopName"`;
+			$confirm = `confirmDialog -t "openPipeline" -m ("Would you like to Save "+$wName+" before editing Asset?") -b "Save" -b "Don't Save" -b "Cancel" -db "Save"`;
+			if ($confirm==("Save"))
+				openPipelineSaveWorkshop "saved before opening new item";
+			else if ($confirm=="Cancel")
+				return 0;
+		}
+		string $fileToOpen = `openPipelineGetFileName $tab $level1 $level2 $level3 $type $versionOffset 0`;
+		string $latestWorkshop = `openPipelineGetFileName $tab $level1 $level2 $level3 $type 0 0`;
+		string $category = `openPipelineGetCategory $tab $level1 $level2 $level3`;
+		if (`filetest -r $fileToOpen`)
+		{
+			$version = openPipelineGetVersionFromFile($fileToOpen);
+			//kevin
+			//file -f -open $fileToOpen;
+			file -f -ignoreVersion -open $fileToOpen;
+		}
+		else if (($type=="workshop")&&(!`filetest -r $latestWorkshop`))
+		{
+			string $choice = `confirmDialog -t "Edit Asset" -m "You are about to edit an item for the first time. Would you like to start with an new scene, or the currently open scene?" -b "New Scene" -b "Current Scene" -b "Cancel" -cb "Cancel" -db "Current Scene"`;
+			if ($choice=="New Scene")
+				file -f -new;
+			else if ($choice=="Cancel")
+				return 0;
+		}
+		else
+		{
+			warning ("openPipelineOpenItem: File Not Found \n");
+			return 0; // failure
+		}
+		optionVar -sv "op_currOpenType" $type;
+		optionVar -iv "op_currOpenVersion" $version;
+		optionVar -sv "op_currOpenCategory" $category;
+		optionVar -sv "op_currOpenLevel1" $level1;
+		optionVar -sv "op_currOpenLevel2" $level2;
+		optionVar -sv "op_currOpenLevel3" $level3;
+		optionVar -iv "op_currOpenTab" $tab;
+	}
+	else
+	{
+		warning ("openPipelineOpenItem: Invalid command or Item doesn't exist. \n");
+		return 0;
+	}
+	return 1 ;
+}
+
+//###########################################
+// Name: 					openPipelineImportItem
+// Description: 	Import item into the current scene.
+// Input: 				$type - "workshop" or "master"
+//								$tab, $level1, $level2, $level3 - the item
+//								$flags - additional flags for the import command
+// Returns: 			success - the path of the created item. failure - an empty string.
+//###########################################
+global proc int openPipelineImportItem(string $type, int $tab, string $level1, string $level2, string $level3, string $flags)
+{
+	string $file = openPipelineGetFileName($tab,$level1,$level2,$level3,$type,0,0);
+	if (`filetest -f $file`)
+	{      
+    string $impCmd = "file -import "+$flags+" ";
+   	$impCmd+=("\""+$file+"\"");
+    //-options "v=0;p=17"
+    string $result =`eval $impCmd`;
+		return 1;
+	}
+	else
+	{
+		warning("openPipelineImportItem: Could not find file to import/reference: "+$file);
+		return 0;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineReferenceItem
+// Description: 	Reference item into the current scene.
+// Input: 				$type - "workshop" or "master"
+//								$tab, $level1, $level2, $level3 - the item
+//								$flags - additional flags for the reference command
+// Returns: 			success - the path of the created item. failure - an empty string.
+//###########################################
+global proc int openPipelineReferenceItem(string $type, int $tab, string $level1, string $level2, string $level3, string $flags)
+{
+	string $file = openPipelineGetFileName($tab,$level1,$level2,$level3,$type,0,0);
+	
+	if (`filetest -f $file`)
+	{      
+    string $refCmd = "file -reference "+$flags+" ";
+   	$refCmd+=("\""+$file+"\"");
+    //-options "v=0;p=17"
+    string $result =`eval $refCmd`;
+		return 1;
+	}
+	else
+	{
+		warning("openPipelineReferenceItem: Could not find file to import/reference: "+$file);
+		return 0;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineSaveWorkshop
+// Description: 	Saves a workshop for the currently open item
+// Input: 				$note - an optional note to accompany the version about to be saved
+// Returns: 			success - 1  failure - 0
+//###########################################
+global proc int openPipelineSaveWorkshop(string $note)
+{
+	string $ext = `optionVar -q "op_workshopFormat"`;
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	
+	string $destinationFile = openPipelineGetFileName($tab,$level1,$level2,$level3,"nextWorkshop",0,0);
+	// save the current file to the new location
+	file -rename $destinationFile;     
+	string $type;
+	if ($ext == "ma")
+	    $type = "mayaAscii";
+	else if ($ext == "mb")
+	    $type = "mayaBinary";
+	else
+	{
+	    $type = "mayaBinary";
+	    warning ("openPipelineSaveWorkshop: Invalid file format ("+$ext+") specified: saving to Maya Binary");
+	}
+	file -save -type $type;
+	int $latestVersion = openPipelineGetVersionFromFile($destinationFile);
+	optionVar -iv "op_currOpenVersion" ($latestVersion);
+	openPipelineAddEventNote($tab, $level1, $level2, $level3, $wName, $latestVersion, $note);
+	//kevin
+	op_cacheActions geoCacheSet ;
+	
+	return 1;
+}
+
+//###########################################
+// Name: 					openPipelineSaveMaster
+// Description: 	Saves a master for the currently open item
+// Input: 				$comment - a comment to accompany the version being mastered
+//								$flatten - whether to flatten references before mastering
+//								$deleteDispLayers - whether to delete display layers before mastering
+//								$openMaster - whether to open the master file after saving
+//								$customCommand - an optional custom mel command to execute before mastering
+// Returns: 			success - 1  failure - 0
+//###########################################
+global proc int openPipelineSaveMaster(string $comment, int $flatten, int $deleteDispLayers, int $after, string $customCommand)
+{
+	string $ext = `optionVar -q "op_masterFormat"`;
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $masterName = `optionVar -q "op_masterName"`;
+	string $masterFile = openPipelineGetFileName($tab,$level1,$level2,$level3,"master",0,0);
+	string $destinationFile = openPipelineGetFileName($tab,$level1,$level2,$level3,"nextVersion",0,0);
+	openPipelineSaveWorkshop($comment);
+	sysFile -rename $destinationFile $masterFile;
+	if($flatten)
+	{
+		openPipelineImportRefs;
+	}
+	if ($deleteDispLayers)
+	{
+		string $layers[] = `ls -type displayLayer`;
+		for($layer in $layers)
+		{
+			if($layer != "defaultLayer")
+			{
+				delete $layer;
+			}
+		}
+	}
+	if($customCommand != "")
+	{
+		print ("openPipeline: begin custom command " + $customCommand + "\n");
+		evalEcho $customCommand;
+		print ("openPipeline: end custom command " + $customCommand + "\n");
+	}
+	// save the current file to the master location
+	file -rename $masterFile;
+	
+	string $type;
+	if ($ext == "ma")
+	    $type = "mayaAscii";
+	else if ($ext == "mb")
+	    $type = "mayaBinary";
+	else
+	{
+	    $type = "mayaBinary";
+	    warning ("openPipelineSaveMaster: Invalid file format ("+$ext+")specified: saving to Maya Binary");
+	}   
+	file -save -type $type;
+
+	if($after == 1)
+	{
+		openPipelineOpenItem("workshop", $tab, $level1, $level2, $level3, 0);
+	}else if($after == 2){
+		optionVar -sv "op_currOpenType" "master";
+	}else if($after == 3){
+		openPipelineCloseCurrent;
+		file -new;
+	}
+
+	openPipelineAddEventNote($tab, $level1, $level2, $level3, $masterName, 0, $comment);
+	return 1;
+}
+
+//###########################################
+// Name: 					openPipelineRemoveItem
+// Description: 	Moves the files and folders under the selected item to the "deleted" folder
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineRemoveItem(int $tab, string $level1, string $level2, string $level3)
+{
+	int $depth = `openPipelineGetDepth $level1 $level2 $level3`;
+	string $currLevel1 = `optionVar -q op_currOpenLevel1`;
+	string $currLevel2 = `optionVar -q op_currOpenLevel2`;
+	string $currLevel3 = `optionVar -q op_currOpenLevel3`;
+	int $currTab = `optionVar -q op_currOpenTab`;
+	string $originalPath = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	string $category = `openPipelineGetCategory $tab $level1 $level2 $level3`;
+	string $deletePath = (`optionVar -q "op_deletePath"`);
+	$confirmText = "Are you sure you want to remove this Item?\n(all files and folders will be moved to the 'deleted' folder)";
+	string $name = `basename  $originalPath ""`;
+	if (`confirmDialog -t "Remove Files" -m $confirmText -ma "center" -b "Yes" -b "No" -db "Yes" -cb "No"`=="Yes")
+	{
+		if (!`filetest -d $deletePath`)
+			sysFile -makeDir $deletePath;	
+		int $i;
+		int $isCurrent=0;
+		//check if the currently item is being deleted
+		if ($currTab==$tab)
+		{
+			if ($currLevel1==$level1)
+			{
+				if ($depth==1)
+					$isCurrent=1;
+				else if ($currLevel2==$level2)
+				{
+					if ($depth==2)
+					 	$isCurrent=1;
+					else if ($currLevel3==$level3)
+					{
+						if ($depth==3)
+					 		$isCurrent=1;
+					}
+				}
+			}
+		}
+		if ($isCurrent)
+		{
+			if (`confirmDialog -t "Remove Files" -m "You are removing an item that is currently open. Continue?" -ma "center" -b "Yes" -b "No" -db "Yes" -cb "No"`=="Yes")
+			{
+				openPipelineCloseFile;
+			}
+			else
+				return 0;
+
+		}
+		string $newPath = $deletePath+$name+"_deleted_";
+		int $j = 0;
+		while (`filetest -d ($newPath+$j)`)
+		{
+			$j++;
+		}
+		$newPath = $newPath+$j;
+		int $result = `sysFile -rename $newPath $originalPath`;
+		if (!$result)
+			{
+				error("openPipeline: Remove failed. Folder "+$originalPath+" could not be moved to the 'deleted' folder. \nA folder or file may be in use outside of Maya.");
+				return 0;
+			}
+		else
+		{
+			int $result2 = `openPipelineRemoveArchive $tab $level1 $level2 $level3`;
+			return $result2;
+		}
+	}
+	else
+		return 0;
+}
+
+//###########################################
+// Name: 					openPipelineRemoveArchive
+// Description: 	Moves the archived files and folders under the selected item to the "deleted" folder
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineRemoveArchive(int $tab, string $level1, string $level2, string $level3)
+{
+
+	string $archivePath = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 1`;
+	string $deletePath = (`optionVar -q "op_deletePath"`);
+	string $name = `basename  $archivePath ""`;
+	if (!`filetest -d $deletePath`)
+		sysFile -makeDir $deletePath;	
+	if (`filetest -d $archivePath`)
+	{	
+		string $newPath = $deletePath+$name+"_archiveDeleted_";
+		int $result;
+		$j=0;	
+		while (`filetest -d ($newPath+$j)`)
+		{
+			$j++;
+		}
+		$newPath = $newPath+$j;
+		$result = `sysFile -rename $newPath $archivePath`;
+		if (!$result)
+		{
+			
+			error("OpenPipeline: Remove failed. Folder "+$archivePath+" could not be moved to the 'deleted' folder. \nA folder or file may be in use outside of Maya.");
+			return 0;
+		}		
+		else
+			return 1;
+	}
+	else
+		return 1;
+}
+
+//###########################################
+// Name: 					openPipelineArchiveItem
+// Description: 	Archives old versions of an item.
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$keepWorkshops - how many workshops to keep un-archived. 0 doesn't archive any
+//								$keepVersions - how many old mastered versions to keep un-archived. 0 doesn't archive any
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineArchiveItem(int $tab, string $level1, string $level2, string $level3, int $keepWorkshops, int $keepVersions)
+{
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $path = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	string $archivePath = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 1`;
+	int $wAttempts = 0;
+	int $wSuccesses = 0;
+	int $vAttempts = 0;
+	int $vSuccesses = 0;
+	if ($keepWorkshops)
+	{
+		string $workshopFiles[] = `openPipelineGetWorkshops $tab $level1 $level2 $level3 0`;	
+		for ($i=$keepWorkshops; $i<(size($workshopFiles)); $i++)
+		{
+			$file = $workshopFiles[$i];
+			$wAttempts++;
+			string $newName = substituteAllString($file, $path, $archivePath);
+			string $dirName = dirname($newName);
+			if (!`filetest -d $dirName`)
+				sysFile -md $dirName;	
+			int $result = `sysFile -ren $newName $file`;
+			if ($result)
+				$wSuccesses++;
+		}
+	}
+	string $versionFiles[];
+	$versionFiles = `openPipelineGetVersions $tab $level1 $level2 $level3 0`;
+	int $numVersions = size($versionFiles);
+	if ($keepVersions)
+	{	
+		for ($i=$keepVersions; $i<(size($versionFiles)); $i++)
+			{
+				$vAttempts++;
+				string $file = $versionFiles[$i];
+				string $newName = substituteAllString($file, $path, $archivePath);
+				string $dirName = dirname($newName);
+				if (!`filetest -d $dirName`)
+					sysFile -md $dirName;
+				int $result = `sysFile -ren $newName $file`;
+				if ($result)
+					$vSuccesses++;
+			}
+	}
+	string $message = $wSuccesses+" / "+ $wAttempts +" "+ $wName+" files successfully moved to the archive.\n";
+	$message = $message + " " + $vSuccesses+" / "+ $vAttempts + " version files successfully moved to the archive.\n";
+	print("openPipeline: "+$message+"\n");
+	return 1;
+}
+
+//###########################################
+// Name: 					openPipelineRetrieveArchive
+// Description: 	Restores all archived files of an item
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$doWorkshops - whether to restore archived workshops
+//								$doVersions - whether to restore archived masters
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineRetrieveArchive(int $tab, string $level1, string $level2, string $level3, int $doWorkshops, int $doVersions)
+{
+	int $wAttempts = 0;
+	int $wSuccesses = 0;
+	int $vAttempts = 0;
+	int $vSuccesses = 0;
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $originalPath = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	string $archivePath = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 1`;
+	if ($doWorkshops)
+	{
+			string $archivedWorkshopFiles[];
+			$archivedWorkshopFiles = `openPipelineGetWorkshops $tab $level1 $level2 $level3 1`;	
+			for ($file in $archivedWorkshopFiles)
+				{
+					$wAttempts++;
+					string $newName = substituteAllString($file,$archivePath,$originalPath);
+					int $result = `sysFile -ren $newName $file`;
+					if ($result)
+						$wSuccesses++;
+				}
+	}
+	if ($doVersions)
+	{
+			string $archivedVersionFiles[];
+			$archivedVersionFiles = `openPipelineGetVersions $tab $level1 $level2 $level3 1`;
+			for ($file in $archivedVersionFiles)
+				{
+					$vAttempts++;
+					string $newName = substituteAllString($file, $archivePath,$originalPath);
+					int $result = `sysFile -ren $newName $file`;
+					if ($result)
+						$vSuccesses++;
+				}
+	}
+	string $message = $wSuccesses+" / "+ $wAttempts +" "+ $wName+" files successfully retrieved from the archive.\n";
+	$message = $message + " " + $vSuccesses+" / "+ $vAttempts +" "+ " version files successfully retrieved from the archive.\n";
+	print("openPipeline: "+$message+"\n");
+	return 1;
+}
+
+//###########################################
+// Name: 					openPipelineCloseFile
+// Description: 	Closes the currently open file
+// Input:					none
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineCloseFile()
+{
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $currLevel1 = `optionVar -q "currLevel1"`;
+	if ((`file -q -mf`)&&(size($currLevel1)))
+	{
+		string $confirm;
+		$confirm = `confirmDialog -t "openPipeline" -m ("Would you like to Save "+$wName+" before closing?") -b "Save" -b "Don't Save" -b "Cancel" -db "Don't Save"`;
+		if ($confirm==("Save"))
+			openPipelineSaveWorkshop "saved before closing";
+		else if ($confirm=="Cancel")
+			return 1;
+	}
+	optionVar -sv "op_currOpenType" "";
+	optionVar -iv "op_currOpenVersion" 0;
+	optionVar -sv "op_currOpenCategory" "";
+	optionVar -sv "op_currOpenLevel1" "";
+	optionVar -sv "op_currOpenLevel2" "";
+	optionVar -sv "op_currOpenLevel3" "";
+	optionVar -iv "op_currOpenTab" 0;
+	file -f -newFile;
+	return 1;
+}
+
+//###########################################
+// Name: 					openPipelineOpenLocation
+// Description: 	Opens an item's folder in the OS's explorer
+// Input:					$tab, $level1, $level2, $level3 - the item
+// Returns: 			none
+//###########################################
+global proc openPipelineOpenLocation(int $tab, string $level1, string $level2, string $level3)
+{
+	string $path = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	if (`filetest -d $path`)
+	{
+		string $cmd;
+		if (`about -os`=="mac")
+			$cmd = "open -a finder '"+$path+"'";
+		else
+		{
+			$path = `substituteAllString $path "/" "\\"`;
+			$cmd = "explorer "+$path+"";
+		}
+		system $cmd;
+	}
+	else
+		warning ("openPipelineOpenLocation: couldn't find folder '" + $path + "'.");
+}
+
+//###########################################
+// Name: 					openPipelineRecordPlayblast
+// Description: 	Records a playblast for an item
+// Input:					$tab, $level1, $level2, $level3 - the item
+// Returns: 			the full path and name of the resulting movie file
+//###########################################
+global proc string openPipelineRecordPlayblast(int $tab, string $level1, string $level2, string $level3)
+{
+	string $playblastFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "playblastFile" 0 0`;
+	playblast -f $playblastFile -forceOverwrite -format "movie" -viewer 0 -showOrnaments 0;
+	return $playblastFile;
+}
+
+//###########################################
+// Name: 					openPipelineCreateThumbnail
+// Description: 	Take a snapshot of the current scene and make it the thumbnail for an item
+// Input:					$tab, $level1, $level2, $level3 - the item
+// Returns: 			the full path and name of the resulting image file
+//###########################################
+global proc string openPipelineCreateThumbnail(int $tab, string $level1, string $level2, string $level3)
+{
+	string $fileName = `openPipelineGetFileName $tab $level1 $level2 $level3 "previewFile" 0 0`;
+	float	$currFrame =	`currentTime -q`;
+	int	$format	=	`getAttr "defaultRenderGlobals.imageFormat"`;
+	setAttr	"defaultRenderGlobals.imageFormat" 8;
+	playblast	-frame $currFrame	-format	"image"	-cf	$fileName -orn 0 -v	0	-wh	164	105	-p 100;
+	setAttr	"defaultRenderGlobals.imageFormat" $format;
+	return $fileName;
+}
+
+//###########################################
+// Name: 					openPipelineSetCustomNotes
+// Description: 	Set the custom notes for an item
+// Input:					$tab, $level1, $level2, $level3 - the item
+//								$notes - the notes
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineSetCustomNotes(int $tab, string $level1, string $level2, string $level3, string $notes)
+{
+	string $notesFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "notesFile" 0 0`;
+	string $newText = `substituteAllString $notes "<" " "`;
+	$newText = `substituteAllString $newText ">" " "`;
+	$newText = `substituteAllString $newText "\r" "<br>"`;
+	if (!`filetest -r $notesFile`)
+	{
+		$fileId=`fopen $notesFile "w"`;
+		fprint $fileId "<!--This file is automatically generated by openPipeline. Edit at your own risk!-->\n";
+		fprint $fileId "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
+		fprint $fileId "<?xml-stylesheet type=\"text/xsl\" href=\"xsl/plStylesheet.xsl\"?>\n";
+		fprint $fileId "<openPipeline_objectInfo>\n";
+		fprint $fileId "		<description>\n";
+		fprint $fileId ("			" + $newText + "\n");
+		fprint $fileId "		</description>\n";
+		fprint $fileId "</openPipeline_objectInfo>";
+		fclose $fileId;
+	}
+	else
+	{
+		string $contents[];
+		$contents = openPipelineGetXmlAll($notesFile);
+		$fileId = `fopen $notesFile "w"`;
+		$clearbit=0;
+		for ($i=0;$i<size($contents);$i++)
+		{
+			if (openPipelineIsXmlInTag($contents[$i],"description"))
+			{
+				$contents[$i] = ("<description>"+$newText);
+				$clearbit=1;
+			}
+			else if (openPipelineIsXmlOutTag($contents[$i],"description"))
+				$clearbit=0;
+			else if ($clearbit)
+				$contents[$i]="";
+		}
+		for ($line in $contents)
+			fprint $fileId ($line+"\n");
+		fclose $fileId;
+	}
+ 	return 1;
+}
+
+//###########################################
+// Name: 					openPipelineViewPlayblast
+// Description: 	Opens the playblast of an item
+// Input:					$tab, $level1, $level2, $level3 - the item
+// Returns: 			none
+//###########################################
+global proc openPipelineViewPlayblast(int $tab, string $level1, string $level2, string $level3)
+{
+	string $playblastFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "playblastFile" 0 0`;
+	if (`filetest -r $playblastFile`)
+		system("load "+$playblastFile);
+	else
+		warning ("openPipelineViewPlayblast: couldn't find playblast file '" + $playblastFile + "'.");
+}
+
+//###########################################
+// Name: 					openPipelineAddEventNote
+// Description: 	Adds an event note to an item's history
+// Input:					$tab, $level1, $level2, $level3 - the item
+//								$event - the event
+//								$version - if the event is a saved workshop, which version is being saved. use 0 for other events
+//								$comment - a comment to accompany the event
+// Returns: 			success - 1 failure - 0
+//###########################################
+global proc int openPipelineAddEventNote(int $tab, string $level1, string $level2, string $level3, string $event, int $version, string $comment)
+{
+	string $historyFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "historyFile" 0 0`;
+	int		$fileId=`fopen $historyFile "a"`;
+	global string $openPipeline_userName;	
+	//get the date and time
+	string $dateStrip = openPipelineGetDate();
+	string $timeStrip = openPipelineGetTime();
+	fprint $fileId "	<note>\n";	
+	fprint $fileId ("		<author>" + $openPipeline_userName + "</author>\n");
+	fprint $fileId ("		<date>" + $dateStrip + "</date>\n");
+	fprint $fileId ("		<time>" + $timeStrip + "</time>\n");			
+	fprint $fileId ("		<event>"+$event+"</event>\n");
+	if ($version)
+	fprint $fileId ("		<version>"+$version+"</version>\n");
+	fprint $fileId ("		<comment>" + $comment + "</comment>\n");
+	fprint $fileId "	</note>\n";
+	fclose $fileId;
+	return 1;
+}
+

@@ -1,0 +1,648 @@
+// openPipeline Info Retrieval functions
+//
+//These procedures can be used to retrieve information about the current state of openPipeline.
+//This includes information about the available projects and the items within these projects.
+
+// Note: Parameters with the names "$tab, $level1, $level2, $level3" always describe an item. 
+// 	The $tab integer refers to the Asset Inventory tab (2) or the Shot Inventory tab (3)
+// 	The three $level strings describe the hierarchy of an item, for example "characters" "bob" "model" 
+//	$level strings can be left blank, for example "props" "spatula" ""
+
+//***	The following is a full list of optionVars used. 
+//		These can be accessed for pertinent information while openPipeline is running***
+
+//CURRENTLY OPEN FILE INFO
+//
+//op_currOpenType (string) - whether it's a workshop or master
+//op_currOpenCategory (string) - whether it's a shot, asset type, asset or component
+//op_currOpenVersion (int) - version of currently open file.  0 means no workshops have been created yet.
+//op_currOpenLevel1 (string)
+//op_currOpenLevel2 (string) 
+//op_currOpenLevel3 (string) 
+//op_currOpenTab (int) 
+
+//CURRENT PROJECT INFO
+//
+//op_currProjectName (string) - project name
+//op_currProjectPath (string) - full project path
+//op_libPath (string) - full path to asset library
+//op_shotPath (string) - full path to shots folder
+//op_scriptsPath (string) - full path to scripts folder
+//op_rendersPath (string) - full path to renders folder
+//op_particlesPath (string) - full path to particles folder
+//op_texturesPath (string) - full path to textures folder
+//op_archivePath (string) - full path to archive folder
+//op_deletePath (string) - full path to deleted items folder
+//op_workshopFormat (string) - file format for workshops (ma or mb)
+//op_masterFormat (string) - file format for master (ma or mb)
+//op_workshopName (string) - display name for workshop files
+//op_masterName (string) - display name for master files
+
+//UI INFO
+//
+//op_assetTypes - list of asset types within the current project (string array)
+//op_assets - list of assets under the selected asset type (string array)
+//op_components - list of components under the selected asset (string array)
+//op_sequences - list of sequences within the current project (string array)
+//op_shots - list of shots within the current project (string array)
+//op_shotComponents - list of shot components under the selected shot (string array)
+//op_currTab - the current tab the user is working in (int) (1=currently editing, 2=asset browser, 3=shot browser) 
+
+//###########################################
+// Name: 					openPipelineGetProjectList
+// Description: 	Returns the the names all existing projects
+// Input: 				none
+// Returns: 			A string array containing all the available project names
+//###########################################
+global proc string[] openPipelineGetProjectList()
+{
+	string $projects[] = openPipelineGetProjectsData();
+	string $projectsList[];
+
+	    for($i=0; $i<size($projects); $i++)
+	    {
+	        string $currName = openPipelineGetXmlData($projects[$i], "name");
+	        //string $currPath = openPipelineGetXmlData($projects[$i], "path");
+	        $projectsList[$i]=$currName;
+	        //$projectsList[$i*2+1]=$currPath;
+	    }
+	return $projectsList;
+}
+
+//###########################################
+// Name: 					openPipelineGetCustomNotes
+// Description: 	Get an item's custom notes
+// Input:					$tab, $level1, $level2, $level3 - the item
+// Returns: 			a string containing the notes
+//###########################################
+global proc string openPipelineGetCustomNotes(int $tab, string $level1, string $level2, string $level3)
+{
+	string $notesFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "notesFile" 0 0`;
+	string $output="";
+	if (!`filetest -r $notesFile`)
+	{
+		openPipelineSetCustomNotes $tab $level1 $level2 $level3 " ";
+	}
+	else
+	{
+		string $contents[];
+		$contents = openPipelineGetXmlAll($notesFile);
+		string $info[];
+		$info = openPipelineGetXmlTop($contents,"openPipeline_objectInfo");
+		string $description[];
+		$description = openPipelineGetXmlTop($info,"description");
+		for ($line in $description)
+		{
+			if (openPipelineIsXmlInTag($line,"br"))
+				$output = ($output+"\n");
+			else
+				$output = ($output+$line);
+		}
+	}
+	return $output;
+}
+
+//###########################################
+// Name: 				openPipelineGetDate
+// Description: Returns the current date
+// Input: 			none
+// Returns: 		The current date in the format MM/DD/YY
+//###########################################
+global proc string openPipelineGetDate()
+{
+	string $date = `about -cd`;
+	string $dateSeparated[];
+	tokenize($date,"/",$dateSeparated);
+	$date = $dateSeparated[1]+"/"+$dateSeparated[2]+"/"+$dateSeparated[0];
+	return $date;
+}
+
+//###########################################
+// Name: 					openPipelineGetTime
+// Description: 	Returns the current time
+// Input: 				none
+// Returns: 			The current time
+//###########################################
+global proc string openPipelineGetTime()
+{
+	string $time = `about -ct`;
+	return $time;
+}
+
+//###########################################
+// Name: 					openPipelineHasWorkshop
+// Description: 	Returns whether an item has at least one workshop
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			yes - 1, no - 0
+//###########################################
+global proc int openPipelineHasWorkshop(int $tab, string $level1, string $level2, string $level3)
+{
+	string $workshop = openPipelineGetFileName($tab, $level1, $level2, $level3, "workshop", 0, 0);
+	if (size($workshop))
+		return 1;
+	else
+		return 0;
+}
+
+//###########################################
+// Name: 					openPipelineHasMaster
+// Description: 	Returns whether an item has at least one master
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			yes - 1, no - 0
+//###########################################
+global proc int openPipelineHasMaster(int $tab, string $level1, string $level2, string $level3)
+{
+	string $master = openPipelineGetFileName($tab, $level1, $level2, $level3, "master", 0, 0);
+	if (size($master)&&(`filetest -r $master`))
+		return 1;
+	else
+		return 0;
+}
+
+//###########################################
+// Name: 					openPipelineHasPlayblast
+// Description: 	Returns whether an item has a playblast
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			yes - 1, no - 0
+//###########################################
+global proc int openPipelineHasPlayblast(int $tab, string $level1, string $level2, string $level3)
+{
+	string $playblastFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "playblastFile" 0 0`;
+	return (`filetest -r $playblastFile`);
+}
+
+//###########################################
+// Name: 					openPipelineGetWorkshops
+// Description: 	Returns the workshop files for a given item
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$archive - use 1 to retrieve the archived workshops
+//														otherwise use 0
+// Returns: 			A string array of the full paths to the workshop files
+//###########################################
+global proc string[] openPipelineGetWorkshops(int $tab, string $level1, string $level2, string $level3, int $archive)
+{
+	string $workshopFiles[];
+	int $i = 0;
+	$workshop = `openPipelineGetFileName $tab $level1 $level2 $level3 "workshop" $i $archive`;
+	while (size($workshop))
+	{
+		$workshopFiles[$i] = $workshop;
+		$i++;
+		$workshop = `openPipelineGetFileName $tab $level1 $level2 $level3 "workshop" $i $archive`;
+	}
+	return $workshopFiles;
+}
+
+//###########################################
+// Name: 					openPipelineGetVersions
+// Description: 	Returns all of the version files for a given asset, component or shot
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$archive - use 1 to retrieve the archived versions
+//														otherwise use 0
+// Returns: 			A string array of the full paths to the version files
+//###########################################
+global proc string[] openPipelineGetVersions(int $tab, string $level1, string $level2, string $level3, int $archive)
+{
+	string $versionFiles[];
+	int $i = 0;
+	$version = `openPipelineGetFileName $tab $level1 $level2 $level3 "version" $i $archive`;
+	while (size($version))
+	{
+		$versionFiles[$i] = $version;
+		$i++;
+		$version = `openPipelineGetFileName $tab $level1 $level2 $level3 "version" $i $archive`;
+	}
+	return $versionFiles;
+}
+
+//###########################################
+// Name: 					openPipelineGetNumWorkshops
+// Description: 	Returns the number of workshops an item has
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$archive - use 1 for archived workshops
+//														otherwise use 0
+// Returns: 			The number of workshops
+//###########################################
+global proc int openPipelineGetNumWorkshops(int $tab, string $level1, string $level2, string $level3, int $archive)
+{
+	string $workshops[] = `openPipelineGetWorkshops $tab $level1 $level2 $level3 $archive`;
+	return (size($workshops));
+}
+
+//###########################################
+// Name: 					openPipelineGetNumVersions
+// Description: 	Returns the number of versions an item has
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$archive - use 1 for archived versions
+//														otherwise use 0
+// Returns: 			The number of versions
+//###########################################
+global proc int openPipelineGetNumVersions(int $tab, string $level1, string $level2, string $level3, int $archive)
+{
+	string $versions[] = `openPipelineGetVersions $tab $level1 $level2 $level3 $archive`;
+	return (size($versions));
+}
+
+//###########################################
+// Name: 					openPipelineGetLatestWorkshopVersion
+// Description: 	Returns the version of the latest workshop for a given item
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			The latest workshop version number (int)
+//###########################################
+global proc int openPipelineGetLatestWorkshopVersion(int $tab, string $level1, string $level2, string $level3)
+{
+	int $version = 0;
+	string $latestWorkshop = `openPipelineGetFileName $tab $level1 $level2 $level3 "workshop" 0 0`;
+	if (size($latestWorkshop))
+		$version = openPipelineGetVersionFromFile($latestWorkshop);
+	return $version;
+}
+
+//###########################################
+// Name: 					openPipelineGetFileName
+// Description: 	Returns the full path of a folder or filename pertinent to the given item, 
+//								depending on what mode is provided. See below for valid modes. 
+// Input: 				$tab, $level1, $level2, $level3 - the item
+//								$mode - must be one of the following: "folder" "parentFolder" "workshopFolder" 
+//												"versionFolder" "componentFolder" "noteFolder" "playblastFile" "previewFile" 
+//												"notesFile" "workshop" "nextWorkshop" "version" "nextVersion" "master" 	
+//												"childFolder" "historyFile" 
+//								$offset - if mode is "workshop" or "version", the offset from the latest file
+//													(use 0 for latest)
+//								$archive - 1 to look in the archive
+// Returns: 			The full filename (string)
+// Note:					This proc dictates openPipeline's file naming conventions.
+//###########################################
+global proc string openPipelineGetFileName(int $tab, string $level1, string $level2, string $level3, string $mode, int $offset, int $archive)
+{
+	int $depth= `openPipelineGetDepth $level1 $level2 $level3`;
+	string $fileName="";
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $wExt = `optionVar -q "op_workshopFormat"`;
+	string $mName = `optionVar -q "op_masterName"`;
+	string $mExt = `optionVar -q "op_masterFormat"`;
+	string $previewFileName = "preview.jpg";
+	string $componentsFolder = "components";
+	string $notesFolder = "notes";
+	string $versionFolder = "version";
+	string $notesFile = "info.xml";
+	if ($mode=="parentFolder")
+ 	{
+ 		if ($depth==3)
+ 			$fileName = `openPipelineGetFileName $tab $level1 $level2 "" "folder" 0 0`;
+ 		else if ($depth==2)
+ 			$fileName = `openPipelineGetFileName $tab $level1 "" "" "folder" 0 0`;
+ 		else if ($depth==1)
+ 			$fileName = `optionVar -q "op_currProjectPath"`;
+ 		else
+ 			$fileName="";
+ 	}
+ 	else
+	{
+		//asset tab
+		if ($tab==2)
+			$fileName+=`optionVar -q op_libPath`;
+		//shot tab
+		else if ($tab==3)
+			$fileName+=`optionVar -q op_shotPath`;
+		else 
+			return "";
+		if ($archive)
+		{
+			string $projectPath = `optionVar -q "op_currProjectPath"`;
+			string $archivePath = `optionVar -q "op_archivePath"`;
+			string $tempString = $fileName;
+			$fileName = substituteAllString($tempString, $projectPath, $archivePath);
+		}
+		if (size($level1))
+		{
+			$fileName+=$level1+"/";
+			if (size($level2))
+			{
+				$fileName+=$level2+"/";
+				if (size($level3))
+				{
+					$fileName+=$componentsFolder+"/"+$level3+"/";
+				}
+				if ($mode=="workshopFolder")
+				{
+					$fileName+=$wName+"/";	
+				}
+				else if ($mode=="versionFolder")
+				{
+					$fileName+=$versionFolder+"/";
+				}
+				else if ($mode=="componentFolder")
+				{
+					$fileName+=$componentsFolder+"/";
+				}
+				else if ($mode=="noteFolder")
+				{
+					$fileName+=$notesFolder+"/";
+				}
+				else if ($mode=="playblastFile")
+				{
+					string $ext;
+					if ((`about -os`=="nt")||(`about -os`=="win64"))
+						$ext = "avi";
+					else if (`about -os`=="mac")
+						$ext = "mov";
+					else
+						$ext = "mv";
+					string $playblastFileName = "playblast."+$ext;
+					$fileName+=$playblastFileName;
+				}
+				else if ($mode=="previewFile")
+				{
+					$fileName+=$previewFileName;
+				}
+				else if ($mode=="notesFile")
+				{
+					$fileName+=$notesFolder+"/"+$notesFile;
+				}
+				
+				else if ($mode=="workshop")
+				{
+					string $fileStr = $fileName+$wName+"/";
+					string $filespec = "*"+$wName + "_*." + $wExt;
+					string $fullStr = $fileStr+$filespec;
+					python("import glob");
+					string $workshopFiles[] = python("glob.glob('"+$fullStr+"')");
+					int $j;
+					for ($j=0; $j<size($workshopFiles); $j++)
+					{
+						
+						$workshopFiles[$j]=basename($workshopFiles[$j],"");
+					}					
+					$workshopFiles = `sort $workshopFiles`;
+					int $workshopNum = size($workshopFiles);				
+					if ($workshopNum)
+					{
+						if (($workshopNum-1-$offset)>=0)
+							$fileName += ($wName+"/"+$workshopFiles[$workshopNum-1-$offset]);
+						else
+							$fileName = "";
+					}
+					else
+					{
+						$fileName = "";
+					}
+				}
+				else if ($mode=="nextWorkshop")
+				{
+					string $itemName = openPipelineGetFolderFromPath($fileName,0);
+					string $parentName = openPipelineGetFolderFromPath($fileName,2);
+					string $workshopFiles[] = `getFileList -folder ($fileName+$wName+"/") -filespec ("*"+$wName + "_*." + $wExt)`;
+					$workshopFiles = `sort($workshopFiles)`; // Sort alphabetically to ensure order is correct
+					int $workshopNum = `size($workshopFiles)`;
+					int $latestWorkshop=0;
+					if ($workshopNum)
+						$latestWorkshop = openPipelineGetVersionFromFile($workshopFiles[$workshopNum-1]);
+					string $suffix = openPipelinePad(($latestWorkshop+1),4);
+					if (size($level3))
+						$fileName = ($fileName+$wName+"/" + $parentName + "_" + $itemName + "_" + $wName +"_" + $suffix + "."+$wExt);
+					else
+						$fileName = ($fileName+$wName+"/" + $itemName + "_" + $wName + "_" + $suffix + "."+$wExt);
+				}
+				else if ($mode=="version")
+				{
+					string $versionFiles[] = `getFileList -folder ($fileName+$versionFolder+"/") -filespec ("*version_*." + $mExt)`;
+					$versionFiles = `sort $versionFiles`;
+					int $versionNum = size($versionFiles);				
+					if ($versionNum)
+					{
+						if (($versionNum-1-$offset)>=0)
+							$fileName += ($versionFolder+"/"+$versionFiles[$versionNum-1-$offset]);
+						else
+							$fileName = "";
+					}
+					else
+					{
+						$fileName = "";
+					}
+				}
+				else if ($mode=="nextVersion")
+				{
+					string $ext = `optionVar -q "op_masterFormat"`;
+					string $itemName = openPipelineGetFolderFromPath($fileName,0);
+					string $parentName = openPipelineGetFolderFromPath($fileName,2);
+					$versionFiles = `getFileList -folder ($fileName+$versionFolder+"/") -filespec ("*"+$itemName + "_version_*." + $mExt)`;
+					$versionFiles = `sort($versionFiles)`; // Sort alphabetically to ensure order is correct
+					int $numVersions = `size($versionFiles)`;
+					int $latestVersion = 0;
+					if ($numVersions)
+						$latestVersion = (openPipelineGetVersionFromFile($versionFiles[$numVersions-1]));
+					string $suffix = openPipelinePad(($latestVersion+1),4);
+					if (size($level3))
+						$fileName = ($fileName+$versionFolder+"/"+ $parentName + "_" + $itemName + "_version_" + $suffix + "." + $mExt);		
+					else
+						$fileName = ($fileName + $versionFolder+"/"+ $itemName + "_version_" + $suffix + "." + $mExt);	
+				}
+				else if ($mode=="master")
+				{
+					
+					string $itemName = openPipelineGetFolderFromPath($fileName,0);
+					string $parentName = openPipelineGetFolderFromPath($fileName,2);
+					if (size($level3))
+						$fileName = $fileName + $parentName + "_" + $itemName + "." + $mExt;
+					else if ($tab==2)
+						$fileName = $fileName + $itemName + "_asset." + $mExt;
+					else if ($tab==3)
+						$fileName = $fileName + $itemName + "_shot." + $mExt;
+				}
+				else if ($mode=="historyFile")
+				{
+					string $itemName = openPipelineGetFolderFromPath($fileName,0);
+					string $parentName = openPipelineGetFolderFromPath($fileName,2);
+					if (size($level3))
+						$fileName = ($fileName + $notesFolder + "/" + $parentName + "_" + $itemName + "_ComponentNote.xml");
+					else if ($tab==2)
+						$fileName = ($fileName + $notesFolder + "/" + $itemName + "_AssetNote.xml");
+					else if ($tab==3)
+						$fileName = ($fileName + $notesFolder+ "/" + $itemName + "_SceneNote.xml");
+				}
+				else if ($mode=="childFolder")
+				{
+					if ($depth==2)
+						$fileName+=($componentsFolder+"/");
+					else if ($depth==3)
+						$fileName="";
+				}
+				else if ($mode!="folder")
+				{
+					$fileName="";
+					warning ("openPipeline (openPipelineGetFileName) unrecognized file mode: "+$mode);
+				}
+			}
+		}
+	
+		
+	}
+	return $fileName;
+}
+
+//###########################################
+// Name: 					openPipelineGetChildren
+// Description: 	Returns the children of the given item
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			The names of the children (string array)
+//###########################################
+global proc string[] openPipelineGetChildren(int $tab, string $level1, string $level2, string $level3)
+{
+	string $childPath = `openPipelineGetFileName $tab $level1 $level2 $level3 "childFolder" 0 0`;
+	string $children[] = `getFileList -fld $childPath`;
+	string $validChildren[];
+	int $i = 0;
+	for ($child in $children)
+	{
+		string $firstChar = startString($child,1);
+		if (($firstChar!=".")&&(`filetest -d ($childPath+$child)`))
+		{
+			$validChildren[$i] = $child;
+			$i++;
+		}
+	}	
+	return $validChildren;
+}
+
+//###########################################
+// Name: 					openPipelineGetCategory
+// Description: 	Returns the category of a given item (shot, asset, component, etc.)
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			The category (string)
+//###########################################
+global proc string openPipelineGetCategory(int $tab, string $level1, string $level2, string $level3)
+{
+	string $category;
+	if ($tab==2)
+	{
+		if (size($level3))
+			$category="component";
+		else if (size($level2))
+			$category="asset";
+		else if (size($level1))
+			$category="assetType";
+	}
+	else if ($tab==3)
+	{
+		if (size($level3))
+			$category="shotComponent";
+		else if (size($level2))
+			$category="shot";
+		else if (size($level1))
+			$category="sequence";
+	}
+	return $category;
+}
+
+//###########################################
+// Name: 					openPipelineGetCurrentlyOpenPath
+// Description: 	Returns the path of the currently open item
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			The path (string)
+//###########################################
+global proc string openPipelineGetCurrentlyOpenPath()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	string $currOpen = `openPipelineGetFileName $tab $level1 $level2 $level3 "folder" 0 0`;
+	return $currOpen;
+}
+
+//###########################################
+// Name: 					openPipelineGetThumbnail
+// Description: 	Get the filename of an item's thumbnail image
+// Input:					$tab, $level1, $level2, $level3 - the item
+// Returns: 			the image filename
+//###########################################
+global proc string openPipelineGetThumbnail(int $tab, string $level1, string $level2, string $level3)
+{
+	string $fileName = `openPipelineGetFileName $tab $level1 $level2 $level3 "previewFile" 0 0`;
+	return $fileName;
+}
+
+//###########################################
+// Name: 					openPipelineGetEventNotes
+// Description: 	Get an item's event history
+// Input:					$tab, $level1, $level2, $level3 - the item
+// Returns: 			a string containing the events
+//###########################################
+global proc string openPipelineGetEventNotes(int $tab, string $level1, string $level2, string $level3)
+{
+	string $historyFile = `openPipelineGetFileName $tab $level1 $level2 $level3 "historyFile" 0 0`;
+	string $outString ="";
+	if (`filetest -f $historyFile`)
+	{
+		string $historyTextArray[] = `openPipelineReadXML $historyFile`;
+		$outString = stringArrayToString($historyTextArray, "");
+	}
+	return $outString;
+}
+
+//###########################################
+// Name: 					openPipelineGetCurrentlySelectedItem
+// Description: 	Get the currently selected item under the given tab in the UI
+// Input:					$tab - the tab (2 for asset library, 3 for shot library)
+//								$depth - the depth to look at
+// Returns: 			an array with three strings, corresponding to the item
+// Note:					This proc won't work unless the UI is open
+//###########################################
+global proc string[] openPipelineGetCurrentlySelectedItem(int $tab, int $depth)
+{
+	string $level1 = "";
+	string $level2 = "";
+	string $level3 = "";
+	
+	if ($tab==2)
+	{
+		if (($depth>0)&&(`optionVar -as "op_assetTypes"`))
+		{			
+			string $types[] = `optionVar -q "op_assetTypes"`;
+			int $selected[] = `textScrollList -q -sii op_assetTypeScrollList`;
+			if ($selected[0])
+				$level1 = $types[($selected[0])-1];
+		}
+		if (($depth>1)&&(`optionVar -as "op_assets"`))
+		{
+			string $assets[] = `optionVar -q "op_assets"`;
+			int $selected[] = `textScrollList -q -sii op_assetScrollList`;
+			if ($selected[0])
+				$level2 = $assets[($selected[0])-1];
+		}
+		if (($depth>2)&&(`optionVar -as "op_components"`))
+		{
+			string $components[] = `optionVar -q "op_components"`;
+			int $selected[] = `textScrollList -q -sii op_componentScrollList`;
+			if ($selected[0])
+				$level3 = $components[($selected[0])-1];
+		}
+	}
+	else if ($tab==3)
+	{
+		if (($depth>0)&&(`optionVar -as "op_sequences"`))
+		{
+			string $sequences[] = `optionVar -q "op_sequences"`;
+			int $selected[] = `textScrollList -q -sii op_sequenceScrollList`;
+			if ($selected[0])
+				$level1 = $sequences[($selected[0])-1];
+		}
+		if (($depth>1)&&(`optionVar -as "op_shots"`))
+		{
+			string $shots[] = `optionVar -q "op_shots"`;
+			int $selected[] = `textScrollList -q -sii "op_shotScrollList"`;
+			if (size($selected))
+					$level2 = $shots[($selected[0])-1];
+		}
+		if (($depth>2)&&(`optionVar -as "op_shotComponents"`))
+		{
+			string $components[] = `optionVar -q "op_shotComponents"`;
+			int $selected[] = `textScrollList -q -sii "op_shotComponentScrollList"`;
+			if (size($selected))
+				$level3 = $components[($selected[0])-1];
+		}
+	}
+	string $item[] = {$level1,$level2,$level3};
+	return $item;
+}
