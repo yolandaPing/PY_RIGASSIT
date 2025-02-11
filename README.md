@@ -21,5 +21,11 @@ Maya绑定助手，内部有权重模块；copy blendShape修型， weight模块
 **Feedback mailbox ：yolandaping1224@gmail.com **
 
 
+============================================================
 
 
+
+![工具架](https://github.com/user-attachments/assets/4648d2d1-f996-40c9-95b9-b7bb22b34ec1)
+![logo右键](https://github.com/user-attachments/assets/79b67d92-8a3c-4992-b965-b5fe1418894e)
+![空白处右键](https://github.com/user-attachments/assets/9a8b5a35-f389-4994-aa3e-d59921c32f97)
+![ctrl+右键](https://github.com/user-attachments/assets/2c4b5c32-8102-4f91-ae49-00af2570f861)
