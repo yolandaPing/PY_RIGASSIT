@@ -1,0 +1,22 @@
+{
+  "tip":[
+  "05.3.4",
+  "2022-2025",
+  "https://www.dropbox.com/scl/fo/0ij9yw7r6tp65vt73iwqf/AHdjkFb1sQh3U-mcbDygdD8?rlkey=a9l2cmrnpzxa6dx92laj093fc&st=e6ilm5gg&dl=1",
+  "https://www.dropbox.com/scl/fo/3uvq78rnk83idxku4asxk/ABwZ4aYW9-hDFbQuUe817J0?rlkey=5e5a734yhbpfconnp0c3ermvl&st=hkor6hsa&dl=0",
+  "https://pan.quark.cn/s/fe8c6e815f8e"
+],
+"description": [
+  "2024-09-08. v 05.0.0   升级工具的版本适配性; ",
+  "2024-10-13. v 05.1.0   添加关节链ribbon绑定方式; 优化拷贝权重工具",
+  "2024-10-16. v 05.1.1   优化blendShape拷贝工具的自动清理无效目标体",
+  "2024-10-22. v 05.1.2   优化ribbon的矩阵链接方式",
+  "2024-10-22. v 05.1.3   优化joint模块",
+  "2024-11-09. v 05.2.0   添加自定义IKFK Ribbon System",
+  "2024-12-08. v 05.3.0   添加多种权重导入导出功能; 添加maya2024的使用权限",
+  "2024-12-24. v 05.3.1   添加wire转权重工具曲线自动创建skin joints 计算权重",
+  "2025-01-04. v 05.3.2   修复IKFK Ribbon System 外层控制器的数值;\n------------. -----------   优化mirror blendWeight SDK",
+  "2025-02-08. v 05.3.3   优化快捷拷贝权重时重命名对象拷贝报错问题",
+  "2025-02-10. v 05.3.4   优化低版本maya报错问题"
+]
+}

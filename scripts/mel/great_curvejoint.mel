@@ -1,0 +1,200 @@
+// 优化 2023.12.12
+global proc CreateCurve_joint()
+{
+    string $sel[]=`ls -sl `;
+    if (size($sel) < 1){
+        error("\n至少选择一根曲线！");
+    }
+    string $qd_curve[];clear $qd_curve;
+    for($ii = 0 ; $ii<`size $sel` ; $ii++ )
+    {
+        string $shape[]=`listRelatives -pa -s $sel[$ii]`;
+        if (`size $shape`!=0)
+        {
+            if (`nodeType $shape[0]` == "nurbsCurve")
+            {
+                $qd_curve[`size $qd_curve`] = $sel[$ii];
+            }
+        }
+    }
+    if (`size $qd_curve` !=0)
+    {
+        global float $mayaTools_color[];
+        global float $mayaTools_wincolor[];
+        string $result = `promptDialog  -title "根据曲线创建关节"  -message ("曲线段数 ： " ) -button "使用曲线段数" -button "自定义段数" -button "取消" -tx "9"`;
+        if ($result == "自定义段数")
+        {
+            if (`size $qd_curve` !=0)
+            {
+                int $curveNumber = `promptDialog -query -text`;
+                for ($ii = 0 ;$ii<`size $qd_curve`;$ii++)
+                {
+                    select -r $qd_curve[$ii];
+                    // rebuildCurve -ch 1 -rpo 1 -rt 0 -end 1 -kr 0 -kcp 0 -kep 1 -kt 0 -s $curveNumber -d 1 -tol 0.01 $qd_curve[$ii];
+                    // select -r $qd_curve[$ii];
+                    // DeleteHistory;
+                    // select -r $qd_curve[$ii];
+                    // CreateCurve_joint_system;
+                    // select -r $qd_curve[$ii];
+                    
+                    jointOnCur($qd_curve[$ii],$curveNumber+1);
+                }
+            }
+            else
+            {
+                error "没有选择曲线";
+            }
+        }
+        else if ($result == "使用曲线段数")
+        {
+            string $sel[] =` ls -sl`;
+            for ($ii = 0 ;$ii<`size $sel`;$ii++)
+            {
+                select -r $sel[$ii];
+                CreateCurve_joint_system;
+                select -r $sel[$ii];
+            }
+        }
+        else if ($result == "取消")
+        {
+        
+        }
+    }
+    else
+    {
+        error "没有选择曲线";
+    }
+}
+global proc CreateCurve_joint_system()
+{
+     string $sel[]=`ls -sl`;
+	if (`size $sel` == 0 ){error "请选择曲线";}
+    // for ($cur =0 ;$cur<`size $sel`; $cur++)
+	for ($ii =0 ;$ii<`size $sel`; $ii++)
+	{
+       select -r ($sel[$ii]+".ep[0:9999]") ;
+       string $curve_cv_all[]=`ls -sl -fl`;
+        
+        // string $cluster[];
+        // clear $cluster;
+        // for ($iii =0 ;$iii<`size $curve_cv_all`; $iii++)
+        // {
+        //     select -r $curve_cv_all[$iii] ;
+        //     string $c[]=`cluster`; 
+        //     $cluster[`size $cluster`] = $c[1];
+        // }
+        // select -r $cluster;
+        // chuangjianGuGe;
+        
+        int $numb = size($curve_cv_all);
+        jointOnCur($sel[$ii],$numb);
+	}
+}
+
+global proc chuangjianGuGe()
+{
+    string $sel[]=`ls -sl`;
+    select -cl;
+    for ($ii in $sel)
+    {
+        //
+        string $joint=`joint`;
+        pointConstraint -offset 0 0 0 -weight 1 $ii $joint;
+        delete $ii;
+    }
+    select -r "joint*" ;
+     string $sel[]=`ls -sl -type "joint"`; 
+     select -r $sel[0];
+    joint -e  -oj xyz -secondaryAxisOrient yup -ch -zso;
+    select -r $sel[size($sel)-1];
+    joint -e  -oj none -ch -zso;
+    select -cl;
+}
+
+global proc jointOnCur(string $cur, int $locNum){
+    cycleCheck -e off;
+    for($i=0;$i<$locNum;$i++){
+        spaceLocator -n ($cur+"_"+($i+1)+"_loc")-p 0 0 0;
+
+        select -tgl $cur;
+        pathAnimation -n ($cur+"_"+($i+1)+"_loc_path") -fractionMode true -follow true -followAxis x -upAxis y -worldUpType "vector" -worldUpVector 0 1 0 -inverseUp false -inverseFront false -bank false -startTimeU 1 -endTimeU 1;
+        selectKey -add -k -t 1 -t 1 ($cur+"_"+($i+1)+"_loc_path_uValue");
+        cutKey -animation keys -clear;
+        connectAttr ($cur+"_"+($i+1)+"_loc_path.allCoordinates") ($cur+"_"+($i+1)+"_loc.translate");
+        delete `listConnections -t "addDoubleLinear"`;
+
+        shadingNode -asUtility multiplyDivide -n ($cur+"_"+($i+1)+"_loc_md");
+        setAttr ($cur+"_"+($i+1)+"_loc_md.operation") 2;
+        setAttr ($cur+"_"+($i+1)+"_loc_md.input2X") ($locNum-1);
+        setAttr ($cur+"_"+($i+1)+"_loc_md.input1X") $i;
+        connectAttr ($cur+"_"+($i+1)+"_loc_md.outputX") ($cur+"_"+($i+1)+"_loc_path.uValue");
+        delete ($cur+"_"+($i+1)+"_loc_md");
+
+}
+    group -n ($cur+"_"+"loc_grp") -em;
+    parent ($cur+"_"+"*_loc") ($cur+"_"+"loc_grp") ;
+    select -cl;
+/*************************************************************************create joints*********************************************************************************************************/
+
+    joint -n dup_joint;
+
+    for ($j=0;$j<$locNum;$j++){
+        duplicate  -n ($cur+"_"+($j+1)+"_joint") dup_joint;
+        if ($j>0){
+            parent ($cur+"_"+($j+1)+"_joint") ($cur+"_"+$j+"_joint");
+            setAttr ($cur+"_"+($j+1)+"_joint.translateX") 1;
+            }
+        
+    }
+    delete dup_joint;
+
+/*************************************************************************create rotate cards*********************************************************************************************************/
+    select -hi ($cur+"_"+"1_joint") ;
+    string $born[]=`ls -sl`;
+    for($b=0;$b<$locNum;$b++){
+        polyPlane -w 1 -h 1 -sx 1 -sy 1  -n ($born[$b]+"_rot_geo");	
+        move -rpr -0.5 0 0 (($born[$b]+"_rot_geo")+".scalePivot") (($born[$b]+"_rot_geo")+".rotatePivot");
+        delete `parentConstraint  $born[$b] ($born[$b]+"_rot_geo")`;
+        
+        spaceLocator -n ($born[$b]+"_rot_loc");
+        delete`parentConstraint $born[$b] ($born[$b]+"_rot_loc")`;	
+        
+        shadingNode -asUtility distanceBetween -n ($born[$b]+"_dist");
+        if($b>0){
+            connectAttr (($born[$b]+"_rot_loc")+".translate") (($born[$b]+"_dist")+".point1");
+            connectAttr (($born[$b-1]+"_rot_loc")+".translate") (($born[$b]+"_dist")+".point2");
+            connectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleX");
+            connectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleY");
+            connectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleZ");
+            disconnectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleX");
+            disconnectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleY");
+            disconnectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleZ");
+            select -r ("*_rot_geo");
+            makeIdentity -apply true -t 0 -r 0 -s 1 -n 0 -pn 1 ;    
+            parent ($born[$b]+"_rot_geo") ($born[$b-1]+"_rot_geo");
+            
+            }
+        
+        
+        pointConstraint -n ($born[$b]+"_rotptcon") ($born[$b]+"_rot_geo") $born[$b];	
+        connectAttr (($born[$b]+"_rot_geo")+".rotate") ($born[$b]+".jointOrient");
+        string $opsit = substituteAllString($born[$b], "joint", "loc");
+        string $opsit1 = substituteAllString($born[$b+1], "joint", "loc");
+        delete `pointConstraint $opsit ($born[$b]+"_rot_geo")`;
+        if($b<($locNum-1)){
+
+    delete `aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 $opsit1 ($born[$b]+"_rot_geo")`;
+        }
+
+    }	
+    delete ($cur+"_"+"loc_grp");
+    delete ("*_rot_loc");
+    delete ("*_rotptcon*");
+    delete ("*_rot_geo*");
+
+    print("Creation completed ! ");
+    // cycleCheck -e on;
+
+}
+
+CreateCurve_joint();

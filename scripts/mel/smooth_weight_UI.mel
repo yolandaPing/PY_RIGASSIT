@@ -1,0 +1,118 @@
+//将简模权重平滑拷贝到高模上，祁智：2021/05/13
+global proc smooth_weight_simplify_UI(){
+    if (`window -ex smooth_weight_simplify_Win`){deleteUI -window smooth_weight_simplify_Win;}
+    if (`windowPref -ex smooth_weight_simplify_Win`){windowPref -remove smooth_weight_simplify_Win;}
+    window -title "Smooth weight" -wh 200 220 smooth_weight_simplify_Win;
+    columnLayout -adjustableColumn true;
+    textFieldButtonGrp -l "low :" -text "low mod name " -bl "Get" -bc "qizhi_lowMod_Name()" 
+        -columnWidth3 45 110 25 -ct3 "right" "both" "right" -co3 0 0 -5 -adj 2 qizhi_lowModel_Feedback ;
+    columnLayout -adjustableColumn true;
+    radioButtonGrp -nrb 4  -l "Division Levels" -cw5 75 25 25 25 25 -la4 "1" "2" "3" "4" -sl 1 ms_Number_Group;
+    text -l "" -h 4;
+    separator;
+    text -l "" -h 4;
+    text -label "Automatic smoothing";
+    text -l "" -h 4;
+    button -h 25 -w 35 -label "Smooth Copy" -bgc 0.1 0.5 0.5 -command "smooth_copy_mod()" but1;
+    text -l "" -h 4;
+    separator;
+    text -l "" -h 4;
+    text -label "Manual smoothing";
+    textFieldButtonGrp -l "smooth :" -text "smooth mod name" -bl "Get" -bc "qizhi_smoothMod_Name()" 
+        -columnWidth3 45 110 25 -ct3 "right" "both" "right" -co3 0 0 -5 -adj 2 qizhi_smoothModel_Feedback ;
+    textFieldGrp -l "skin :" -text "skin cluster name"  -columnWidth2 45 118 qizhi_skinCluster_Feedback ;
+    text -l "" -h 4;
+    separator;
+    text -l "" -h 4;
+    button -h 25 -w 35 -label "Apply" -bgc 0.1 0.5 0.5 -command "Apply_smooth_weight()" ;
+    showWindow smooth_weight_simplify_Win;
+}
+//获取原始模型名称//
+global proc qizhi_lowMod_Name(){
+    string $lowMod_Name[] = `ls -sl`;
+    textFieldButtonGrp -e -tx $lowMod_Name[0] qizhi_lowModel_Feedback ;
+}
+//创建平滑的模型//
+global proc smooth_copy_mod(){
+    string $lowMod =`textFieldGrp -q -text qizhi_lowModel_Feedback`;
+    int $SmoothNumber=`radioButtonGrp -q -sl ms_Number_Group`;
+    select -r $lowMod ;
+    polySmooth  -mth 0 -sdt 2 -ovb 1 -ofb 3 -ofc 0 -ost 1 -ocr 0 -dv $SmoothNumber -bnr 1 -c 1 -kb 1 -ksb 1 -khe 0 -kt 1 -kmb 1 -suv 1 -peh 0 -sl 1 -dpe 1 -ps 0.1 -ro 1 -ch 1 $lowMod;  //平滑
+    select -r $lowMod ; duplicate -rr;
+    string $SmoothMod_Name[] = `ls -sl`;
+    string $skinClus[]=`listHistory $lowMod`;
+    string $skinCluster="";
+    for ($i=0;$i<size($skinClus);$i++)
+		if (`objectType $skinClus[$i]`=="skinCluster")
+			{
+			$skinCluster=$skinClus[$i];
+			}	
+    string $skinJnt[]=`listConnections -s 1 -d 0 ($skinCluster+".matrix")`;
+    skinCluster -tsb ($skinJnt) $SmoothMod_Name[0];
+    textFieldGrp -e -tx ($SmoothMod_Name[0]) qizhi_smoothModel_Feedback ;
+    select -r $SmoothMod_Name[0] ;
+    string $selGeos[] = `ls - sl -typ "transform"`;
+    for ($geo in $selGeos){
+            string $skinTmp = findRelatedSkinCluster ($geo);
+            }
+    string $skinTmp = findRelatedSkinCluster ($geo);
+    textFieldGrp -e -tx $skinTmp qizhi_skinCluster_Feedback ;
+    select -cl  ;
+}
+//单独获取平滑模型的名称和蒙皮名称//
+global proc qizhi_smoothMod_Name(){
+    string $smoothMod_Name[] = `ls -sl`;
+    textFieldGrp -e -tx $smoothMod_Name[0] qizhi_smoothModel_Feedback ;
+    string $skin; 
+    string $selGeos[] = `ls - sl -typ "transform"`;
+    for ($geo in $selGeos){
+            string $skinTmp = findRelatedSkinCluster ($geo);
+            }
+    string $skinTmp = findRelatedSkinCluster ($geo);
+    textFieldGrp -e -tx $skinTmp qizhi_skinCluster_Feedback ;
+}
+//计算结果//
+global proc Apply_smooth_weight(){
+    string $lowMod =`textFieldGrp -q -text qizhi_lowModel_Feedback`;
+    string $smoothMod =`textFieldGrp -q -text qizhi_smoothModel_Feedback`;
+    string $skinCluster =`textFieldGrp -q -text qizhi_skinCluster_Feedback`;
+    
+    string $skinClus[]=`listHistory $lowMod`;
+    string $skinCl="";
+    for ($i=0;$i<size($skinClus);$i++)
+		if (`objectType $skinClus[$i]`=="skinCluster")
+			{
+			$skinCl=$skinClus[$i];
+			}	
+    string $jnt[]=`listConnections -s 1 -d 0 ($skinCl+".matrix")`;
+    select -r $smoothMod ;
+    int $verte[] =  `polyEvaluate -vertex`;
+    for($i=0; $i<size($jnt); $i++){
+        setAttr ($jnt[$i]+".liw") 0;
+    }
+    for($ver=0; $ver < $verte[0]; $ver++){
+        skinPercent -tv $jnt[(size($jnt)-1)] 1 $skinCluster ($smoothMod+".vtx["+$ver+"]") ;
+    }
+    for($i=0; $i<((size($jnt))-1); $i++){
+        setAttr ($jnt[$i]+".liw") 1;
+    }
+    for($i=0; $i<(size($jnt)-1); $i++){
+        float $vtx_tr_a[]; float $vtx_tr_b[]; float $vtx_tr_c[];
+        for($ver=0; $ver<$verte[0]; $ver++){
+            float $tr_a[] = `xform -q -ws -t ($lowMod+".vtx["+$ver+"]")`;
+            $vtx_tr_a[$ver] = $tr_a[0];
+        }
+        select -r $jnt[$i] ;
+        move -r 1 0 0 ($jnt[$i]+".scalePivot") ($jnt[$i]+".rotatePivot");
+        for($ver=0; $ver<$verte[0]; $ver++){
+            float $tr_b[] = `xform -q -ws -t ($lowMod+".vtx["+$ver+"]")`;
+            $vtx_tr_b[$ver] = $tr_b[0];
+            $vtx_tr_c[$ver] = ($vtx_tr_b[$ver] - $vtx_tr_a[$ver]);
+            skinPercent -tv $jnt[$i] $vtx_tr_c[$ver] $skinCluster ($smoothMod+".vtx["+$ver+"]");
+        }
+        move -r -1 0 0 ($jnt[$i]+".scalePivot") ($jnt[$i]+".rotatePivot");
+    }
+    select -cl  ;
+    print ("Done");
+}
+smooth_weight_simplify_UI;

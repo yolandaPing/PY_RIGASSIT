@@ -1,0 +1,397 @@
+/*
+FileName:Follicle or Rivet Fun
+@Author:You P
+Date....:2022-05-10 : 14 :10
+*/
+
+
+global proc string[] findEdge (string $obejectName,float $faceIndex)
+{
+
+    select -r ($obejectName + ".f[" + $faceIndex + "]");
+
+    PolySelectConvert 3;
+    string $face2Vtx[] = `filterExpand -sm 31`;
+    string $Edge_1[],$Edge_2[];
+
+    if (`size $face2Vtx` == 3)
+    {
+        select -r ($obejectName + ".f[" + $faceIndex + "]");
+        PolySelectConvert 2;
+        string $face2Edg[] = `filterExpand -sm 32`;
+        $Edge_1[0] = $face2Edg[0];
+        $Edge_2[0] = $face2Edg[1];
+    }
+
+    else
+    {
+        select -r ($obejectName + ".f[" + $faceIndex + "]");
+        PolySelectConvert 2;
+        string $face2Edg[] = `filterExpand -sm 32`;
+        int $egeIndex;
+        for ($egeIndex = 0; $egeIndex < (`size $face2Edg` - 2); $egeIndex++)
+        {
+            select -r $face2Edg[$egeIndex] $face2Edg[$egeIndex+1];
+            PolySelectConvert 3;
+            string $Edg2Vtx[] = `filterExpand -sm 31`;
+                if (`size $Edg2Vtx` == 3)
+                {
+                    select -r $face2Edg[$egeIndex] $face2Edg[$egeIndex+2];
+                    PolySelectConvert 3;
+                    string $Edg2Vtx[] = `filterExpand -sm 31`;
+                    if (`size $Edg2Vtx` == 3)
+                    {
+                        continue;
+                    }
+                    
+                    else 
+                    {
+                        $Edge_1[0] = $face2Edg[$egeIndex];
+                        $Edge_2[0] = $face2Edg[$egeIndex+2];
+                    }
+                }
+                
+                else 
+                {
+                    $Edge_1[0] = $face2Edg[$egeIndex];
+                    $Edge_2[0] = $face2Edg[$egeIndex+1];
+                }
+            }
+        }
+
+    select -cl;
+
+    string $EdgeTwo[];
+    $EdgeTwo[0] = $Edge_1[0];
+    $EdgeTwo[1] = $Edge_2[0];
+    return $EdgeTwo;
+}
+
+
+global proc CreateRivet (int $conType,int $constraintType, int $Rivet_Matrix)
+{
+
+ 
+int $pomLoaded = `pluginInfo -query -l nearestPointOnMesh`;
+
+if( !$pomLoaded ){
+    loadPlugin nearestPointOnMesh;
+    $pomLoaded = `pluginInfo -query -l nearestPointOnMesh`;
+        }
+
+
+string $sel[] = `ls -sl`;
+if (`size $sel`>1)
+{
+    string $Leadobj = $sel[(`size $sel`) -1]; 
+    string $rivetGrpName = $Leadobj+"_Rivet_grp";
+
+    string $objSp[] = `listRelatives -s $Leadobj`;
+
+    string $nType = `nodeType $objSp[0]`;
+    if( $nType != "mesh" && $nType != "nurbsSurface"){
+    error( "# Please add NurbsSurface/Mesh.");
+    
+    }
+
+for ($i = 0;$i < (`size $sel` - 1);$i ++ )
+{
+
+    float $ctrlPosp[3]= `xform -q -rp -ws $sel[$i]`; 
+   
+    global string $namePOSI;
+
+    if( $nType == "mesh")
+        {
+
+        string $ntpo = `createNode nearestPointOnMesh`;
+        connectAttr -f ($objSp[0] + ".worldMesh[0]") ($ntpo + ".inMesh");
+        setAttr ($ntpo + ".inPosition") $ctrlPosp[0] $ctrlPosp[1] $ctrlPosp[2]; 
+        float $ntfi = `getAttr ($ntpo + ".nearestFaceIndex")`;
+
+        string $edgeTwo[] = findEdge ($Leadobj,$ntfi);
+        string $edge_1 = $edgeTwo[0];
+        string $edge_2 = $edgeTwo[1];
+
+        string $parts[];
+        float $e1,$e2;
+        tokenize($edge_1,"[]",$parts);
+        $e1 = $parts[1];
+        tokenize($edge_2,"[]",$parts);
+        $e2 = $parts[1];
+
+        string $nameCFME1 = `createNode curveFromMeshEdge -n ($Leadobj + "_forCurve_1")`;
+            setAttr ".ihi" 1;
+            setAttr ".ei[0]"  $e1;
+        string $nameCFME2 = `createNode curveFromMeshEdge -n ($Leadobj + "_forCurve_2")`;
+            setAttr ".ihi" 1;
+            setAttr ".ei[0]"  $e2;
+        string $nameLoft = `createNode loft -n ($Leadobj + "_" + $sel[$i] +"_Loft")`;
+            setAttr -s 2 ".ic";
+            setAttr ".u" yes;
+            setAttr ".rsn" yes;
+
+        $namePOSI = `createNode pointOnSurfaceInfo -n ($sel[$i] + "_point_info")`;
+            setAttr ".turnOnPercentage" 1;
+            setAttr ".parameterU" 0.5;
+            setAttr ".parameterV" 0.5;
+
+        connectAttr -f ($nameLoft + ".os") ($namePOSI + ".is");
+        connectAttr ($nameCFME1 + ".oc") ($nameLoft + ".ic[0]");
+        connectAttr ($nameCFME2 + ".oc") ($nameLoft + ".ic[1]");
+        connectAttr ($Leadobj + ".w") ($nameCFME1 + ".im");
+        connectAttr ($Leadobj + ".w") ($nameCFME2 + ".im");
+
+        string $colp =  `createNode closestPointOnSurface`;
+        connectAttr -f ($nameLoft + ".outputSurface") ($colp + ".inputSurface");
+        setAttr ($colp + ".inPosition") $ctrlPosp[0] $ctrlPosp[1] $ctrlPosp[2]; 
+
+
+        float $ntpoPos[3] = `getAttr ($ntpo + ".position")`;
+        float $colpPos[3] = `getAttr ($colp + ".position")`;
+
+        if  ((abs($ctrlPosp[0] - $ntpoPos[0]) < 0.0001)&&(abs($ctrlPosp[1] - $ntpoPos[1]) < 0.0001)&&(abs($ctrlPosp[2] - $ntpoPos[2]) < 0.0001))
+            {
+            if ((abs($ctrlPosp[0] - $colpPos[0] )> 0.0001)||(abs($ctrlPosp[1] - $colpPos[1] )> 0.0001)||(abs($ctrlPosp[2] - $colpPos[2] )> 0.0001))
+                {
+                setAttr ($nameLoft + ".autoReverse") 0;
+                setAttr ($nameLoft + ".reverse[0]") 1;
+                }
+            }
+
+            setAttr ($namePOSI + ".parameterU") (`getAttr ($colp + ".parameterU")` -1);
+            setAttr ($namePOSI + ".parameterV") `getAttr ($colp + ".parameterV")`;
+
+            delete $ntpo $colp;
+    }
+
+    if( $nType == "nurbsSurface")
+        {
+            $clPos = `createNode closestPointOnSurface`;	
+            connectAttr ($objSp[0] + ".ws") ($clPos + ".is");
+            setAttr ($clPos + ".inPosition") $ctrlPosp[0] $ctrlPosp[1] $ctrlPosp[2]; 
+
+            $namePOSI = `createNode pointOnSurfaceInfo -n ($sel[$i] + "_point_info")`;
+                        setAttr ".turnOnPercentage" 0;
+                        setAttr ".parameterU" `getAttr ($clPos + ".parameterU")`;
+                        setAttr ".parameterV" `getAttr ($clPos + ".parameterV")`;
+            connectAttr -f ($objSp[0] + ".ws") ($namePOSI + ".is");
+
+            delete  $clPos;
+        }
+        
+        //create locator
+        string $nameLocator = `createNode transform -n ($sel[$i] + "_rivet")`;
+        createNode locator -n ($nameLocator + "Shape") -p $nameLocator;
+        setAttr ".localScale" 0.02 0.02 0.02;	
+        
+        if ($Rivet_Matrix == 1){
+            $FourMatrix =`shadingNode -asUtility fourByFourMatrix -n ($sel[$i] + "_FourMatrix")`;
+            $decMatrix = `shadingNode -asUtility decomposeMatrix -n ($sel[$i] + "_decMatrix")`;
+            
+            connectAttr -f ($namePOSI + ".tangentUx") ($FourMatrix + ".in00");
+            connectAttr -f ($namePOSI + ".tangentUy") ($FourMatrix + ".in01");
+            connectAttr -f ($namePOSI + ".tangentUz") ($FourMatrix + ".in02");
+            //
+            connectAttr -f ($namePOSI + ".tangentVx") ($FourMatrix + ".in10");
+            connectAttr -f ($namePOSI + ".tangentVy") ($FourMatrix + ".in11");
+            connectAttr -f ($namePOSI+ ".tangentVz") ($FourMatrix + ".in12");
+            //
+            connectAttr -f ($namePOSI + ".normalX") ($FourMatrix + ".in20");
+            connectAttr -f ($namePOSI + ".normalY") ($FourMatrix + ".in21");
+            connectAttr -f ($namePOSI + ".normalZ") ($FourMatrix + ".in22");
+            //
+            connectAttr -f ($namePOSI + ".positionX") ($FourMatrix + ".in30");
+            connectAttr -f ($namePOSI + ".positionY") ($FourMatrix + ".in31");
+            connectAttr -f ($namePOSI + ".positionZ") ($FourMatrix + ".in32");
+
+            connectAttr -f ($FourMatrix + ".output") ($decMatrix + ".inputMatrix");
+
+            connectAttr -f ($decMatrix + ".outputTranslate") ($nameLocator + ".translate");
+            connectAttr -f ($decMatrix + ".outputRotate") ($nameLocator + ".rotate");
+        }
+        else{
+             string $nameAC = `createNode aimConstraint -p $nameLocator -n ($nameLocator + "_rivetAimConstraint1")`;
+            setAttr ".tg[0].tw" 1;
+            setAttr ".a" -type "double3" 0 1 0;
+            setAttr ".u" -type "double3" 0 0 1;
+            setAttr -k off ".v";
+            setAttr -k off ".tx";
+            setAttr -k off ".ty";
+            setAttr -k off ".tz";
+            setAttr -k off ".rx";
+            setAttr -k off ".ry";
+            setAttr -k off ".rz";
+            setAttr -k off ".sx";
+            setAttr -k off ".sy";
+            setAttr -k off ".sz";
+
+            connectAttr ($namePOSI + ".position") ($nameLocator + ".translate");
+            connectAttr ($namePOSI + ".n") ($nameAC + ".tg[0].tt");
+            connectAttr ($namePOSI + ".tv") ($nameAC + ".wu");
+            connectAttr ($nameAC + ".crx") ($nameLocator + ".rx");
+            connectAttr ($nameAC + ".cry") ($nameLocator + ".ry");
+            connectAttr ($nameAC + ".crz") ($nameLocator + ".rz");
+            select -cl;
+        }
+        
+        //constraint
+        if ($conType != 1){
+            if ($constraintType == 1){
+                parentConstraint -mo $nameLocator $sel[$i];
+            }
+            
+            if ($constraintType == 2){
+                pointConstraint -mo $nameLocator $sel[$i];
+            }
+            
+            if ($constraintType == 3){
+                orientConstraint -mo $nameLocator $sel[$i];
+            }
+        }
+        // parent
+        else{
+            parent  $sel[$i] $nameLocator;
+            }
+        
+    if(`objExists $rivetGrpName`){
+        parent $nameLocator $rivetGrpName;
+        }
+    else{
+        group -em -n $rivetGrpName;
+        parent $nameLocator $rivetGrpName;
+        }
+
+    }
+
+    print " >>> Create Rivets successed!\n";
+
+    if (`objExists temp_Joints`){
+        string $jointChild[] = `listRelatives -c temp_Joints`;
+        if (`size $jointChild` == 0) 
+        delete temp_Joints;
+    }
+    select -cl;
+}
+
+else {
+    warning "First select the constrained object, then select Mesh or NurbsSurface!!\n";
+}
+
+}
+
+global proc CreateobjFollicles(int $conType,int $constraintType){
+    
+string $sel[]=`ls -sl`;
+
+string $Leadobj = $sel[(`size $sel`) -1]; 
+string $shape[] = `listRelatives -s $Leadobj`;
+
+string $nType = `nodeType $shape[0]`;
+if( $nType != "mesh" && $nType != "nurbsSurface"){
+error( "# Please add NurbsSurface/Mesh.");
+}
+
+int $exsit=`objExists ($Leadobj+"_follicle_grp")`;
+
+if($exsit==0){
+group -em -n ($Leadobj+"_follicle_grp");
+}
+
+for($i=0;$i<(size($sel)-1);$i++){
+    spaceLocator -p 0 0 0 -n ($sel[$i]+"_Loc");
+    group -n ($sel[$i]+"_Loc_grp");
+
+    select -r ($sel[$i]);
+    select -add ($sel[$i]+"_Loc_grp");
+    delete `parentConstraint`;
+
+    string $shap[]=`listRelatives -s ($sel[$i]+"_Loc")`;
+    setAttr ($shap[0]+".localScaleZ") 0.01;
+    setAttr ($shap[0]+".localScaleX") 0.01;
+    setAttr ($shap[0]+".localScaleY") 0.01;
+
+    float $pos[]=`xform -q -a -ws -t ($sel[$i]+"_Loc")`;
+    string $ntype=`objectType  $shape[0]`;
+
+    //create Follicle
+    string $NewfollicleShape = `createNode follicle `;
+    select -r $NewfollicleShape ;
+    pickWalk -d up;
+    string $follicle =`rename ($sel[$i]+"_follicle")`;
+    string $follicleShape[]=`listRelatives -s $follicle`;
+        
+    if($ntype=="mesh"){
+        createNode closestPointOnMesh -n ($sel[$i]+"cpom"+$i);
+        connectAttr -f ($Leadobj+".outMesh") ($sel[$i]+"cpom"+$i+".inMesh");
+
+        setAttr ($sel[$i]+"cpom"+$i+".inPositionX") $pos[0] ;
+        setAttr ($sel[$i]+"cpom"+$i+".inPositionY") $pos[1] ;
+        setAttr ($sel[$i]+"cpom"+$i+".inPositionZ") $pos[2] ;
+        float $u=`getAttr ($sel[$i]+"cpom"+$i+".parameterU")`;
+        float $v=`getAttr ($sel[$i]+"cpom"+$i+".parameterV")`;
+
+        connectAttr -f ($Leadobj+".outMesh") ($follicleShape[0] +".inputMesh");
+        connectAttr -f ($Leadobj+".worldMatrix[0]") ($follicleShape[0] + ".inputWorldMatrix");
+
+        connectAttr -f ($follicleShape[0] + ".outTranslate") ($follicle +".translate");
+        connectAttr -f ($follicleShape[0] + ".outRotate") ($follicle +".rotate");
+
+        setAttr  ($follicleShape[0] +".parameterU") $u;
+        setAttr  ($follicleShape[0] +".parameterV") $v;
+
+        parent $follicle ($Leadobj+"_follicle_grp");
+        
+        delete ($sel[$i]+"cpom"+$i) ;
+    }
+    
+    else{
+
+        createNode closestPointOnSurface -n ($sel[$i]+"cpom"+$i);
+        string $shape[]=`listRelatives -s $Leadobj`;
+        connectAttr -f ($shape[0]+".worldSpace") ($sel[$i]+"cpom"+$i+".inputSurface");
+
+        setAttr ($sel[$i]+"cpom"+$i+".inPositionX") $pos[0] ;
+        setAttr ($sel[$i]+"cpom"+$i+".inPositionY") $pos[1] ;
+        setAttr ($sel[$i]+"cpom"+$i+".inPositionZ") $pos[2] ;
+        float $u=`getAttr ($sel[$i]+"cpom"+$i+".parameterU")`;
+        float $v=`getAttr ($sel[$i]+"cpom"+$i+".parameterV")`;
+
+        connectAttr -f ($shape[0]+".local") ($follicleShape[0] + ".inputSurface");
+        connectAttr -f ($shape[0]+".worldMatrix[0]") ($follicleShape[0] + ".inputWorldMatrix");
+
+        connectAttr -f ($follicleShape[0] + ".outTranslate") ($follicle + ".translate");
+        connectAttr -f ($follicleShape[0] + ".outRotate") ($follicle + ".rotate");
+
+        setAttr  ($follicleShape[0] + ".parameterU") $u;
+        setAttr  ($follicleShape[0] + ".parameterV") $v;
+
+        parent $follicle ($Leadobj+"_follicle_grp");
+   
+        delete ($sel[$i]+"cpom"+$i);
+    }
+
+    delete ($sel[$i]+"_Loc_grp");
+    select -cl;
+    // constraint
+    if($conType != 1){
+        if ($constraintType == 1){
+            parentConstraint -mo $follicle ($sel[$i]);
+        }
+         if ($constraintType == 2){
+            pointConstraint -mo $follicle ($sel[$i]);
+        }
+         if ($constraintType == 3){
+            orientConstraint -mo $follicle ($sel[$i]);
+        }
+    }
+    
+   // parent
+   else{
+        parent ($sel[$i]) $follicle;
+   } 
+    
+}
+
+}
+

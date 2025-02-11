@@ -1,0 +1,180 @@
+global proc yolanda_p_hotKey(string $button)
+{   python("from CommonUse import yolanda_p_setHotKey as YHK");
+    
+    string $currentPanel = `getPanel -underPointer`;
+    if ("" == $currentPanel) {
+        $currentPanel = `getPanel -withFocus`;
+       }
+      // if ("" != $currentPanel) {
+      //     string $panelType = `getPanel -typeOf $currentPanel`;
+      // }
+
+  switch($button )
+//  XRayJoint
+  { 
+    case "XRayJoint":
+         {
+      int $n=`modelEditor -q -jointXray  $currentPanel`;
+      if($n)
+      modelEditor -e -jointXray 0 $currentPanel;
+      if(!$n)
+      modelEditor -e -jointXray 1 $currentPanel;
+            }
+       break;
+
+    case "Xray":
+    {
+            if ( (`getPanel -typeOf $currentPanel`) == "modelPanel" )
+            modelEditor -e -xray ( !`modelEditor -q -xray $currentPanel` ) $currentPanel;
+    }
+    break;
+
+    case "ObjectXray":
+    { 
+      dR_DoCmd("objectXrayTGL");
+            // if ( (`getPanel -typeOf $currentPanel`) == "modelPanel" )
+            // modelEditor -e -objectXray ( !`modelEditor -q -objectXray $currentPanel` ) $currentPanel;
+    }
+    break;
+
+    case "Grid":
+    {
+            optionVar -intValue showGrid (!`optionVar -query showGrid`); 
+            grid -toggle (`optionVar -query showGrid`);
+    }
+    break;
+
+    case "UseDefaultMaterial":
+    {
+        string $panelType = `getPanel -typeOf $currentPanel`;
+        if ($panelType ==  "modelPanel") {
+          int $usingDefaultMaterial = `modelEditor -query -useDefaultMaterial $currentPanel`;
+          modelEditor -edit -useDefaultMaterial (1 - $usingDefaultMaterial) $currentPanel;
+        } 
+    }
+    break;
+
+//       wireframeOnShaded
+
+      case "WireframeOnShaded":
+      {
+        int $wos=`modelEditor -q -wos  $currentPanel`;
+        if($wos)
+        modelEditor -e -wos 0 $currentPanel;
+        if(!$wos)
+        modelEditor -e -wos 1 $currentPanel;
+        }
+       break;
+
+        case "PaintSkinWeights":
+      {
+        string $selectObj[]=`ls -sl`;
+        if (size($selectObj) !=0){
+           artAttrSkinToolScript 4 ;
+        }
+        }
+       break;
+////////////////////////////////////////////////////////////////////////////////////////////
+    case "DeleteLockObject" :
+        {
+          string $locked[] = `ls  -sl`;
+          select -hierarchy;
+          lockNode -l 0;
+          delete $locked;
+
+          print" >>> Delete selected successfully  !";
+                  }
+        break;
+
+    case "UnLockObject" :
+        {
+          select -hierarchy;
+          lockNode -l 0;
+          select -cl;
+          print" >>> successfully unlocked !";
+                            }
+        break;
+
+    case "seletcteEdgeMidVtexs" :
+                {
+                  string $sel[] = `ls -sl -fl`;
+                  string $vtx;
+                  for($i=0;$i<size($sel);$i++)if(`match ".vtx\\[" $sel[$i]` == ".vtx[")$vtx = $sel[$i];
+                  select -d $vtx;
+                  ConvertSelectionToVertices;
+                  $sel = `ls -sl -fl`;
+                  string $inVtx[];
+                  int $size;
+                  select -r $vtx;
+                  for($i=0;$i<200;$i++)
+                  {
+                      PolySelectTraverse 1;
+                      select -d $sel;
+                      $size = `size($inVtx)`;
+                      $inVtx = `ls -sl -fl`;
+                      if(`size($inVtx)` == $size)break;
+                  }
+                  select -r $inVtx $sel;
+                }
+      break;
+
+      case "AddBlendShape" :
+                {
+                  string $sels[]=`ls -sl`;
+
+                  string $bs[] = `blendShape -frontOfChain -tc 0 -n ($sels[1]+"_blendShape")`;
+                  setAttr ($bs[0]+".w[0]") 1;
+                  setAttr ($sels[0]+".visibility") 0;
+                  select $sels[1];
+
+                }
+      break;
+
+       case "setDefaultsBySelect":
+        {
+            
+          
+            python("YHK.yolandap_setDefaultsBySelect()");
+        }
+        break;
+
+
+        case "zreoTrans":
+        {
+          python("YHK.yolandap_zreoTrans()");
+        }
+        break;
+
+         case "zreoRotate":
+        {
+          python("YHK.yolandap_zreoRotate()");
+        }
+        break;
+
+         case "zreoScale":
+        {
+          python("YHK.yolandap_zreoScale()");
+        }
+        break;
+        
+         case "pickJointOn":
+        {
+          python("YHK.yolandap_PickMaskJoint_on()");
+        }
+        break;
+        
+        case "pickCurveOn":
+        {
+          python("YHK.yolandap_PickMaskCurve_on()");
+        }
+        break;
+        
+        case "pickSurfceOn":
+        {
+          python("YHK.yolandap_PickMaskSurfce_on()");
+        }
+        break;
+
+////////////////////////////////////////////////////////////////////////////////////////////
+   }
+}

@@ -1,0 +1,129 @@
+global proc checkSceneName(){
+     int $overNameRadio=`radioButtonGrp -q -sl  radioButton1`;
+     if($overNameRadio==1) {  
+        textScrollList -e -ra textListWin;
+        string $AllObjects[]=`ls`;
+        string $names[];
+        for($AllObject in $AllObjects){
+            string $object[];
+            int $nameOver = 0 ;
+            $nums= `tokenize $AllObject "|" $object`;
+            if($nums>1){
+                for($name in $names){
+                    if($object[size($object)-1]==$name){
+                        $nameOver=1;
+                    }
+                }
+            if($nameOver==0){
+                $names[size($names)]=$object[size($object)-1];
+            }
+            }
+        }
+        for($name in $names){
+            textScrollList -e -a $name textListWin;
+        }
+     }
+if($overNameRadio==2) {
+    textScrollList -e -ra textListWin;
+    string $overNameAlls[]=`ls`;
+    string $shortNames[];
+    string $onlyNames[];
+    for($i=0;$i<size($overNameAlls);$i++){
+        $nums=`tokenize $overNameAlls[$i] "|" $onlyNames`;
+        $shortNames[$i]=$onlyNames[$nums-1];
+    }
+
+    string $lowerNameAlls[];
+    for($i=0;$i<size($shortNames);$i++){
+        string $lowerName=`tolower($shortNames[$i])`;
+        $lowerNameAlls[$i]=$lowerName;
+    }
+
+
+    string $overLowerName[]=stringArrayRemoveDuplicates($lowerNameAlls);
+    string $overNames[] = stringArrayRemoveExact($overLowerName, $lowerNameAlls);
+    string $overNameOnly[]=stringArrayRemoveDuplicates($overNames);
+    
+    ///////////////
+    int $overNameNums[];
+    int $lowerNameNum=0;
+    for($i=0;$i<size($overNameOnly);$i++){
+
+        for($j=0;$j<size($lowerNameAlls);$j++){
+            if($overNameOnly[$i]==$lowerNameAlls[$j]){
+               $overNameNums[$lowerNameNum]=$j; 
+               $lowerNameNum++;
+            }    
+        }
+    }
+
+    string  $overNameNumEnd[];
+    int $endNameNum=0;
+    for($i=0;$i<size($overNameNums);$i++){
+        $overNameNumEnd[$endNameNum]=$shortNames[$overNameNums[$i]];
+        $endNameNum++;    
+    }
+
+    string $overNameNumList[]=stringArrayRemoveDuplicates($overNameNumEnd);
+
+    for($name in $overNameNumList){
+        textScrollList -e -a $name textListWin; 
+    }  
+}
+string $numItem[]=`textScrollList -q -ai  textListWin`;  
+if (`size($numItem)`==0){
+    textScrollList -e -a "none" textListWin; 
+    // text -e " none " textShow;
+}     
+
+}
+
+global proc selectObject(){
+    select -cl ;
+    string $objectNames[]=`textScrollList -q -si textListWin`;
+    for ($objectName in $objectNames){
+        select -add  ("*|"+$objectName);
+    }
+}
+global proc RenameAll(){
+    select -cl ;
+    string $objectNames[]=`textScrollList -q -allItems textListWin`;
+   
+    
+    for ($i=0;$i<size($objectNames) ;$i++){
+        if ($i % 2 != 1){
+            if(`radioButtonGrp -q -sl radioButton1`==1){
+            select -r ("*|"+$objectNames[$i]);
+            }
+            if(`radioButtonGrp -q -sl  radioButton1`==2){
+                select -add ("*|"+$objectNames[$i]);
+            }  
+            string $sels[]=`ls-sl`;
+            for($n=0;$n<size($sels);$n++){
+                rename ($sels[$n]) ($objectNames[$i]+"_"+($n+1));
+            }
+            
+        }
+
+    }    
+    
+    checkSceneName;
+}
+
+global proc sceneRenameUI(){
+    if(`window -q -ex sceneRenameWin`==1){
+        deleteUI sceneRenameWin;
+    }
+    
+    window -t "Check Scene Rename Object" -wh 350 580 -tlc 180 100 -s 0 sceneRenameWin;
+    // windowPref -r sceneRenameWin;
+    columnLayout -adj 1 -rs 10;
+    textScrollList -h 420 -ams 1 -sc "selectObject" textListWin;
+    text -l " " textShow;
+    radioButtonGrp -nrb 2  -l "case sensitive ? : " -cw3 120 80 80  -la2 "yes" "no" -sl 1 radioButton1;
+    button -h 35 -w 100 -bgc .8 .8 .8 -l "check scene" -c "checkSceneName" but1;
+    button -h 35 -w 100 -bgc .8 .8 .8 -l "Rename All" -c "RenameAll" but2;
+    showWindow sceneRenameWin;
+    
+}
+

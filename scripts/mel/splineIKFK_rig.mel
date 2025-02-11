@@ -1,0 +1,279 @@
+global proc gtsplineik_win(){
+if(`window -ex spline_IKFKSwith`) deleteUI  -window spline_IKFKSwith;
+window -wh 350 200 spline_IKFKSwith;
+columnLayout -adjustableColumn true "快捷创建";
+columnLayout -adj 1   mainColumnL;     
+    text -l "  ";
+    text -l " 先载入控制器，设置数量，选择需要创建IKFK的根关节";
+        separator -style "double" ;
+    textFieldButtonGrp -cw3 80 150 80 -h 50 -l ("控制器名称:") -text " 载入总控制器 " -ann "根据所需创建的关节所选择总控制器，可以是这部分关节的总控制器"  -bl   " 载 入 " -bc "LaodCon" LaodConObj;
+    setParent..;
+    rowColumnLayout -numberOfRows 1 ;
+    text -l " " -w 20;
+    text -l "控制器数量：";
+    intField -v 6 -min 4 -max 50  -ann "设置创建所控制spline关节的控制器数量" gtconNumb ;
+    text -l " " -w 20;
+    button -l "创 建" -ann "设置创建所控制spline关节的控制器数量" -w 60 -h 35 -c "gtsplineik_Swith"; 
+    text -l " " -h 40 -w 350 TextShowRusults;
+showWindow spline_IKFKSwith;
+}
+global proc LaodCon(){
+string $Cname="";
+string $sel[]=`ls -sl`;
+string $teststring=$sel[0];
+$Pname=$teststring;
+textFieldButtonGrp  -e -text $Pname LaodConObj;
+}
+
+global proc gtsplineik_Swith(){
+    //设置控制器数量$Numb：
+    int $Numb=`intField -q -v gtconNumb`;
+    string $Zcon=`textFieldButtonGrp -q -tx LaodConObj`;
+    string $sel[] = `ls -sl`;
+   //string $Zcon=($sel[0]);
+	select -r $sel[0];
+	select -hi;
+	string $sel[] = `ls -sl`;
+	string $baseJoint = $sel[0];
+	string $endJoint = $sel[size($sel)-1];
+    select -cl;
+
+	vector $jointPos[];
+
+	string $currentJoint = $baseJoint;
+	int $counter = 0;
+	select $baseJoint;
+		while ($currentJoint != $endJoint)
+		{
+			$jointPos[$counter] = `joint -q -p -a $currentJoint`;
+			pickWalk -d down;
+			$sel = `ls -sl`;
+			$currentJoint = $sel[0];
+			$counter++;
+		} 
+		
+    $sel = `ls -sl`;
+    $currentJoint = $sel[0];
+    $jointPos[$counter] = `joint -q -p -a $currentJoint`;	
+//创建曲线
+    string $buildCurve = "curve -d 1 ";
+    int $cvCounter = 0;
+    while ($cvCounter <= $counter)
+    {
+        $buildCurve = ($buildCurve + " -p " + $jointPos[$cvCounter]);
+        $cvCounter++;
+    }
+
+    $buildCurve = $buildCurve + ";";
+    //将$buildCurve字符串作为Maya命令计算。(创建曲线控制所有关节)
+    string $nameOfCurve = `eval ($buildCurve)`;
+    rename ($baseJoint+"_cur");
+    string $nameOfCurve=($baseJoint+"_cur");
+    CenterPivot;
+  
+    rebuildCurve -ch 1 -rpo 1 -rt 0 -end 1 -kr 1 -kcp 0 -kep 1 -kt 0 -s ($Numb-1) -d 3 -tol 0.01 $nameOfCurve;
+    int $degree = `getAttr ($nameOfCurve+".degree")`;
+    int $spans = `getAttr ($nameOfCurve+".spans")`;
+    int $max = ($degree+$spans)-1;
+    int $cv=$max-2;
+    delete ($nameOfCurve+".cv[1]");
+    delete ($nameOfCurve+".cv["+$cv+"]");
+    select -cl;
+    string $obj="notmove";
+    if (`objExists notmove_grp`== 0){
+        string $conGroup = `group -em -n ( $obj + "_grp" )`;
+    }
+    if (`objExists ($nameOfCurve+"_allcon_grp")`== 0){
+        string $conGroup = `group -em -n ( $nameOfCurve + "_allcon_grp ")`;
+    }
+    if (`objExists ($nameOfCurve+"_clustergrp")`== 0){
+        string $clusterGroup = `group -em -n ( $nameOfCurve + "_clustergrp")`;
+    }
+    select -r -sym ($nameOfCurve+".cv[0:"+$max+"]");
+    string $vexs[]=`ls -sl -fl`;
+    for ($i=0;$i<size($vexs);$i++){
+        select -r ($vexs[$i]);
+        newCluster " -envelope 1" ;
+        int $j=$i+1;
+        rename ($nameOfCurve+$j+"_cluster");
+        select -cl;
+         curve -d 1 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 
+         -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p 
+         -0.5 0.5 -0.5 -p -0.5 0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 
+         -0.5 0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 
+         -k 15 -n (($nameOfCurve+$j)+"IKCon");
+         pickWalk -d down;
+         rename (($nameOfCurve+$j)+"IKConShape");
+         select -r (($nameOfCurve+$j)+"IKCon");
+         group -n (($nameOfCurve+$j)+"IKCongrp");
+         group -n (($nameOfCurve+$j)+"IKCongrpA");
+         delete `parentConstraint ($nameOfCurve+$j+"_cluster") (($nameOfCurve+$j)+"IKCongrpA")`;
+        circle -ch 0 -o on -nr 1 0 0 -r 1.5 -n (($nameOfCurve+$j)+"FKCon") ;
+        pickWalk -d down;
+        rename (($nameOfCurve+$j)+"FKConShape");
+        select -r (($nameOfCurve+$j)+"FKCon");
+        group -n (($nameOfCurve+$j)+"FKCongrp");
+        group -n (($nameOfCurve+$j)+"FKCongrpA");
+        delete `parentConstraint ($nameOfCurve+$j+"_cluster") (($nameOfCurve+$j)+"FKCongrpA")`;
+        circle -ch 0 -o on -nr 1 0 0 -r 1.3 -n (($nameOfCurve+$j)+"FK_reCon") ;
+        pickWalk -d down;
+        rename (($nameOfCurve+$j)+"FK_reConShape");
+        select -r (($nameOfCurve+$j)+"FK_reCon");
+        group -n (($nameOfCurve+$j)+"FK_reCongrp");
+        group -n (($nameOfCurve+$j)+"FK_reCongrpA");
+        delete `parentConstraint ($nameOfCurve+$j+"_cluster") (($nameOfCurve+$j)+"FK_reCongrpA")`;
+        pointConstraint -mo (($nameOfCurve+$j)+"FKCon") (($nameOfCurve+$j)+"IKCon") (($nameOfCurve+$j)+"FK_reCon") ($nameOfCurve+$j+"_cluster"); 
+        setAttr (($nameOfCurve+$j+"_cluster")+".visibility") 0;
+        setAttr ($nameOfCurve+$j+"IKConShape.overrideEnabled") 1;
+        setAttr ($nameOfCurve+$j+"IKConShape.overrideColor") 6;
+        setAttr ($nameOfCurve+$j+"FKConShape.overrideEnabled") 1;
+        setAttr ($nameOfCurve+$j+"FKConShape.overrideColor") 16;
+        setAttr ($nameOfCurve+$j+"FK_reConShape.overrideEnabled") 1;
+        setAttr ($nameOfCurve+$j+"FK_reConShape.overrideColor") 13;
+        select -cl;
+        parent (($nameOfCurve+$j)+"IKCongrpA") ($nameOfCurve+"_allcon_grp");
+        parent (($nameOfCurve+$j)+"FKCongrpA") ($nameOfCurve+"_allcon_grp");
+        parent (($nameOfCurve+$j)+"FK_reCongrpA") ($nameOfCurve+"_allcon_grp");
+        parent ($nameOfCurve+$j+"_cluster") ( $nameOfCurve + "_clustergrp");
+    }
+    select -r ($nameOfCurve+"*IKCongrpA");
+    Group 0 1 1 -n ;rename "IKcon_grp";
+    
+    select -r ($nameOfCurve+"*FK_reCongrpA");
+    string $sela[]=`ls -sl`;
+     Group 0 1 1 -n ;rename "FK_recon_grp";
+    select -r ($nameOfCurve+"*FK_reCon");
+    string $selb[]=`ls -sl`;
+    for ($i=0;$i<size($sela);$i++){
+        int $j=$i+1;
+        if ($j<size($sela)){
+            parent $sela[$i] $selb[$j];
+        }
+    }
+    
+    select -r ($nameOfCurve+"*FKCongrpA");
+    string $sela[]=`ls -sl`;
+    Group 0 1 1 -n ;rename "FKcon_grp";
+    select -r ($nameOfCurve+"*FKCon");
+    string $selb[]=`ls -sl`;
+    for ($i=0;$i<size($sela);$i++){
+        int $j=$i+1;
+        if ($j<size($sela)){
+            parent $sela[$j] $selb[$i];
+        }
+    }
+    
+    select -cl;
+    select -r $baseJoint;
+    select -tgl $endJoint;
+    select -tgl $nameOfCurve ;
+    ikHandle -n ($nameOfCurve+"_handle") -sol ikSplineSolver -ccv false -pcv false;
+    setAttr ($nameOfCurve+".visibility") 0;
+    setAttr ($nameOfCurve+"_handle.visibility") 0;
+    parent ($nameOfCurve) notmove_grp;
+    parent ($nameOfCurve+"_handle") notmove_grp;
+    select -cl;
+    
+   ///////////骨骼拉伸、、、
+    shadingNode -asUtility curveInfo -n(($nameOfCurve)+"curInfo");
+    connectAttr -f (($nameOfCurve)+"Shape.worldSpace[0]") ((($nameOfCurve)+"curInfo")+".inputCurve");
+    shadingNode -asUtility multiplyDivide -n (($nameOfCurve)+"mulD");
+    setAttr ((($nameOfCurve)+"mulD")+".operation") 2;
+    
+    connectAttr -f ((($nameOfCurve)+"curInfo")+".arcLength") ((($nameOfCurve)+"mulD")+".input1X");
+    shadingNode -asUtility multiplyDivide -n ($Zcon+"mulD");
+    connectAttr -f ($Zcon+".scaleZ") (($Zcon+"mulD")+".input1X");
+    float $curve_length = `getAttr  ((($nameOfCurve)+"curInfo")+".arcLength")`;
+    setAttr (($Zcon+"mulD")+".input2X") $curve_length;
+    
+    connectAttr -f (($Zcon+"mulD")+".outputX") ((($nameOfCurve)+"mulD")+".input2X");
+
+    select -r $baseJoint;
+    select -hi;
+    string $seljnt[]=`ls -sl`; 
+    for ($i=0;$i<size($seljnt);$i++){
+        connectAttr -f ((($nameOfCurve)+"mulD")+".outputX") ($seljnt[$i]+".sx");
+    }
+    select -cl;
+    parent ($nameOfCurve+"_allcon_grp") $Zcon;
+    print ($nameOfCurve+"_spline关节创建完成！");
+
+
+addAttr -ln "IKFK"  -at "enum" -en "FK:IK:FK_re:"  -k 1 $Zcon;
+spaceLocator -n ($nameOfCurve+"SPjnt_Loc") -p 0 0 0;
+delete`pointConstraint $Zcon ($nameOfCurve+"SPjnt_Loc")`;
+CenterPivot;
+FreezeTransformations;
+DeleteHistory;
+connectAttr  ($Zcon+".translate") ($nameOfCurve+"SPjnt_Loc.translate");
+connectAttr  ($Zcon+".rotate") ($nameOfCurve+"SPjnt_Loc.rotate");
+connectAttr  ($Zcon+".scale") ($nameOfCurve+"SPjnt_Loc.scale");
+parent  $baseJoint ($nameOfCurve+"SPjnt_Loc");
+select -cl;
+
+shadingNode -asUtility condition -n ($Zcon+"FK_cond");
+connectAttr -f ($Zcon+".IKFK" ) ($Zcon+"FK_cond.firstTerm");
+setAttr ($Zcon+"FK_cond.colorIfTrueR") 1;
+setAttr ($Zcon+"FK_cond.colorIfFalseR") 0;
+shadingNode -asUtility condition -n ($Zcon+"IK_cond");
+connectAttr -f ($Zcon+".IKFK" ) ($Zcon+"IK_cond.firstTerm");
+setAttr ($Zcon+"IK_cond.colorIfTrueR") 1;
+setAttr ($Zcon+"IK_cond.colorIfFalseR") 0;
+shadingNode -asUtility condition -n ($Zcon+"FK_re_cond");
+connectAttr -f ($Zcon+".IKFK" ) ($Zcon+"FK_re_cond.firstTerm");
+setAttr ($Zcon+"FK_re_cond.colorIfTrueR") 1;
+setAttr ($Zcon+"FK_re_cond.colorIfFalseR") 0;
+
+setAttr ($Zcon+"FK_re_cond.secondTerm") 0;
+setAttr ($Zcon+"IK_cond.secondTerm") 1;
+setAttr ($Zcon+"FK_re_cond.secondTerm") 2;
+  
+select -r ($nameOfCurve+"*_cluster") ;
+pickWalk -d down;pickWalk -d right;
+string $selcu[]=`ls -sl`;
+for ($i=0;$i<size($selcu);$i++){
+    int $j=$i+1;
+    if ($j<=size($selcu)){
+        connectAttr -f ($Zcon+"FK_cond.outColorR") ($selcu[$i]+"."+$nameOfCurve+$j+"FKConW0");
+        connectAttr -f ($Zcon+"IK_cond.outColorR") ($selcu[$i]+"."+$nameOfCurve+$j+"IKConW1");
+        connectAttr -f ($Zcon+"FK_re_cond.outColorR") ($selcu[$i]+"."+$nameOfCurve+$j+"FK_reConW2");
+    }
+
+}
+setAttr ($Zcon+".IKFK") 0;
+setAttr "FKcon_grp.visibility" 1;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("FKcon_grp.visibility");
+setAttr ($Zcon+".IKFK") 1;
+setAttr "FKcon_grp.visibility" 0;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("FKcon_grp.visibility");
+setAttr ($Zcon+".IKFK") 2;
+setAttr "FKcon_grp.visibility" 0;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("FKcon_grp.visibility");
+
+setAttr ($Zcon+".IKFK") 0;
+setAttr "IKcon_grp.visibility" 0;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("IKcon_grp.visibility");
+setAttr ($Zcon+".IKFK") 1;
+setAttr "IKcon_grp.visibility" 1;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("IKcon_grp.visibility");
+setAttr ($Zcon+".IKFK") 2;
+setAttr "IKcon_grp.visibility" 0;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("IKcon_grp.visibility");
+
+setAttr ($Zcon+".IKFK") 0;
+setAttr "FK_recon_grp.visibility" 0;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("FK_recon_grp.visibility");
+setAttr ($Zcon+".IKFK") 1;
+setAttr "FK_recon_grp.visibility" 0;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("FK_recon_grp.visibility");
+setAttr ($Zcon+".IKFK") 2;
+setAttr "FK_recon_grp.visibility" 1;
+setDrivenKeyframe -currentDriver ($Zcon+".IKFK") ("FK_recon_grp.visibility");
+setAttr ($Zcon+".IKFK") 0;
+parent ($nameOfCurve+"SPjnt_Loc") ( $nameOfCurve + "_clustergrp") notmove_grp;
+setAttr ($nameOfCurve+"SPjnt_Loc.visibility") 0;
+string $text=("......创建完成......");
+   text -e -l $text TextShowRusults;  
+print ("......完成......");
+}
+gtsplineik_win();

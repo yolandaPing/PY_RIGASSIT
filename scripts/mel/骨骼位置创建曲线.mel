@@ -1,0 +1,49 @@
+//选择跟关节
+	string $sel[] = `ls -sl`;
+	select -r $sel[0];
+	select -hi;
+	string $sel[] = `ls -sl -type "joint"`;
+	string $baseJoint = $sel[0];
+	string $endJoint = $sel[size($sel)-1];
+    	select -cl;
+    
+//创建一个矢量数组来存储关节的世界空间坐标。
+	vector $jointPos[];
+//字符串变量，用于存放while循环中正在查询的当前关节。
+	string $currentJoint = $baseJoint;
+//计算while循环中使用的整数，以确定向量数组中的正确索引。
+	int $counter = 0;
+	select $baseJoint;
+	//将通过拾取穿过起始端和末端之间的所有关节来循环它们。
+    //循环遍历每个关节时，将它们的世界空间存储到$jointPos中
+		while ($currentJoint != $endJoint)
+		{
+			$jointPos[$counter] = `joint -q -p -a $currentJoint`;
+			pickWalk -d down;
+			$sel = `ls -sl`;
+			$currentJoint = $sel[0];
+			$counter++;
+		} 
+		
+	//这3行存储了循环将错过的末端接头的位置
+		$sel = `ls -sl`;
+		$currentJoint = $sel[0];
+		$jointPos[$counter] = `joint -q -p -a $currentJoint`;
+      
+//现在$jointPos[]持有我们关节的世界空间坐标，我们需要建立一个cv曲线		
+//创建曲线
+		string $buildCurve = "curve -d 1 ";
+//for循环的另一个计数器整数
+		int $cvCounter = 0;
+		
+//循环并将每个关节的位置添加到构建曲线字符串中。
+		while ($cvCounter <= $counter)
+		{
+			$buildCurve = ($buildCurve + " -p " + $jointPos[$cvCounter]);
+			$cvCounter++;
+		}
+		
+//向曲线命令添加结束终止
+		$buildCurve = $buildCurve + ";";
+		//将$buildCurve字符串作为Maya命令计算。(创建曲线控制所有关节)
+		string $nameOfCurve = `eval ($buildCurve)`;

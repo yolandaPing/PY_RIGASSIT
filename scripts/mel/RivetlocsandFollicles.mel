@@ -1,0 +1,65 @@
+source "mel/RivetandFollicle_Func.mel"; 
+global proc CreateRivetloc(){
+    if(`window -ex rivetwin`) deleteUI  -window rivetwin;
+window -wh 300 260 -t "Rivet or Follicle_v 2.0.0" -s 0 rivetwin;
+columnLayout -adjustableColumn true ;
+text -l "Rivet or Follicle_v 2.0.0 " -bgc .25 .4 .5 -h 30 ;
+separator -style double -h 20;   
+text -l "先选被控制对象，再选控制Mesh/NurbsSurface\n  " ;
+text -l " " -w 20;
+    columnLayout -adj 1;
+    radioButtonGrp -bgc 0.2 0.2 0.2 -en 1  -l " 创建方式：" -nrb 2 -la2 "parent" "Constraint" -cw3 65 65 135  -select 1 -cc "ConstraintType_update" cTypeBox;
+    text -l " " -w 20;
+
+    radioButtonGrp -bgc 0.2 0.2 0.2 -en 1  -l " Type ：" -nrb 3 -la3 "parent" "point"  "orient" -cw4 65 65 65 100 -select 1 positionBox;
+    setParent ..;
+    separator -style double -h 20; 
+    rowColumnLayout -nc 3 -cw 1 140 -cw 2 20 -cw 3 140;
+    button -l "Rivet " -bgc .8 0.8 0.8 -ann "rivet" -w 60 -h 35 -c "ApplyRivet"; 
+    text -l " " -w 20;
+    button -l " Follicle" -bgc .8 0.8 0.8 -ann "follicle" -w 60 -h 35 -c "ApplyFollicles"; 
+    setParent ..;
+    text -l "  ";
+    separator ;
+    iconTextButton -style "textOnly" -label "Copyright(c）| Rigging | 2023-05-29 | YouP" -h 22 -al "center" -c  "showHelp -a \"https://b23.tv/pmLchH6\"" ;
+    separator -style double -h 30;  
+    
+
+showWindow rivetwin;
+ConstraintType_update;
+}
+
+global proc ConstraintType_update(){
+    int $Type=`radioButtonGrp -q -sl cTypeBox`;
+    if ($Type == 1){
+        radioButtonGrp -e  -vis 0 positionBox;
+    }
+    else{
+        radioButtonGrp -e  -vis 1 positionBox;
+    }
+}
+
+global proc ApplyRivet(){
+    int $Type=`radioButtonGrp -q -sl cTypeBox`;
+    int $stat=`radioButtonGrp -q -sl positionBox`;
+    
+    string $sel[] = `ls -sl`;
+    if (`size $sel`< 2)
+        error( "# Please add NurbsSurface/Mesh.");
+    
+    CreateRivet($Type,$stat);
+
+}
+
+global proc ApplyFollicles(){
+    int $Type=`radioButtonGrp -q -sl cTypeBox`;
+    int $stat=`radioButtonGrp -q -sl positionBox`;
+    
+    string $sel[] = `ls -sl`;
+    if (`size $sel`< 2)
+        error( "# Please add NurbsSurface/Mesh.");
+
+    CreateobjFollicles($Type,$stat);
+
+}
+CreateRivetloc;

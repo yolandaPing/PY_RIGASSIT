@@ -1,0 +1,368 @@
+proc string stringReplace(string $str, string $search, string $replace)
+{
+    string $retstr = "";
+
+    	// Sanity check please!
+    if ($search == "")
+        return $str;
+    
+    if ($str == "")
+        return $str;
+        
+        
+    int $len = size($str);
+    int $lenS = size($search);
+    
+    int $i, $j;
+    int $match;
+    
+    for ($i=1; $i <= $len; ++$i)
+        {
+	$match = 0;
+
+	// Now get substring from where we are currently
+	// to the number of letters past of the length
+	// of the search string.  Basically the same
+	// length as the search string.  So if it is identical
+	// we know we have a match.
+	//
+	// If not, we don't.  We also make sure we aren't
+	// trying to look past the end of the string...
+	//
+	$j = $i + ($lenS - 1);
+
+	if ($j <= $len)
+	    {
+	    string $part = `substring $str $i $j`;
+	    if ($part == $search)
+	        $match = 1;
+	    }
+	
+	if ($match == 1)
+	    {
+	    $retstr += $replace; // we did it, so insert replace str
+	    $i = $j;	// skip forward
+	    }
+	else
+	    {
+	    string $char = `substring $str $i $i`;
+	    $retstr += $char;
+	    }
+	}
+
+    return $retstr;
+	
+}
+
+// --------------------------------------------------------------------------
+
+/*
+ * getShortName() - Given a string, get last part after last | pipe.
+ */
+proc string getShortName(string $obj)
+{
+    string $ret = "";
+    
+    if ($obj == "")
+        return $ret;
+        
+    string $parts[];
+    int $cnt = tokenize($obj, "|", $parts);
+    
+    if ($cnt <= 0)
+        $ret = $obj;
+    else
+        $ret = $parts[($cnt-1)];
+    
+    return $ret;
+}
+
+// --------------------------------------------------------------------------
+
+/*
+ * chop() - Removes last char
+ */
+proc string chop(string $str)
+{
+    string $ret = "";
+
+    int $cnt = size($str);
+    
+    if ($cnt <= 1)
+        return $ret;
+    
+    $ret = `substring $str 1 ($cnt-1)`;
+
+    return $ret;
+}
+
+
+global proc pyAddPrefixorSuffix(int $Type ,string $addStr)
+{
+    string $objs[] = `ls -sl -long `;
+
+    int $objCnt = size($objs);
+    int $i;
+
+    string $shortName;
+    string $newShortName;
+    string $newName;
+
+	// Now do it
+	//
+    for ($i=0; $i < $objCnt; ++$i)
+    {
+        $obj = $objs[$i];
+        
+        $shortName = getShortName($obj);
+            if ($Type == 1){
+                if ($addStr == "")
+                {
+                warning -sl 0 ("Can't add prefix, prefix entry field is blank!");
+                return;
+                }
+            $newShortName = ($addStr +"_"+ $shortName);
+
+            }
+
+            if ($Type == 2){
+                if ($addStr == "")
+                {
+                warning -sl 0 ("No number is setr!");
+                return;
+                }
+            $newShortName = ($shortName+"_"+$addStr);
+
+            }
+
+            if ($Type == 3){
+                if ($addStr == "")
+                {
+                warning -sl 0 ("Can't add suffix, suffix entry field is blank!");
+                return;
+                }
+            $newShortName = ($shortName+"_"+$addStr);
+
+            }
+        
+            
+        print $obj;
+        $newName = `rename $obj $newShortName`;
+        select -r $newName;
+        string $newLongNames[] = `ls -sl -long`;
+        string $newLongName = $newLongNames[0];
+        
+            // Now update rest of stuff in list in case |long|names
+            // required it
+        for ($j=0; $j < $objCnt; ++$j)
+            {
+            string $tmp = $objs[$j];
+
+            $tmp += "|";	// add to end for easy replacing
+            $tmp = `substitute ($obj+"|") $tmp ("|"+$newLongName+"|")`;
+            $tmp = chop($tmp);
+            
+            $objs[$j] = $tmp;
+            }
+        
+
+        }  // end of for all objs
+
+        select $objs;
+    
+}
+
+///////////////////////
+global proc pyReplacePrefix(string $prefix){
+    string $sel[] = `ls -sl`;
+    for($i=((`size $sel`)-1);$i>-1;$i--){
+    string $namePiece[];
+    int $tok=`tokenize $sel[$i] "|" $namePiece`;
+
+    string $tempN=$namePiece[$tok-1];
+    string $nopres[];
+    int $tokpre=`tokenize $tempN "_" $nopres`;
+    if($tokpre>1){
+        string $nopre=$nopres[1];
+        for($ii=2;$ii<size($nopres);$ii++){
+            $nopre=$nopre+"_"+$nopres[$ii];
+        }
+        rename $sel[$i] ($prefix+"_"+$nopre);
+        }
+    }
+}
+///////////////////
+global proc pyReplaceSuffix(string $Suffix){
+    string $sel[] = `ls -sl`;
+    for($i=((`size $sel`)-1);$i>-1;$i--){
+        string $namePiece[];
+        int $tok=`tokenize $sel[$i] "|" $namePiece`;
+        string $tempN=$namePiece[$tok-1];
+        string $noposts[];
+        int $tokposts=`tokenize $tempN "_" $noposts`;
+        if($tokposts>1){
+            string $nopost=$noposts[0];
+            for($count=1;$count<$tokposts-1;$count++){
+                $nopost=$nopost+"_"+$noposts[$count];
+            }
+            rename $sel[$i] ($nopost+"_"+$Suffix);
+        }
+    }
+}
+
+
+global proc pyAddPrefix(string $prefix){
+    string $sel[] = `ls -sl`;
+    for($i=((`size $sel`)-1);$i>-1;$i--){
+        string $namePiece[];
+
+        int $tok=`tokenize $sel[$i] "|" $namePiece`;
+
+        string $nam_tmp=$prefix+"_"+$namePiece[$tok-1];
+
+        rename $sel[$i] $nam_tmp;
+    }
+}
+
+global proc pyAddSuffix(string $Suffix){
+    string $sel[] = `ls -sl`;
+    for($i=0;$i<(`size $sel`);$i++){
+        string $namePiece[];
+        int $j=(`size $sel`)-$i-1;
+        int $tok=`tokenize $sel[$j] "|" $namePiece`;
+        string $name_temp=$namePiece[$tok-1]+"_"+$Suffix;
+        rename $sel[$j] $name_temp;
+    }
+}
+
+global proc pyAddNumbs(int $Numb){
+    string $sel[] = `ls -sl`;
+    
+    for($i=0;$i<(`size $sel`);$i++){
+        string $namePiece[];
+        int $j=(`size $sel`)-$i-1;
+        int $tok=`tokenize $sel[$j] "|" $namePiece`;
+        string $name_temp=$namePiece[$tok-1]+"_"+ ($j + $Numb);
+        rename $sel[$j] $name_temp;
+        // $Numb += 1;
+    }
+}
+
+global proc pyRenameShape(){
+    string $sel[] = `ls -s -l -sl`;
+
+    int $j=size($sel);
+
+    string $namePiece[];
+
+    for($i=0;$i<$j;$i++){
+
+        select -r $sel[$i];
+        string $shapes[]=`ls -dag -leaf -sl`;
+        int $num=`tokenize $sel[$i] "|" $namePiece`-1;
+        if(size($shapes)==1){
+            string $shapName=$namePiece[$num]+"Shape";
+
+            rename $shapes[0] $shapName;
+    }
+    else{
+
+        for($ii=0;$ii<size($shapes);$ii++){
+            int $temp=$ii+1;
+            string $shapeName=$namePiece[$num]+"Shape"+$temp;
+            rename $shapes[$ii] $shapeName;
+            }
+        }
+    }
+}
+
+
+global proc pySearch_fieldReplace(string $oldLetter,string $newLetter){
+    string $sel[] = `ls -sl`;
+    for($i=0;$i<(`size $sel`);$i++){
+        string $namePiece[];
+        int $j=(`size $sel`)-$i-1;
+        int $tok=`tokenize $sel[$i] "|" $namePiece`;
+        string $name_tmp=`substitute $oldLetter $namePiece[$tok-1] $newLetter`;
+        rename $sel[$j] $name_tmp;
+    }
+}
+
+
+global proc pyRename_1(string $newName){
+    string $sel[] = `ls -sl`;
+    int $j=size($sel);
+    for($i=0;$i<(`size $sel`);$i++){
+        int $j=(`size $sel`)-$i-1;
+        string $name_tmp=$newName+$j;
+        rename $sel[$j] $name_tmp;
+    }
+}
+
+global proc pyRename(string $rename,string $Suffix, int $start,int $padding)
+{
+    string $objs[] = `ls -sl -long `;
+
+    int $objCnt = size($objs);
+    int $i;
+
+    string $shortName;
+    string $newShortName;
+    string $newName;
+
+	// Now do it
+	//
+    for ($i=0; $i < $objCnt; ++$i)
+    {
+        $obj = $objs[$i];
+        
+        $shortName = getShortName($obj);
+            
+        
+		if ($rename == "")
+			{
+			warning -sl 0 ("Can't rename and number, rename entry field is blank!");
+			
+			return;
+			}
+            
+		int $n = $i + $start;
+	    		// pad of 0's
+		string $padStr = "";
+		
+			// Add padding as needed
+		for ($p=1; $p < $padding; ++$p)
+			{
+		if ($n < pow(10, $p) )
+			$padStr += "0";
+		}
+	    	
+		$newShortName = ($rename+"_"+$padStr+$n);
+      
+        $newName = `rename $obj $newShortName`;
+        select -r $newName;
+        string $newLongNames[] = `ls -sl -long`;
+        string $newLongName = $newLongNames[0];
+        
+            // Now update rest of stuff in list in case |long|names
+            // required it
+        for ($j=0; $j < $objCnt; ++$j)
+            {
+            string $tmp = $objs[$j];
+
+            $tmp += "|";	// add to end for easy replacing
+            $tmp = `substitute ($obj+"|") $tmp ("|"+$newLongName+"|")`;
+            $tmp = chop($tmp);
+            
+            $objs[$j] = $tmp;
+            }
+        
+
+        }  // end of for all objs
+
+        select $objs;
+        if ($Suffix != ""){
+            pyAddSuffix($Suffix);
+        }
+    
+}

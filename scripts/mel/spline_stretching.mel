@@ -1,0 +1,72 @@
+global proc gtstretching_win (){
+   if(`window -ex stretching_win`) deleteUI  -window stretching_win;
+window -wh 200 180 -t "spline关节拉伸" stretching_win;
+columnLayout -adj 1;
+text -l "";
+text -l "依次载入后，选择关节点击创建";
+textFieldButtonGrp -cw3 80 130 100 -h 50 -l ("总控制器:") -text "  " -bl   " 载入 " -ann "载入总控制器" -bc "Loadzcon" Loadzcon;
+textFieldButtonGrp -cw3 80 130 100 -h 50 -l ("spline曲线:") -text "  " -bl   " 载入 " -ann "载入准备的曲线" -bc "Laodcurve" LaodCurveObj;
+text -l " " -h 40 -w 350 -vis off TextShowRusults ;
+button -l "创 建" -ann "" -h 40 -c "gtstretching";
+
+window -wh 200 180;
+showWindow stretching_win;
+
+}
+gtstretching_win ();
+global proc Loadzcon(){
+string $Cname="";
+string $sel[]=`ls -sl`;
+string $teststring=$sel[0];
+$Pname=$teststring;
+textFieldButtonGrp  -e -text $Pname Loadzcon;
+}
+global proc Laodcurve(){
+string $Cname="";
+string $sel[]=`ls -sl`;
+string $teststring=$sel[0];
+$Pname=$teststring;
+textFieldButtonGrp  -e -text $Pname LaodCurveObj;
+}
+global proc gtstretching(){
+    string $Zcon=`textFieldButtonGrp -q -tx Loadzcon`;
+    string $cuName=`textFieldButtonGrp -q -tx LaodCurveObj`;
+    string $seljnt[]=`ls -sl -type "joint"`;
+    
+    addAttr -ln "strech"  -at double -min 1 -max 10 -dv 2 -k 1 $Zcon ;
+    addAttr -ln "shortLimt"  -at double -min 0.1 -max 1 -dv 0.5 -k 1 $Zcon ;
+
+    shadingNode -asUtility curveInfo -n($cuName+"curInfo");
+    connectAttr -f ($cuName+"Shape.worldSpace[0]") (($cuName+"curInfo")+".inputCurve");
+    shadingNode -asUtility multiplyDivide -n ($cuName+"mulD");
+    setAttr (($cuName+"mulD")+".operation") 2;
+    
+    connectAttr -f (($cuName+"curInfo")+".arcLength") (($cuName+"mulD")+".input1X");
+    shadingNode -asUtility multiplyDivide -n ($Zcon+"mulD");
+    connectAttr -f ($Zcon+".scaleZ") (($Zcon+"mulD")+".input1X");
+    float $curve_length = `getAttr  (($cuName+"curInfo")+".arcLength")`;
+    setAttr (($Zcon+"mulD")+".input2X") $curve_length;
+    
+    connectAttr -f (($Zcon+"mulD")+".outputX") (($cuName+"mulD")+".input2X");
+    
+    shadingNode -asUtility condition -n ("Strechcondition1" );
+    connectAttr -f (($cuName+"mulD")+".outputX") Strechcondition1.firstTerm;
+    connectAttr -f (($cuName+"mulD")+".outputX") Strechcondition1.colorIfTrueR;
+    connectAttr -f ($Zcon+".shortLimt") Strechcondition1.secondTerm;
+    connectAttr -f ($Zcon+".shortLimt") Strechcondition1.colorIfFalseR;
+    setAttr "Strechcondition1.operation" 2;
+    shadingNode -asUtility condition -n ("Strechcondition2" );
+    connectAttr -f Strechcondition1.outColorR Strechcondition2.firstTerm;
+    connectAttr -f Strechcondition1.outColorR Strechcondition2.colorIfTrueR;
+    connectAttr -f ($Zcon+".strech") Strechcondition2.secondTerm;
+    connectAttr -f ($Zcon+".strech") Strechcondition2.colorIfFalseR;
+    setAttr "Strechcondition2.operation" 4;
+    
+    for ($i=0;$i<size($seljnt);$i++){
+        connectAttr -f Strechcondition2.outColorR ($seljnt[$i]+".sx");
+    }
+    string $text=("......accomplish......");
+    text -e -l $text -vis on TextShowRusults; 
+    print ("......accomplish......");
+}
+ 

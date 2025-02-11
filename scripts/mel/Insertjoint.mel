@@ -1,0 +1,114 @@
+global proc FitResampleUI ()
+{
+    if (`window -q -ex FitResampleJnt`)
+        deleteUI FitResampleJnt;
+    window -t "insert the joints" -wh 260 100 -s 0 FitResampleJnt ;
+
+    int $numJoints=2;
+    string $allDescendents[],$tempString[];
+    string $selJoints[]=`ls -sl -type joint`;
+    string $startJoint=$endJoint="none";
+    if (size($selJoints)==2)
+        {
+            $startJoint = $selJoints[0];
+            $endJoint = $selJoints[1];
+        }
+    //Find current $numJoints
+    if (`objExists $startJoint` && `objExists $endJoint` )
+        {
+        string $countJoint=$endJoint;
+        for ($i=0;$i<99;$i++)
+            {
+            $tempString=`listRelatives -p $countJoint`;
+            $countJoint=$tempString[0];
+            if ($countJoint=="" || $countJoint==$startJoint)
+                break;
+            $numJoints++;
+            }
+        }
+     Create_Layout($startJoint,  $endJoint,  $numJoints);
+    
+showWindow FitResampleJnt;
+}
+
+
+
+global proc Create_Layout(string $startJoint, string $endJoint, int $numJoints ){
+    columnLayout -adj 1;
+    // rowLayout -nc 2;
+    // textFieldGrp -cw2 60 100 -l "startJoint:" -ed 0 -tx $startJoint StartJointtextFieldGrp;
+    // button -h 20 -l " << " -c "FitPick StartJointtextFieldGrp";
+    // setParent..;
+    // rowLayout -nc 2;
+    // textFieldGrp -cw2 60 100 -l "endJoint:" -ed 0 -tx $endJoint EndJointtextFieldGrp;
+    // button -h 20 -l " << " -c "FitPick EndJointtextFieldGrp";
+    // setParent..;
+    // intFieldGrp -v1 $numJoints -cw2 100 50 -l "joints amount: " NumJoints;
+    text -l "Select start and end joints";
+    text -l "";
+    intSliderGrp -label "amount:" -field true
+    -minValue 1 -maxValue 100
+    -fieldMinValue 0 -fieldMaxValue 100
+    -value 0 -cw3 80 50 100  NumJoints;
+    text -l "";
+    button -l "Apply" -c FitResampleJoints;
+}
+
+
+global proc FitPick (string $textFieldGrp)
+{
+string $selJoints[]=`ls -sl -type joint`;
+if (!size($selJoints))
+	error "No joint selected.";
+textFieldGrp -e -tx $selJoints[0] $textFieldGrp;
+}
+
+
+global proc FitResampleJoints(){
+    // string $startJoint=`textFieldGrp -q -tx StartJointtextFieldGrp`;
+    // string $endJoint=`textFieldGrp -q -tx EndJointtextFieldGrp`;
+    // int $numJoints=`intFieldGrp -q -v1 NumJoints`;
+    // if ($startJoint=="none" && $endJoint=="none"){
+    //     string $born[]=`ls - sl`;
+    //     $startJoint=$born[0];
+    //     $endJoint=$born[1];
+    // }
+    
+    int $numJoints=`intSliderGrp -q -v NumJoints`;
+    
+
+    string $born[]=`ls - sl`;
+    if (size($born) != 2)
+        error "Please choose the joint correctly !";
+
+    $startJoint=$born[0];
+    $endJoint=$born[1];
+    
+    if ($numJoints < 1)
+        error "Please set the quantity to insert !";
+
+    int $n = $numJoints;
+    int $max = $n +1;
+    for($i=0;$i<$n;$i++){
+        string $new = $startJoint;
+
+        duplicate -rc  -n ($new+"_"+($i+1)+"_sub_joint") $startJoint ;
+        delete `listRelatives -c ($new+"_"+($i+1)+"_sub_joint")`;
+        pointConstraint -n ($new+"_"+($i+1)+"_sub_jointPcont") $startJoint $endJoint ($new+"_"+($i+1)+"_sub_joint");
+        setAttr (($new+"_"+($i+1)+"_sub_jointPcont.")+$startJoint+"W0") ($max-$i-1);
+        setAttr (($new+"_"+($i+1)+"_sub_jointPcont.")+$endJoint+"W1") ($i+1); 
+        delete ("*_sub_jointPcont");
+        if ($i ==0){
+        parent ($new+"_1_sub_joint") $startJoint;
+        }
+        if ($i >0){
+        parent ($new+"_"+($i+1)+"_sub_joint") ($new+"_"+($i)+"_sub_joint");
+        }
+        if ($i == ($n-1)){
+        parent $endJoint ($new+"_"+($i+1)+"_sub_joint");
+        }
+    }
+}
+
+
+FitResampleUI();
