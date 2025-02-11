@@ -1,4 +1,4 @@
-# PY_RIGASSIT
+# PY_RIGASSIT 
 Why Should I use this ?
 =======================
 * 这是一款能帮助你提高绑定效率的maya绑定助手
@@ -16,6 +16,8 @@ Why Should I use this ?
 *Author: Yolanda Ping*
 
 ============================================================
+
+# 版本 05.3.4
 
 # 安装
 * 请确保你的maya已安装pymel ！！！ 
