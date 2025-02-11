@@ -40,3 +40,6 @@ Why Should I use this ?
 ![logo右键](https://github.com/user-attachments/assets/79b67d92-8a3c-4992-b965-b5fe1418894e)
 ![空白处右键](https://github.com/user-attachments/assets/9a8b5a35-f389-4994-aa3e-d59921c32f97)
 ![ctrl+右键](https://github.com/user-attachments/assets/2c4b5c32-8102-4f91-ae49-00af2570f861)
+
+# 版本更新信息查看
+![版本更新信息](https://github.com/user-attachments/assets/62ca6061-4d60-4ec0-a4e0-1a383aa4ff95)
