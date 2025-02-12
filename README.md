@@ -19,6 +19,8 @@ Why Should I use this ?
 
 # 版本 05.3.4
 
+# 使用
+关于PY_RIGASSIT 工具使用 [About PY_RIGASSIT Tool](https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0)
 
 # 安装
 * 请确保你的maya已安装pymel ！！！安装和导入 PyMEL [Autodesk Maya PyMel](https://help.autodesk.com/view/MAYAUL/2022/CHS/?guid=GUID-2AA5EFCE-53B1-46A0-8E43-4CD0B2C72FB4)
