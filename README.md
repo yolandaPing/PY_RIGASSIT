@@ -22,10 +22,9 @@ Why Should I use this ?
 # 安装
 * 请确保你的maya已安装pymel ！！！ 
 
-* 双击Install安装.bat 输入 y 安装工具，n 卸载 
+* 双击Install安装.bat 输入 y 安装工具，n 取消
 
-* uninstall卸载.bat 输入 y 卸载工具，n 卸载
-
+* uninstall卸载.bat 输入 y 卸载工具，n 取消
 * 支持maya2017-2024
 
 ============================================================
