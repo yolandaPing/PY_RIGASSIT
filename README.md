@@ -20,7 +20,9 @@ Why Should I use this ?
 # 版本 05.3.4
 
 # 安装
-* 请确保你的maya已安装pymel ！！！ 
+* 请确保你的maya已安装pymel ！！！
+  
+* 安装和导入 PyMEL ![Autodesk Maya pymel]([https://www.autodesk.com/products/maya/overview](https://help.autodesk.com/view/MAYAUL/2022/CHS/?guid=GUID-2AA5EFCE-53B1-46A0-8E43-4CD0B2C72FB4))
 
 * 双击Install安装.bat 输入 y 安装工具，n 取消
 
