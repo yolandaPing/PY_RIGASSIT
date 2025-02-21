@@ -7,6 +7,8 @@ Why Should I use this ?
 
 * 内部有权重模块；copy blendShape修型， weight模块；驱动模块；SDK拷贝和镜像模块；动力学绑定；拉链绑定等等
 
+* 建议安装numpy， 可以使用到变形器转权重，极速版权重导出导入！！！
+
 ============================================================
 
 ``If you have any questions about this tool, look forward to your timely feedback``
