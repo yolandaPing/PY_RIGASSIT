@@ -24,8 +24,8 @@ Why Should I use this ?
 # 使用
 关于PY_RIGASSIT 工具使用 [About PY_RIGASSIT Tool](https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0)
 
-# 网盘共享
-PY_RIGASSIT 网盘下载 [PY_RIGASSIT](https://pan.quark.cn/s/fe8c6e815f8e)
+# 闲鱼下载
+PY_RIGASSIT 下载 [PY_RIGASSIT](https://m.tb.cn/h.7lqLwhV?tk=kDADUV6ekXE)
 
 # 安装
 * 请确保你的maya已安装pymel ！！！安装和导入 PyMEL [Autodesk Maya PyMel]((https://pan.quark.cn/s/fe8c6e815f8e))
