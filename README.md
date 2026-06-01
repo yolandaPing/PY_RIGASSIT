@@ -19,10 +19,13 @@ Why Should I use this ?
 
 # 当前版本 0.6.1.1
 
+<img width="2486" height="1139" alt="新版ui" src="https://github.com/user-attachments/assets/4b715585-ae7b-4ec8-a809-539a5acbc6d7" />
+<img width="2551" height="1332" alt="第六版升级" src="https://github.com/user-attachments/assets/e14d61bf-b37a-417e-a6ac-174921d7e1d7" />
+
 # PY_RIGASSIT 核心功能
-* ✔批量拷贝权重（skincluster，defrom weight）和拷贝blendshape修型
+* ✔批量拷贝权重（skincluster，defrom weight
+* ✔批量拷贝blendshape修型
 * ✔️ openpipline（本地资产管理）、
-* ✔️ hotBox designer （热盒大师）、
 * ✔️ ikfk高级系统绑定、
 * ✔权重快速导入导出工具、
 * ✔自动计算权重、
@@ -30,6 +33,11 @@ Why Should I use this ?
 * ✔拉链绑定工具、
 * ✔动力学绑定工具、
 * ✔ikspline样条ik绑定工具、
+* ✔Ribbon rigging、
+* ✔生长动画绑定效果，
+* ✔可滑动的FK绑定、
+* ✔根据模型创建关节，
+* ✔曲线创捷关节，选择对象创建关节，
 * ✔批量属性创建
 * ✔批量拷贝sdk、和导出sdk数据、
 * ✔批量镜像sdk工具
@@ -38,12 +46,12 @@ Why Should I use this ?
 * ✔mel转python工具、
 * ✔脚本编辑器着色工具、
 * ✔maya2024或以上版本支持一个模型上多个蒙皮节点拷贝权重，
-* ✔生长动画绑定效果，
 * ✔批量约束、批量矩阵、链接，
 * ✔反算和拆分bs，
 * ✔导出动画数据工具 ，
- ✔导入模型材质，
-* ✔导出模型数据工具等等
+* ✔导入模型材质，
+* ✔导出模型数据工具,
+* ✔️ hotBox designer （热盒大师）、
 * ✔支持用户加入自己工具和脚本 等等
 
 * ✔️ 兼容Maya 2018-2026全版本，安装包小不占内存
