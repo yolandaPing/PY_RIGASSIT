@@ -1,0 +1,72 @@
+global proc pyFitResampleJoints(){
+
+    int $numJoints=`intSliderGrp -q -v pyNumJoints`;
+    string $endJoint = "";
+    
+     if ($numJoints < 1)
+        error "Please set the quantity to insert !";
+
+    string $borns[]=`ls - sl -type "joint"`;
+    if (size($borns)==0){
+        error "Please selected start joint !";
+    }
+   for($j=0;$j<size($borns);$j++){
+    string $childs[] = `listRelatives -c $borns[$j]`;
+    $startJoint=$borns[$j];
+    if (size($childs) > 0){
+        $endJoint =  $childs[0];
+    }
+    else{
+        continue;
+        }
+    
+        int $n = $numJoints;
+    int $max = $n +1;
+    for($i=0;$i<$n;$i++){
+        string $new = $startJoint;
+
+        duplicate -rc  -n ($new+"_"+($i+1)+"_sub_joint") $startJoint ;
+        delete `listRelatives -c ($new+"_"+($i+1)+"_sub_joint")`;
+        pointConstraint -n ($new+"_"+($i+1)+"_sub_jointPcont") $startJoint $endJoint ($new+"_"+($i+1)+"_sub_joint");
+        setAttr (($new+"_"+($i+1)+"_sub_jointPcont.")+$startJoint+"W0") ($max-$i-1);
+        setAttr (($new+"_"+($i+1)+"_sub_jointPcont.")+$endJoint+"W1") ($i+1); 
+        delete ("*_sub_jointPcont");
+        if ($i ==0){
+        parent ($new+"_1_sub_joint") $startJoint;
+        }
+        if ($i >0){
+        parent ($new+"_"+($i+1)+"_sub_joint") ($new+"_"+($i)+"_sub_joint");
+        }
+        if ($i == ($n-1)){
+        parent $endJoint ($new+"_"+($i+1)+"_sub_joint");
+        }
+    }
+    
+       }
+    
+    select -r $borns;
+}
+
+
+global proc pyFitResampleUI ()
+{
+    if (`window -q -ex FitResampleJnt`)
+        deleteUI FitResampleJnt;
+    window -t "insert joints" -wh 280 115 -s 0 FitResampleJnt ;
+
+     columnLayout -adj 1;
+
+    text -l "select start joints";
+    text -l "";
+    intSliderGrp -label "numb: " -field true
+    -minValue 1 -maxValue 100
+    -fieldMinValue 0 -fieldMaxValue 100
+    -value 1 -cw3 80 50 100  pyNumJoints;
+    text -l "";
+    button -l "Apply" -c pyFitResampleJoints -h 30 -bgc .8 .8 .8;
+    
+showWindow FitResampleJnt;
+}
+
+
+

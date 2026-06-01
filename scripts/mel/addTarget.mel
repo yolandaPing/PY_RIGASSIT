@@ -1,0 +1,58 @@
+/*
+time: 20250322
+author: you P
+email: yolandaping1224@gmail.com
+*/
+
+
+global proc add_blendshap_target() {
+    // Get selection ordered by selection order
+    string $sel[] = `ls -os`;
+    int $numTargets = size($sel) - 1;
+    
+    // Validate selection
+    if ($numTargets < 1) {
+        error "Select at least one target and one base geometry";
+        return;
+    }
+    
+    string $baseGeo = $sel[$numTargets];
+    string $bsNode;
+    
+    // Find existing blendShape node
+    string $deformers[] = `findDeformers $baseGeo`;
+    for ($df in $deformers) {
+        if (`objectType $df` == "blendShape") {
+            $bsNode = $df;
+            break;
+        }
+    }
+    
+    if ($bsNode == "") {
+        // Create new blendShape node if none exists
+        string $bsNodes[] = `blendShape -frontOfChain -tc 0 -n ($baseGeo + "_blendShape") $sel[0] $baseGeo`;
+        $bsNode = $bsNodes[0]; // Get first element of returned array
+        
+        // Set initial weights
+        for ($i = 0; $i < $numTargets; $i++) {
+            setAttr ($bsNode + ".w[" + $i + "]") 1;
+        }
+        
+        // Special case for 2 targets (3 selected items)
+        if (size($sel) == 3) {
+            setAttr ($bsNode + ".w[1]") -1;
+        }
+    } else {
+        // Add targets to existing blendShape
+        int $nextIndex = `getAttr -size ($bsNode + ".weight")`;
+        
+        for ($i = 0; $i < $numTargets; $i++) {
+            blendShape -e -t $baseGeo $nextIndex $sel[$i] 1 $bsNode;
+            setAttr ($bsNode + ".w[" + $nextIndex + "]") 1;
+            $nextIndex++;
+        }
+    }
+    
+    print "Add complete.\n";
+}
+

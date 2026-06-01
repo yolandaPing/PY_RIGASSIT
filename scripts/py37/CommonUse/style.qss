@@ -1,0 +1,166 @@
+
+QWidget {
+    font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC";
+    font-size: 11px;
+}
+
+QDialog, QMainWindow {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+QDialog {
+    background-color: #3a3a3a;
+    border: 1px solid #1f1f1f;
+    border-radius: 6px;
+}
+
+QDialog::title {
+    background-color: #2f3133;
+}
+
+QLabel[title="true"] {
+    font-size: 15px;
+    font-weight: bold;
+    color: #4dd0e1;
+}
+
+
+QPushButton {
+    background-color: #4a4d50;   
+    color: #e0e0e0;
+    border: 1px solid #5a5f63;
+    border-radius: 5px;
+    padding: 6px;
+}
+
+QPushButton:hover {
+    background-color: #55595c;
+}
+
+QPushButton:pressed {
+    background-color: #3f4245;
+}
+
+
+QPushButton[main="true"] {
+    background-color: #00acc1;
+    color: #000;
+    font-weight: bold;
+}
+
+
+QPushButton[danger="true"] {
+    background-color: #ef5350;
+    color: #000;
+}
+
+
+QPushButton[secondary="true"] {
+    background-color: #90a4ae;
+    color: #000;
+}
+
+
+
+QLineEdit, QDoubleSpinBox {
+    background-color: #2a2a2a;   
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 4px;
+}
+
+QLineEdit:focus, QDoubleSpinBox:focus {
+    border: 1px solid #00acc1;
+}
+
+
+
+QListWidget {
+    background-color: #2a2a2a;   
+    border: 1px solid #444;
+}
+
+QListWidget::item:selected {
+    background-color: #00acc1;
+    color: black;
+}
+
+
+/* ===== Scroll ===== */
+QScrollArea {
+    border: none;
+}
+
+
+
+QSplitter::handle {
+    background: transparent;
+}
+
+QSplitter::handle:horizontal {
+    border-left: 1px dashed rgba(255,255,255,0.15);
+}
+
+QSplitter::handle:vertical {
+    border-top: 1px dashed rgba(255,255,255,0.15);
+}
+
+QSplitter::handle:hover {
+    border-color: #00bcd4;
+}
+
+
+
+QFrame[card="true"] {
+    background-color: #343638;   
+    border: 1px solid #4a4f54;
+    border-radius: 8px;
+}
+
+QLabel[cardTitle="true"] {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4fc3f7;
+    padding-bottom: 4px;
+}
+
+
+
+QFrame[cardLine="true"] {
+    background-color: #4a4f54;
+    max-height: 1px;
+}
+
+
+
+QToolButton {
+    border: none;
+    font-weight: bold;
+    padding: 4px;
+}
+
+QToolButton:hover {
+    color: #4dd0e1;
+}
+
+
+/* ===== Checkbox ===== */
+QCheckBox {
+    spacing: 6px;
+}
+
+
+
+QSpinBox::up-button,
+QSpinBox::down-button {
+    width: 0px;
+}
+
+
+/* ===== Tooltip ===== */
+QToolTip {
+    background-color: #3a3a3a;
+    border: 1px solid #666;
+    color: #eee;
+}

@@ -1,0 +1,146 @@
+/*
+time: 20250322
+author: you P
+email: yolandaping1224@gmail.com
+*/
+
+
+
+global proc string pyPoseMirrorSkin(string $left_prex, string $right_prex, string $mid_prex, string $noMirror, int $leftToright) {
+
+
+    string $sel[] = `ls -sl -fl -tl 1`;
+    if (size($sel) == 0) {
+        return "No object selected.";
+    }
+    $sel = stringToStringArray($sel[0], ".");
+
+    string $lKeyA[] = stringToStringArray($left_prex, ";");
+    string $rKeyA[] = stringToStringArray($right_prex, ";");
+    string $mKeyA[] = stringToStringArray($mid_prex, ";");
+
+    if (size($lKeyA) != size($rKeyA) || size($lKeyA) == 0 || size($rKeyA) == 0 || size($mKeyA) == 0) {
+        return "Error retrieving string, please check!!!";
+    }
+
+    string $nMir[] = stringToStringArray($noMirror, ";");
+
+    string $skinClusterNode = `findRelatedSkinCluster $sel[0]`;
+    if ($skinClusterNode == "") {
+        return "No skin cluster found on selected object.";
+    }
+
+    string $inf[] = `skinCluster -q -inf $skinClusterNode`;
+    string $dif[] = stringArrayRemove($inf, $nMir);
+    if (size($dif)) $nMir = stringArrayRemove($dif, $nMir);
+
+    string $left[], $right[], $middle[];
+    // 创建inf列表的快速查找表
+    string $infLookup[] = {};
+    for ($i = 0; $i < size($inf); $i++) {
+        $infLookup[size($infLookup)] = $inf[$i];
+    }
+
+    for ($j = 0; $j < size($inf); $j++) {
+        string $joint = $inf[$j];
+        string $OtherSide = pyFindOtherSide($joint, $lKeyA, $rKeyA);
+
+        if ($OtherSide != "" && `stringArrayContains $OtherSide $infLookup`) {
+            // 只有当对称关节存在时才添加到左右数组
+            $left[size($left)] = $joint;
+            $right[size($right)] = $OtherSide;
+        } else {
+            // 检查是否是中间关节
+            for ($mid = 0; $mid < size($mKeyA); $mid++) {
+                if (`gmatch $joint ("*"+$mKeyA[$mid]+"*")`) {
+                    $middle[size($middle)] = $joint;
+                    break;
+                }
+            }
+        }
+    }
+
+        $middle = stringArrayRemove($right, $middle);
+        if (size($nMir)) {
+            $left = stringArrayRemove($nMir, $left);
+            $right = stringArrayRemove($nMir, $right);
+            $middle = stringArrayCatenate($nMir, $middle);
+            $middle = stringArrayRemoveDuplicates($middle);
+        }
+
+        if (size($inf) != (size($left) + size($right) + size($middle))) {
+            string $dif_inf[] = stringArrayRemove($left, $inf);
+            $dif_inf = stringArrayRemove($right, $dif_inf);
+            $dif_inf = stringArrayRemove($middle, $dif_inf);
+
+            if (size($dif_inf)>0){
+                string $result = "";
+
+                for ($i = 0; $i < size($dif_inf); $i++) {
+
+                    float $pos[] = `xform -q -ws -t $dif_inf[$i]`; //判断关节x轴是否在世界中心
+                    // print($pos[0]);
+                    if (abs($pos[0]) > 0.0001){
+                        $result += $dif_inf[$i] + ";";
+                        // print($result);
+                    }
+                    else{
+                        $middle[size($middle)] = $dif_inf[$i];
+                    }
+
+                }
+
+                if ($result != ""){
+                    return $result;
+                }
+
+            }
+
+        }
+
+        int $Version = `about -v`;
+        if ($Version > 2019) {
+            global string $gSelect = "selectSuperContext";
+            setToolTo $gSelect;
+        }
+
+        if (`objExists PoseMirrorSkin_Temp_grp`) delete PoseMirrorSkin_Temp_grp;
+        createNode -ss transform -n "PoseMirrorSkin_Temp_grp";
+        setAttr ($skinClusterNode + ".envelope") 0;
+
+        for ($l = 0; $l < size($left); $l++) {
+            createNode -p "PoseMirrorSkin_Temp_grp" -ss joint -n ("TempJnt_" + $left[$l]);
+            xform -t 1 $l 0 ("TempJnt_" + $left[$l]);
+            createNode -p "PoseMirrorSkin_Temp_grp" -ss joint -n ("TempJnt_" + $right[$l]);
+            xform -t -1 $l 0 ("TempJnt_" + $right[$l]);
+        }
+
+        for ($m = 0; $m < size($middle); $m++) {
+            createNode -p "PoseMirrorSkin_Temp_grp" -ss joint -n ("TempJnt_" + $middle[$m]);
+            xform -t 0 $m 0 ("TempJnt_" + $middle[$m]);
+        }
+
+        string $matrix[] = `listConnections -c 1 -d 0 ($skinClusterNode + ".matrix")`;
+        for ($i = 0; $i < size($inf); $i++) {
+            connectAttr -f ("TempJnt_" + $inf[$i] + ".worldMatrix[0]") $matrix[$i*2];
+        }
+
+        if ($leftToright == 1) {
+            copySkinWeights -ss $skinClusterNode -ds $skinClusterNode -mirrorMode YZ -sa closestPoint;
+        } else {
+            copySkinWeights -ss $skinClusterNode -ds $skinClusterNode -mirrorMode YZ -mi -sa closestPoint;
+        }
+
+        for ($i = 0; $i < size($inf); $i++) {
+            connectAttr -f ($inf[$i] + ".worldMatrix[0]") $matrix[$i*2];
+        }
+
+        setAttr ($skinClusterNode + ".envelope") 1;
+        delete PoseMirrorSkin_Temp_grp;
+
+
+    return "PoseMirrorSkin completed successfully.";
+}
+
+
+//pyPoseMirrorSkin("L_;_L;l_", "R_;_R;r_",  "M_;_M;m_", "", 1);

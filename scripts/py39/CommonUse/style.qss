@@ -1,0 +1,195 @@
+
+QWidget {
+    font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC";
+    font-size: 11px;
+}
+
+QDialog, QMainWindow {
+    background-color: #3a3a3a;
+    color: #e0e0e0;
+}
+
+QDialog {
+    background-color: #3a3a3a;
+    border: 1px solid #1f1f1f;
+    border-radius: 6px;
+}
+
+QDialog::title {
+    background-color: #2f3133;
+}
+
+
+QLabel{
+    font-size: 11px;
+    font-weight: bold;
+    color: #d8deed;
+}
+
+QLabel[title="true"] {
+    font-size: 15px;
+    font-weight: bold;
+    color: #4dd0e1;
+}
+
+QLabel[isText="true"] {
+    font-size: 12px;
+    font-weight: bold;
+    color: #4dd0e1;
+}
+
+
+QPushButton {
+    background-color: #4a4d50;   
+    color: #e0e0e0;
+    border: 1px solid #5a5f63;
+    border-radius: 5px;
+    padding: 6px;
+}
+
+
+QPushButton[main="true"] {
+    background-color: #b7bcc2;   
+    color: #000;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+
+QPushButton[green="true"] {
+    background-color: #62dfef;
+    color: #000;
+    font-weight: bold;
+}
+
+
+QPushButton[danger="true"] {
+    background-color: #f77977;
+    color: #000;
+}
+
+
+QPushButton[secondary="true"] {
+    background-color: #8cb8b3;
+    color: #000;
+}
+
+
+QPushButton:hover {
+    border: 2px solid #16e4ff;
+}
+
+QPushButton:pressed {
+    border: 2px solid #009cc7;
+}
+
+
+QLineEdit, QDoubleSpinBox {
+    background-color: #2a2a2a;   
+    border: 1px solid #444;
+    border-radius: 3px;
+    padding: 4px;
+}
+
+QLineEdit:focus, QDoubleSpinBox:focus {
+    border: 1px solid #00acc1;
+}
+
+
+
+QListWidget {
+    background-color: #2a2a2a;   
+    border: 1px solid #444;
+}
+
+QListWidget::item:selected {
+    background-color: #00acc1;
+    color: black;
+}
+
+
+/* ===== Scroll ===== */
+QScrollArea {
+    border: none;
+}
+
+
+
+QSplitter::handle {
+    background: transparent;
+}
+
+QSplitter::handle:horizontal {
+    border-left: 1.5px dashed rgba(20, 19, 19, 0.4);
+}
+
+QSplitter::handle:vertical {
+    border-top: 1.5px dashed rgba(24, 24, 24, 0.38);
+}
+
+QSplitter::handle:hover {
+    border-color: #00bcd4;
+}
+
+
+QFrame[card="true"] {
+    background-color: #343638;   
+    border: 1px solid #4a4f54;
+    border-radius: 8px;
+}
+
+QLabel[cardTitle="true"] {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4fc3f7;
+    padding-bottom: 4px;
+}
+
+
+
+QFrame[cardLine="true"] {
+    background-color: #4a4f54;
+    max-height: 1px;
+}
+
+
+
+QToolButton {
+    background-color: #5d6f80;
+    border: none;
+    font-weight: bold;
+    padding: 3px;
+}
+
+QToolButton:hover {
+    color: #60e4f6;
+}
+
+
+/* ===== Checkbox QRadioButton ===== */
+QCheckBox,
+QRadioButton {
+    spacing: 6px;
+    font-weight: 600;  
+}
+
+QCheckBox:hover,
+QRadioButton:hover {
+    color: #4dd0e1;  
+}
+
+QSpinBox::up-button,
+QSpinBox::down-button {
+    width: 0px;
+}
+
+
+/* ===== Tooltip ===== */
+
+QToolTip {
+    background-color: #fff59d;  
+    color: #000000;
+    border: 1px solid #999;
+    padding: 4px 6px;
+    border-radius: 3px;
+}

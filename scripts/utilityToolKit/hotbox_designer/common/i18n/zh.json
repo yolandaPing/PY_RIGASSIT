@@ -1,0 +1,24 @@
+{
+    "about.title": "关于 Hotbox Designer",
+    "about.version": "版本",
+    "about.compat": "兼容",
+    "about.modified": "二次开发",
+    "about.features": "主要改动",
+    "about.license": "许可",
+    "about.license_desc": "基于原项目协议",
+
+    "feature.nested": "嵌套子菜单系统（Hotbox 内嵌 Hotbox）",
+    "feature.editor": "支持在编辑器中创建/编辑按钮子菜单",
+
+    "ui.language": "语言",
+    "ui.close": "关闭",
+
+    "menu.add_button": "添加按钮",
+    "menu.add_text": "添加文本",
+    "menu.add_bg": "添加背景",
+
+    "submenu.enable": "启用子菜单",
+    "submenu.edit": "编辑子菜单",
+
+    "feature.ui": "界面与交互优化"
+}

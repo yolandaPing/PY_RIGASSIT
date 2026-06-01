@@ -1,0 +1,15 @@
+//创建定位器打组
+global proc gtLocgrp(){
+    string $sel[]=`ls -sl`;
+    for ($i=0;$i<(size($sel));$i++){
+        spaceLocator -p 0 0 0 -n ($sel[$i]+"_Loc");
+        group -em -n ($sel[$i]+"_grp");
+
+        delete`parentConstraint  $sel[$i] ($sel[$i]+"_Loc")`;
+        delete`parentConstraint  $sel[$i] ($sel[$i]+"_grp")`;
+        parent $sel[$i] ($sel[$i]+"_Loc");
+        parent ($sel[$i]+"_Loc") ($sel[$i]+"_grp");
+    }
+    print "完成";
+}
+gtLocgrp();

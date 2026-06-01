@@ -1,0 +1,104 @@
+     // curve -n ("pathbzcur") -bezier -d 3 -p 0 0 -20 -p 0 0 -20 -p 0 0 -8 -p 0 0 -8 -p 0 0 -8 -p 0 0 3 -p 0 0 3 -p 0 0 3 -p 0 0 14 -p 0 0 14 -p 0 0 14 -p 0 0 26 -p 0 0 26 -p 0 0 26 -p 0 0 39 -p 0 0 39 -p 0 0 39 -p 0 0 52 -p 0 0 52 -p 0 0 52 -p 0 0 65 -p 0 0 65 -p 0 0 65 -p 0 0 78 -p 0 0 78 -p 0 0 78 -p 0 0 90 -p 0 0 90 -p 0 0 90 -p 0 0 103 -p 0 0 103 -p 0 0 103 -p 0 0 117 -p 0 0 117 -p 0 0 117 -p 0 0 130 -p 0 0 130 -k 0 -k 0 -k 0 -k 1 -k 1 -k 1 -k 2 -k 2 -k 2 -k 3 -k 3 -k 3 -k 4 -k 4 -k 4 -k 5 -k 5 -k 5 -k 6 -k 6 -k 6 -k 7 -k 7 -k 7 -k 8 -k 8 -k 8 -k 9 -k 9 -k 9 -k 10 -k 10 -k 10 -k 11 -k 11 -k 11 -k 12 -k 12 -k 12 ;
+     // bezierAnchorPreset -p 1;
+    ////////////////////BZ曲线绑定
+    float $scale=2;
+    string $sel[]=`ls -sl`;    
+    int $degree = `getAttr ($sel[0]+".degree")`;
+    int $spans = `getAttr ($sel[0]+".spans")`;
+    int $max = ($degree+$spans)-1;
+	select -r -sym ($sel[0]+".cv[0:"+$max+"]");
+    string $vexs[]=`ls -sl -fl`;
+    for ($i=0;$i<size($vexs);$i++){
+            select -r ($vexs[$i]);
+            newCluster " -envelope 1" ;
+     }
+       
+select -cl;
+string $cuName=$sel[0];
+Group 0 1 1 ;
+rename ("all"+$cuName+"_con_grp");
+select -cl;
+
+  select -r "cluster*Handle";
+  string $selc[]=`ls -sl`;
+  select -cl; 
+
+   
+  for($i=0;$i<size($selc);$i++){
+       int $j=$i+1;
+  
+       select -r $selc[$i];
+       rename ($cuName+$j+"v");
+    
+     curve -d 1 -p 0.5 0.5 0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p 0.5 -0.5 0.5 -p 0.5 0.5 0.5 
+     -p -0.5 0.5 0.5 -p -0.5 0.5 -0.5 -p 0.5 0.5 -0.5 -p 0.5 -0.5 -0.5 -p -0.5 -0.5 -0.5 -p 
+     -0.5 0.5 -0.5 -p -0.5 0.5 0.5 -p -0.5 -0.5 0.5 -p -0.5 -0.5 -0.5 -p -0.5 -0.5 0.5 -p 0.5 
+     -0.5 0.5 -k 0 -k 1 -k 2 -k 3 -k 4 -k 5 -k 6 -k 7 -k 8 -k 9 -k 10 -k 11 -k 12 -k 13 -k 14 
+     -k 15 -n (($cuName+$j+"v")+"Con");
+     scale( $scale) ($scale ) ($scale);
+     FreezeTransformations;
+     DeleteHistory;
+     group -n (($cuName+$j+"v")+"Congrp");
+     group -n (($cuName+$j+"v")+"CongrpA");
+     delete `parentConstraint ($cuName+$j+"v")  (($cuName+$j+"v")+"CongrpA")`;
+     parent ($cuName+$j+"v") (($cuName+$j+"v")+"Con");
+     setAttr ($cuName+$j+"v.visibility") 0;
+     setAttr ($cuName+$j+"vCon.overrideEnabled") 1;
+     setAttr ($cuName+$j+"vCon.overrideColor") 18;
+     parent (($cuName+$j)+"vCongrpA") ("all"+$cuName+"_con_grp");
+  }
+ /////////////////////////////////// 
+  select -r "pathbzcur*vCon ";
+  string $selcon[]=`ls -sl`;
+  for ($i=0;$i<size($selcon);$i+=3){
+   $a=1+$i;
+   $b=2+$i;
+   if ($a<size($selcon)-2){
+    int $degreea = `getAttr ($selcon[$a]+".degree")`;
+    int $spansa = `getAttr ($selcon[$a]+".spans")`;
+    int $maxa = ($degreea+$spansa)-1;
+	select -r -sym ($selcon[$a]+".cv[0:"+$maxa+"]");
+    scale -r -ocp 0.5 0.5 0.5;
+    select -cl;
+    setAttr ($selcon[$a]+".overrideColor") 12;
+   }
+   if ($b<size($selcon)-1){
+    int $degree = `getAttr ($selcon[$b]+".degree")`;
+    int $spans = `getAttr ($selcon[$b]+".spans")`;
+    int $max = ($degree+$spans)-1;
+	select -r -sym ($selcon[$b]+".cv[0:"+$max+"]");
+    scale -r -ocp 0.5 0.5 0.5;
+    select -cl;
+    setAttr ($selcon[$b]+".overrideColor") 12;
+  }
+  }
+/////////////////////////////////
+  select -r "pathbzcur*vCongrp" ;
+  string $selgrpc[]=`ls -sl`;
+  select -cl;
+
+  for ($i=0;$i<size($selgrpc);$i+=3){
+    int $b=$i+1;
+    if ($b<size($selgrpc)-1){
+  
+         connectAttr -f ($selcon[$i]+".t") ($selgrpc[$b]+".t");
+         connectAttr -f ($selcon[$i]+".r") ($selgrpc[$b]+".r");
+    }
+    }
+      int $w=size($selgrpc)-1;
+     for ($i=0;$i<size($selgrpc);$i+=3){
+            int $a=$w-$i-1;  
+               if ($a>0){  
+        select -r ($selcon[$w-$i]);
+        select -r $selgrpc[$a];
+      
+       
+            connectAttr -f ($selcon[$w-$i]+".t") ($selgrpc[$a]+".t");
+            connectAttr -f ($selcon[$w-$i]+".r") ($selgrpc[$a]+".r");
+       
+            }
+    }
+            // connectAttr -f ($selcon[$w]+".t") ($selgrpc[$w-1]+".t");
+            // connectAttr -f ($selcon[$w]+".r") ($selgrpc[$w-1]+".r");
+
+  print "......Bezier曲线控制器操作完成.....";

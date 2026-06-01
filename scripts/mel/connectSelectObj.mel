@@ -1,0 +1,15 @@
+global proc gtconnect(){
+    string $sel[]=`ls -sl`;
+    if (size($sel)==2) {
+        // connectAttr  ($sel[0]+".translate") ($sel[1]+".translate");
+        // connectAttr  ($sel[0]+".rotate") ($sel[1]+".rotate");
+        connectAttr  ($sel[0]+".scale") ($sel[1]+".scale");
+        print "完成";
+    }
+   else{
+        error "请选择connect输出物体，加选链接的物体。";
+   }
+    
+}
+
+gtconnect();

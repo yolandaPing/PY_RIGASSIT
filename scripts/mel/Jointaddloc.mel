@@ -1,0 +1,27 @@
+global proc add_jointLoc_system()
+{
+    //添加骨骼上级的loc
+    string $sle[]=`ls -sl`;
+    for( $ii = 0;$ii<`size $sle`;$ii++)
+    {
+        select -hi $sle[$ii];
+        string $sle_aaa[]=`ls -sl -type transform `;
+        for( $iia = 0;$iia<`size $sle_aaa`;$iia++)
+        {
+            string $LOC[]=`spaceLocator -p 0 0 0 -n ($sle[$ii]+"_loc")`;
+            delete `parentConstraint  -weight 1 $sle_aaa[$iia] $LOC[0] `;
+            select -r $sle_aaa[$iia];
+            string $sle_bbb[]=`pickWalk -d up`;
+            if ($sle_bbb[0] == $sle_aaa[$iia])
+            {
+                parent $sle_aaa[$iia] $LOC[0];
+            }
+            else
+            {
+                parent $sle_aaa[$iia] $LOC[0];
+                parent  $LOC[0] $sle_bbb[0];
+            }
+        }
+    }
+}
+add_jointLoc_system();

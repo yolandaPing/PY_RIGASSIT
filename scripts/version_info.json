@@ -1,0 +1,107 @@
+{
+  "tip":[
+  "06.0.0",
+  "2022-2026",
+  "https://pyrigassit.cn",
+  "https://github.com/yolandaPing/PY_RIGASSIT.git",
+  "https://pan.quark.cn/s/fe8c6e815f8e"
+],
+"description": [
+  "2024-09-08. v 05.0.0   升级工具的版本适配性; ",
+  "2024-10-13. v 05.1.0   添加关节链ribbon绑定方式; 优化拷贝权重工具",
+  "2024-10-16. v 05.1.1   优化blendShape拷贝工具的自动清理无效目标体",
+  "2024-10-22. v 05.1.2   优化ribbon的矩阵链接方式",
+  "2024-10-22. v 05.1.3   优化joint模块",
+  "2024-11-09. v 05.2.0   添加自定义IKFK Ribbon System",
+  "2024-12-08. v 05.3.0   添加多种权重导入导出功能; 添加maya2024的使用权限",
+  "2024-12-24. v 05.3.1   添加wire转权重工具曲线自动创建skin joints 计算权重",
+  "2025-01-04. v 05.3.2   修复IKFK Ribbon System 外层控制器的数值;\n ------------. -----------   优化mirror blendWeight SDK",
+  "2025-02-08. v 05.3.3   优化快捷拷贝权重时重命名对象拷贝报错问题",
+  "2025-02-10. v 05.3.4   优化低版本maya报错问题",
+  "2025-02-16. v 05.3.5   更新变形器权重拷贝",
+  "2025-03-08. v 05.4.0   添加矩阵约束模块； 优化ikfk绑定系统的自动化",
+  "2025-03-18. v 05.4.1   优化rbf修型和权重镜像工具",
+  "2025-03-23. v 05.5.0   添加平面拆分blendshape target",
+  "2025-04-05. v 05.5.2   优化曲线计算权重 和 SDK模块",
+  "2025-05-18. v 05.5.3   优化控制器镜像前缀 和 ikfk Ribbon 的生成方式",
+  "2025-05-24. v 05.5.4   更新控制器模块 和 关节定向模块",
+  "2025-05-30. v 05.5.5   单独添加拆分权重ui, 添加variable FK工具",
+  "2025-06-10. v 05.5.6   镜像SDK工具添加自定义查找前后缀功能;\n ------------. -----------    drive模块sdk添加值得反转",
+  "2025-06-19. v 05.5.7   sdk 导出模块添加导出节点",
+  "2025-07-06. v 05.5.8   全面更新blendShape Editor 工具",
+  "2025-07-12. v 05.5.9   更改拷贝修型的方式",
+  "2025-07-26. v 05.6.0   添加模型材质球传递工具; 更新IKFK绑定系统; 更换Qt Box的UI;",
+  "2025-08-09. v 05.6.1   优化blendShape Editor; rbf修型添加导出功能;",
+  "2025-08-20. v 05.6.2   修复低版本maya开启第一个模块奔溃;",
+  "2025-08-24. v 05.7.0   添加批量拷贝变形器权重工具;",
+  "2025-09-11. v 05.7.2   优化;",
+  "2025-10-12. v 05.7.4   joint模块添加Global属性自动识别控制器是ADV或PY_RIGASSIT;",
+  "2025-11-26. v 05.7.5   maya2022+优化曲线计算权重和ng2 layer 拆分权重;api correct pose等 ",
+  "2025-12-10. v 05.8.0   支持maya2018-2026",
+  "2026-01-01. v 05.9.1   添加用户MEL python Script Manager神器(加载进总ui)",
+  "2026-01-18. v 05.9.3   添加maya2024多个蒙皮节点权重拷贝和多个蒙皮对象传递给一个对象",
+  "2026-03-06. v 05.9.5   添加模型数据导出和根据导入数据重新生成模型;优化bsEditor ui",
+  "2026-03-19. v 05.9.6   joint模块里普通版权重导入导出速度提升8-10倍, 优化2023+蒙皮节点拷贝",
+  "2026-05-05. v 06.0.0   ui升级新版本， 添加热盒工具"
+],
+  "jointEdit":[
+  "4.1.0",
+  "2022-2026",
+  "https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0"
+],
+  "copytool":[
+  "4.5.0",
+  "2022-2026",
+  "https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0"
+],
+  "drivetool":[
+  "4.6.0",
+  "2022-2026",
+  "https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0"
+],
+  "controlltool":[
+  "2.4.0",
+  "2022-2026",
+  "https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0"
+],
+  "ikfktool":[
+  "2.3.0",
+  "2023-2026",
+  "https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0"
+],
+  "sdktool":[
+  "2.4.0",
+  "2024-2026",
+  "https://www.bilibili.com/video/BV1TxcAe2EAB/?share_source=copy_web&vd_source=7b50d73ef3e3d9c8d5f26b106034eb71"
+],
+  "qttool":[
+  "2.11.0",
+  "2024-2026",
+  "https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0"
+],
+  "blendshapeEdittool":[
+  "3.4.1",
+  "2023-2026",
+  "https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0"
+],
+  "rbfPosetool":[
+  "2.6.5",
+  "2024-2026",
+  "https://www.bilibili.com/video/BV1tfz6YAE8D/?share_source=copy_web&vd_source=7b50d73ef3e3d9c8d5f26b106034eb71"
+],
+   "dirPosetool":[
+  "1.0.2",
+  "2025-2026",
+  "https://www.bilibili.com/video/BV1WmwjzGE2m/?share_source=copy_web&vd_source=7b50d73ef3e3d9c8d5f26b106034eb71"
+],
+  "pyblendshapeEditor":[
+  "3.6.3",
+  "2023-2026",
+  "https://www.bilibili.com/video/BV1WC3BzoENU/?share_source=copy_web&vd_source=7b50d73ef3e3d9c8d5f26b106034eb71"
+],
+  "splitskinweighttool":[
+  "1.2.0",
+  "2025-2026",
+  "https://www.bilibili.com/video/BV1Jz7AzNE5a/?share_source=copy_web&vd_source=c58b058ac7bf4a403e27a58ee40f299b"
+]
+}

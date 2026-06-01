@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shelfLayout>
+    <button>
+        <label>About PY_RIGASSIT </label>
+        <icon>/PY_RIGASSIT.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from AboutToolsUI import AboutToolsUI
+AboutToolsUI = AboutToolsUI()
+AboutToolsUI.window()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>separator</label>
+        <icon>none</icon>
+        <type>separator</type>
+        <command>--------------------------------------------------------------------------------------------------------------</command>
+    </button>
+
+    <button>
+        <label>PY_RIGASSIT Assistant 5</label>
+        <icon>/PyAssistantBase1.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from BatchGUI import BatchGUI
+GUT = BatchGUI()
+GUT.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>separator</label>
+        <icon>none</icon>
+        <type>separator</type>
+        <command>--------------------------------------------------------------------------------------------------------------</command>
+    </button>
+
+    <button>
+        <label>Joints EditTools</label>
+        <icon>/JointEditLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from JointEdit.JointToolsUI import JointToolUI
+JT = JointToolUI()
+JT.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Copy Tools</label>
+        <icon>/MirrorLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from CopyEdit.CopyTools import CopyToolsUI
+CT = CopyToolsUI()
+CT.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Drive Tools</label>
+        <icon>/dirvenLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from ConstrainEdit.ConstrainToolsUI import ConstrainToolsUI
+COT = ConstrainToolsUI()
+COT.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>IKFK Ribbon System</label>
+        <icon>/IKFK_icon.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from ControllerTool.IKFK_Ribbon_System import IKFK_Ribbon_System
+IKFKSYSTEM = IKFK_Ribbon_System()
+IKFKSYSTEM.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Controll Tool</label>
+        <icon>/ctrlsLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from ControllerTool.CustomizeCurve import CommonlyUsedSetUI
+CTRL = CommonlyUsedSetUI()
+CTRL.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>split skin weight tool</label>
+        <icon>/SplitSkinLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from JointEdit.split_skin_weight_UI import SplitSkinUI
+SST = SplitSkinUI()
+SST.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Deform Weight Copy/Edit</label>
+        <icon>/DeformEdit_logo.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+import py_rigAssit.deform_edit.copy_deform_weight as deform_edit
+deform_edit.main()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Attribute Edit</label>
+        <icon>/Attr_logo.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from ControllerTool.AttributeEditUI import AttributeEditUI
+AT = AttributeEditUI()
+AT.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>SDK Edit</label>
+        <icon>/SDK_icon.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from ConstrainEdit import mirror_copy_sdk as mirror_copy_sdk
+mirror_copy_sdk.main()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Combine SDK Driven</label>
+        <icon>/CombineSDK_logo.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+import py_rigAssit.general_mod.combine_sdk_ui as combine_sdk
+combine_sdk.main()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Rename Tool</label>
+        <icon>/ReName_logo.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from GeneralTools.RenameTool import RenameBox
+RenameBox=RenameBox()
+RenameBox.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Rivet Follice Tool</label>
+        <icon>/RivetFolliceLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from GeneralTools.MatrixToolUI import MatrixToolsUI
+MXT = MatrixToolsUI()
+MXT.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Transfer uv shader Tool</label>
+        <icon>/ModerShderUVLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+import py_rigAssit.model_mod.model_transfer_uv_shader as transfer_uv_shader
+transfer_uv_shader.main()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Animation Tool</label>
+        <icon>/AnimationLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+import py_rigAssit.animation_mod.Animation_ui as Animation_ui
+Animation_ui.main()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>separator</label>
+        <icon>none</icon>
+        <type>separator</type>
+        <command>--------------------------------------------------------------------------------------------------------------</command>
+    </button>
+
+    <button>
+        <label>RBF Dirve Pose Tool</label>
+        <icon>/PoseLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+try:
+    from DrivePose.DriverPoseUI import DirveShapeToolsUI
+    RBFPT = DirveShapeToolsUI()
+    RBFPT.mainWindow()
+except:
+    import HelpImageUI as Hint
+    Hint.denyUserAccess()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Dirve Pose Tool</label>
+        <icon>/Dir_pose_log.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+try:
+    from DrivePose.direction_dirve_pose.dir_pose_ui import DIRDirveUI
+    DIRPT = DIRDirveUI()
+    DIRPT.mainWindow()
+except:
+    import HelpImageUI as Hint
+    Hint.denyUserAccess()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>BlendShape Editor</label>
+        <icon>/BS_icon.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from DrivePose.blendShape_Editor import PYBlendShapeEditor
+BST = PYBlendShapeEditor()
+BST.showWindow()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>separator</label>
+        <icon>none</icon>
+        <type>separator</type>
+        <command>--------------------------------------------------------------------------------------------------------------</command>
+    </button>
+
+    <button>
+    <label>Snake Tool</label>
+    <icon>/snake_logo.png</icon>
+    <type>python</type>
+    <command><![CDATA[
+import py_rigAssit.snake_tool.snake_ui as ui
+ui.main()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>separator</label>
+        <icon>none</icon>
+        <type>separator</type>
+        <command>--------------------------------------------------------------------------------------------------------------</command>
+    </button>
+
+    <button>
+        <label>mel to python</label>
+        <icon>/melTopyLog.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+from GeneralTools.translate_mel_to_python import TranslateMELtoPyhtonUI
+TranslateMELtoPyhtonUI=TranslateMELtoPyhtonUI()
+TranslateMELtoPyhtonUI.window()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>Quick Tools box</label>
+        <icon>/QT_logo.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+import py_rigAssit.quick_box_ui as quick_box
+quick_box.show_ui()
+        ]]></command>
+    </button>
+
+    <button>
+        <label>ScriptHighlighter</label>
+        <icon>/cmdWndIcon.png</icon>
+        <type>python</type>
+        <command><![CDATA[import maya.mel as mel
+mel.eval("ScriptEditor;")
+import syntax_jd as syntax_jd
+syntax_jd.wrap()]]></command>
+    </button>
+
+    <button>
+        <label>separator</label>
+        <icon>none</icon>
+        <type>separator</type>
+        <command>--------------------------------------------------------------------------------------------------------------</command>
+    </button>
+
+    <button>
+        <label>py Openpipeline</label>
+        <icon>/pyOpenpipeline.png</icon>
+        <type>python</type>
+        <command><![CDATA[import py_rigAssit.openpipeline.pyopenpipeline as openpipeline
+openpipeline.main()]]></command>
+    </button>
+
+    <button>
+        <label>separator</label>
+        <icon>none</icon>
+        <type>separator</type>
+        <command>--------------------------------------------------------------------------------------------------------------</command>
+    </button>
+
+    <button>
+        <label>Hotbox Designer</label>
+        <icon>/hotbox_designer.png</icon>
+        <type>python</type>
+        <command><![CDATA[
+import hotbox_designer
+hotbox_designer.launch_manager('maya')
+        ]]></command>
+    </button>
+
+    <button>
+        <label>weightDriver</label>
+        <icon>/weightDriver.png</icon>
+        <type>mel</type>
+        <command><![CDATA[
+source "utilityToolKit/weightDriver/scripts/weightDriverEditRBF.mel";weightDriverEditRBF;
+        ]]></command>
+    </button>
+
+    <button>
+        <label>ngSkinTool2</label>
+        <icon>/ngSkinTools2ShelfIcon.png</icon>
+        <type>python</type>
+        <command><![CDATA[import maya.cmds as cmds
+if not cmds.pluginInfo('ngSkinTools2', q=True, l=True):
+    cmds.loadPlugin('ngSkinTools2')
+
+import ngSkinTools2
+ngSkinTools2.open_ui()]]></command>
+    </button>
+
+
+
+    <!-- 以下省略其余按钮，保持相同结构 -->
+</shelfLayout>

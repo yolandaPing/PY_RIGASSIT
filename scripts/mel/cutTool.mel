@@ -1,0 +1,207 @@
+/*
+    Script:     js_cutPlane.mel
+    Version:    1.0
+    Author:     Jason Schleifer
+    Website:    http://jonhandhisdog.com
+
+    Descr:      Used to help segmenting geometry into easily digestible chunks
+
+    Proc:       js_cutPlane_create
+    Descr:      This procedure creates a cut plane for the selected object.
+	            you can create as many as you want, just execute the script
+	            as many times as necessary.
+
+    Proc:       js_cutPlane_cut ( int $deletePlanes )
+                This procedure takes the selected object and cuts it
+                based on the cutPlanes that exist on it.
+                if $deletePlanes is 1, it will delete the cutPlanes.
+                if it's 0, then it will leave the cutPlanes there.
+    
+                it will return the results as follows:
+                "origObject:cutObj1:cutObj2:cutObj3";
+   
+*/
+global proc string js_cutPlane_create ()
+{
+	// This procedure creates a cut plane for the selected object.
+	// you can create as many as you want, just execute the script
+	// as many times as necessary.
+
+    string $objs[0];
+    string $obj;
+    string $cutPlane;
+    $objs = `ls -sl`;
+    if (size($objs) > 0)
+    {
+        $obj = $objs[0];
+        // we're going to create a cutPlane for the selected polygon.
+        // check and make sure it's a poly
+        string $Shape;
+        
+        string $shapes[] = `listRelatives -f -s $obj`;
+        
+
+        $Shape = $shapes[0];
+     
+        
+        if (`nodeType $Shape` == "nurbsSurface")
+        {
+            // we probably have one of the cutPlanes selected.. if that's the case, we
+            // should find the actual object, and create the cutPlane for that.
+            string $object = `js_cutPlane_findObj $obj`;
+            if ($object != "")
+            {
+                // redefine $obj and $shape
+                $obj = $object;
+                $Shape = `listRelatives -f -s $obj`; 
+            }
+
+        }
+        if (`nodeType $Shape` == "mesh")
+        {
+            // cool, we can create a plane
+            $plane = `nurbsPlane -p 0 0 0 -ax 0 0 1 -w 1 -lr 1 -d 3 -u 1 -v 1 -ch 1`;
+            $cutPlane = `rename ($plane[0]) "cutPlane"`;
+
+            // add the cutPlane attribute to the object, if it doesn't already exist
+            if (!`attributeQuery -exists -node $obj "cutPlanes"`)
+            {
+                addAttr -ln "cutPlanes" -at "message" -multi -im 0 $obj;
+            }
+
+            // connect the cutPlane to the object
+            connectAttr -na ($cutPlane + ".message") ($obj + ".cutPlanes");
+
+            // if the number of cutPlanes is > 1, then grab the position of the most recent 
+            // and move the current cutPlane ot that location
+            string $planes[0];
+            $planes = `listConnections ($obj + ".cutPlanes")`;
+            $size = `size($planes)`;
+            float $p[0];
+            float $r[0];
+            if ($size > 1)
+            {
+                $p = `getAttr ($planes[($size-2)] + ".t")`; 
+                $r = `getAttr ($planes[($size-2)] + ".r")`; 
+            }
+            else
+            {
+                $p = `xform -q -ws -t $obj`;
+                $r = `xform -q -ws -ro $obj`;
+            }
+
+            setAttr ($cutPlane + ".t") $p[0] $p[1] $p[2];
+            setAttr ($cutPlane + ".r") $r[0] $r[1] $r[2];
+            
+        }
+    }
+    return $cutPlane;
+}
+
+
+
+global proc string js_cutPlane_findObj (string $selected)
+{
+    string $return;
+    // see if the object is the one selected 
+    if (`attributeQuery -exists -node $selected "cutPlanes"`)
+    {
+        $return = $selected;
+    }
+    else
+    {
+        // find the object if it's connected.
+        string $con[0];
+        $con = `listConnections -d true -p true ($selected + ".message")`;
+        string $item;
+        for ($item in $con)
+        {
+            // check and see if it matches cutPlanes
+            if (`gmatch $item "*cutPlanes*"`)
+            {
+                // we have a cutPlane object!
+                string $break[0];
+                tokenize ($item, ".", $break);
+                $return = $break[0];
+            }
+
+        }
+    }
+    return $return;
+}
+
+
+global proc string[] js_cutPlane_cut ( int $deletePlanes )
+{
+    // this procedure takes the selected object and cuts it
+    // based on the cutPlanes that exist on it.
+    // if $deletePlanes is 1, it will delete the cutPlanes.
+    // if it's 0, then it will leave the cutPlanes there.
+    //
+    // it will return the results as follows:
+    // "origObject:cutObj1:cutObj2:cutObj3";
+    // 
+    string $objs[0];
+    string $return[0];
+    int $count = 0;
+    $objs = `ls -sl`;
+    for ($ob in $objs)
+    {
+        // check and see if $ob is a nurbsSurface
+        $ob = `js_cutPlane_findObj $ob`;
+        // make sure that there's a "cutPlanes" attribute on the object
+        if (`attributeQuery -exists -node $ob "cutPlanes"`)
+        {
+            // get all the cutplanes
+            string $cutPlanes[0];
+            $cutPlanes = `listConnections ($ob + ".cutPlanes")`;
+            
+            for ($plane in $cutPlanes)
+            {
+                $t = `xform -q -ws -t $plane`;
+                $r = `xform -q -ws -ro $plane`;
+                polyCut -pc $t[0] $t[1] $t[2] -ro $r[0] $r[1] $r[2] -ef 1 -eo 0 0 0 $ob;
+            }
+
+            // now separate the object
+            select $ob;
+            polySeparate -ch 0;
+            
+            // create a string which we can use with the objects
+            string $sel[0];
+            $sel = `ls -sl`;
+            string $toReturn = ($ob + "");
+            string $newName = "";
+            for ($item in $sel)
+            {
+                $newName = `substitute "_geo" $ob ""`;
+                $newName = `rename ($item) ($newName + "_segment_#")`;
+            }
+            $sel = `ls -sl`;
+            for ($item in $sel)
+            {
+                $newName = `rename ($item) ($item + "_geo")`;
+                $toReturn = ($toReturn + ":" + $newName);
+            }
+            $return[$count++] = $toReturn;
+            // now delete the planes
+            if ($deletePlanes)
+            {
+                delete $cutPlanes;
+                
+            }
+            
+        }
+        
+        else
+        {
+            warning ("No cutPlanes assigned for " + $ob + ".  Skipping...");
+        }
+    }
+    
+    
+    return $return;
+    
+}
+
+

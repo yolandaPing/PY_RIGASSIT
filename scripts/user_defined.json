@@ -1,0 +1,32 @@
+{
+    "hotkey": false,
+    "hotBox": false,
+    "shelfButton_New": true,
+    "Allow_users": true,
+    "Allow_smooth": true,
+    "Grp_prisec": false,
+    "suffix": "bind",
+    "Chinese": true,
+    "MotionPath_Enable": false,
+    "prefix_map": {
+        "l_": "r_",
+        "r_": "l_",
+        "L_": "R_",
+        "R_": "L_"
+    },
+    "suffix_map": {
+        "_L": "_R",
+        "_R": "_L"
+    },
+    "infix_map": {
+        "_l_": "_r_",
+        "_r_": "_l_",
+        "_L_": "_R_",
+        "_R_": "_L_"
+    },
+    "CopyTools_UI_new": true,
+    "Optional_Drive_UI_new": true,
+    "Blendshape_Editor_User": false,
+    "Dirve_Pose_Mirror": false,
+    "last_tab": 1
+}

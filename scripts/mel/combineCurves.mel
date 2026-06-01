@@ -1,0 +1,60 @@
+curve_combine();
+global proc curve_combine()
+{
+string $sel[]=`ls -sl -fl `;
+string $curve[];clear $curve;
+for($ii = 0 ; $ii<`size $sel`;$ii++)
+{
+    string $shape[]=`listRelatives  -s -f $sel[$ii] `;
+    if(`nodeType $shape[0]` == "nurbsCurve")
+    {
+        $curve[`size $curve`] = $sel[$ii];
+        //select -r $sel[$ii];
+        //FreezeTransformations; 
+    }
+}
+
+if (`size $curve` >= 2)
+{
+
+    for($ii = 0 ; $ii<`size $curve`;$ii++)
+    {
+        float $tx = `getAttr ($curve[$ii]+".tx")`;
+        float $ty = `getAttr ($curve[$ii]+".ty")`;
+        float $tz = `getAttr ($curve[$ii]+".tz")`;
+        float $rx = `getAttr ($curve[$ii]+".rx")`;
+        float $ry = `getAttr ($curve[$ii]+".ry")`;
+        float $rz = `getAttr ($curve[$ii]+".rz")`;
+        float $sx = `getAttr ($curve[$ii]+".sx")`;
+        float $sy = `getAttr ($curve[$ii]+".sy")`;
+        float $sz = `getAttr ($curve[$ii]+".sz")`;
+        $tx = $tx + $ty + $tz + $rx + $ry +$rz + $sx + $sy + $sz;
+        if ($tx != 3 )
+        {
+            select -r $curve[$ii];
+            error ("请先冻结  : " + $curve[$ii]);
+        }
+    }
+    
+    if (`size $curve` >= 2  )
+    {
+        for($ii = 1 ; $ii<`size $curve`;$ii++)
+        {
+            string $ml= ("select -r "+$curve[$ii]+ ";  FreezeTransformations;");
+            eval $ml;
+            string $shape[]=`listRelatives  -f -s $curve[$ii] `;
+            eval ("parent  -s -add "+$shape[0]+" "+$curve[0]);
+            delete $curve[$ii];
+        }
+        select -r $curve[0];DeleteHistory ; CenterPivot;
+    }
+    else 
+    {
+        select -r $sel;
+    }
+}
+else
+{
+    print " >>> 请选择需要合并的曲线！";
+}
+}

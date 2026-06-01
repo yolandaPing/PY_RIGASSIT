@@ -1,0 +1,237 @@
+global proc ControllerBuilderWin(){
+    
+if(`window -ex ControllerBuildeWin`) deleteUI  -window ControllerBuildeWin;
+window -wh 360 220 -title "Controller Builder_v 2.3.0" -s 0 ControllerBuildeWin;
+columnLayout -adj 1   mainColumnL;
+text -l "  ";
+text -l " Select the joints to create the controller\nClick Create ";
+text -l "  ";
+separator -style double;
+floatSliderGrp -l "Ctrl Size : "  -f 1 -v 1 -min 0.01 -max 10  fkikConradius;
+radioButtonGrp -en 1  -l "Ctrl Type : " -nrb  3 -la3 "selected" "hierarchy" "hierarchy+Vis"  -cw4 70 70 110 110 -select 1 fkConTypeBox;
+radioButtonGrp -en 1  -l "Rig Type : " -nrb  3 -la3  "parent" "Constraint" "connect" -cw4 70 70 110 110 -select 1 DirenTypeBox;
+separator -style double;
+text -l "  ";
+button -l "CREATE"-bgc .8 0.8 0.8 -h 50 -c  "CreateCtrls";
+separator -style double -h 10; separator;
+iconTextButton -style "textOnly" -label "Copyright(c£©| Rigging | 2023-03-31 | YouP" -h 22 -al "center" -c  "showHelp -a \"https://b23.tv/pmLchH6\"" ;
+
+
+showWindow ControllerBuildeWin;
+
+}
+////////////
+
+
+global proc CreateCtrls(){
+    
+int $fkcon=`radioButtonGrp -q -sl fkConTypeBox`;
+if($fkcon==1)CreateSLobjCtrl;
+if($fkcon==2 )CreateHisCtrl;
+if($fkcon==3 )CreateHisCtrl;
+
+}
+///////////
+global proc CreateSLobjCtrl(){
+    global float $ctrlsize;
+    $ctrlsize=`floatSliderGrp -q -v fkikConradius`;
+    int $Type=`radioButtonGrp -q -sl DirenTypeBox`;
+
+    string $sel[]=`ls -sl`;
+    for($i=0;$i<size($sel);$i++){
+        
+        string $tokem[];
+        int $tonum=`tokenize ($sel[$i]) "_" $tokem`;
+        string $side=$tokem[1];
+
+        circle -ch 0 -o on -nr 1 0 0 -r ($ctrlsize) -n ($sel[$i]+"_ctrl") ;
+        select -r ($sel[$i]+"_ctrl");
+        group -n ($sel[$i]+"_pri_ctrl");
+        group -n ($sel[$i]+"_sec_ctrl");
+        group -n ($sel[$i]+"_ctrl_drv");
+        group -n ($sel[$i]+"_ctrl_con");
+        group -n ($sel[$i]+"_ctrl_ofs");
+        select -r ($sel[$i]);
+        select -add ($sel[$i]+"_ctrl_ofs");
+        delete `parentConstraint`;
+        
+        if($Type == 1){
+            parent $sel[$i] ($sel[$i]+"_ctrl");
+        }
+        else if($Type == 2){
+            select -r ($sel[$i]+"_ctrl") ;
+            select -add ($sel[$i]);
+            parentConstraint;
+            scaleConstraint;
+        }
+        else{
+            spaceLocator -p 0 0 0 -n ($sel[$i]+"_Loc");
+            group -n ($sel[$i]+"_Loc_grp");
+            delete `parentConstraint $sel[$i] ($sel[$i]+"_Loc_grp") `;
+            parent $sel[$i] ($sel[$i]+"_Loc");
+            connectAttr -f ($sel[$i]+"_ctrl.t") ($sel[$i]+"_Loc.t"); 
+            connectAttr -f ($sel[$i]+"_ctrl.r") ($sel[$i]+"_Loc.r"); 
+            connectAttr -f ($sel[$i]+"_ctrl.s") ($sel[$i]+"_Loc.s"); 
+            string $shapeLoc[]= `listRelatives -s ($sel[$i]+"_Loc")`;
+            setAttr ($shapeLoc[0]+".visibility") 0;
+            setAttr -l true { $shapeLoc[0]+".v" };
+            select -cl;
+        }
+
+         string $shape[]=`listRelatives -s ($sel[$i]+"_ctrl")`;
+            setAttr ($shape[0]+".overrideEnabled") 1;
+          if($side=="l"){
+            setAttr ($shape[0]+".overrideColor") 22;   
+          }else if($side=="r"){
+            setAttr ($shape[0]+".overrideColor") 13;   
+          }else{
+                setAttr ($shape[0]+".overrideColor") 6;     
+              }  
+            }
+        select -cl;
+        print " # created successfully !";
+}
+///////////////
+global proc CreateHisCtrl(){
+    
+    global float $ctrlsize;
+    $ctrlsize=`floatSliderGrp -q -v fkikConradius`;
+    int $fkcon=`radioButtonGrp -q -sl fkConTypeBox`;
+    int $Type=`radioButtonGrp -q -sl DirenTypeBox`;
+
+
+    
+    string $bn[]=`ls -sl`;
+    int $bnnum=size($bn);
+
+    for($jj=0;$jj<$bnnum;$jj++){
+        select -r ($bn[$jj]);
+        string $sels[] = `ls -sl`;
+        
+        int $size=size($sels);	
+        /////////////////////////////
+        string $baseJoint = $sels[0];
+        
+        string $endJoint;
+        
+        string $childs[]=`listRelatives -c -ad $sels[0]`;
+        int $num=size($childs);
+        if ($num >= 2){
+            $endJoint=$childs[0];
+            //////////////////////////////////////	
+            string $typs=`nodeType  $baseJoint`;
+            string $type=`nodeType  $endJoint`;
+            if($typs!="joint")error "The selected joint has at least 2 child objects.";
+            if($type!="joint")error "The selected joint has at least 2 child objects.";
+
+        }
+        else {
+            error "The selected joint has at least 2 child objects.";
+        }
+            
+        
+        select -r  $baseJoint;
+        
+    for($a=($num-1);$a>0;$a--){
+        
+        select -add ($childs[$a]);
+    }
+
+    string $sel[]=`ls -sl`;
+
+    string $tokem[];
+    int $tonum=`tokenize ($sel[0]) "_" $tokem`;
+    string $side=$tokem[1];
+
+    for($i=0;$i<size($sel);$i++){
+        circle -ch 0 -o on -nr 1 0 0 -r ($ctrlsize) -n ($sel[$i]+"_ctrl") ;
+        select -r ($sel[$i]+"_ctrl");
+        group -n ($sel[$i]+"_pri_ctrl");
+        group -n ($sel[$i]+"_sec_ctrl");
+        group -n ($sel[$i]+"_ctrl_drv");
+        group -n ($sel[$i]+"_ctrl_con");
+        group -n ($sel[$i]+"_ctrl_ofs");
+        select -r ($sel[$i]);
+        select -add ($sel[$i]+"_ctrl_ofs");
+        delete `parentConstraint`;
+
+        if($Type == 1){
+                parent $sel[$i] ($sel[$i]+"_ctrl");
+            }
+            else if($Type == 2){
+                select -r ($sel[$i]+"_ctrl") ;
+                select -add ($sel[$i]);
+                parentConstraint;
+                scaleConstraint;
+            }
+            else{
+                spaceLocator -p 0 0 0 -n ($sel[$i]+"_Loc");
+                group -n ($sel[$i]+"_Loc_grp");
+                delete `parentConstraint $sel[$i] ($sel[$i]+"_Loc_grp") `;
+                parent $sel[$i] ($sel[$i]+"_Loc");
+                connectAttr -f ($sel[$i]+"_ctrl.t") ($sel[$i]+"_Loc.t"); 
+                connectAttr -f ($sel[$i]+"_ctrl.r") ($sel[$i]+"_Loc.r"); 
+                connectAttr -f ($sel[$i]+"_ctrl.s") ($sel[$i]+"_Loc.s"); 
+                string $shapeLoc[]= `listRelatives -s ($sel[$i]+"_Loc")`;
+                setAttr ($shapeLoc[0]+".visibility") 0;
+                setAttr -l true { $shapeLoc[0]+".v" };
+                select -cl;
+                if ($i>0) parent ($sel[$i]+"_Loc_grp") $sel[$i-1];
+            }
+
+        setAttr -lock true ($sel[$i]+"_ctrl.v");
+        setAttr -keyable false -channelBox false ($sel[$i]+"_ctrl.v");
+        string $shape[]=`listRelatives -s ($sel[$i]+"_ctrl")`;
+        setAttr ($shape[0]+".overrideEnabled") 1;
+        if($side=="l"){
+            setAttr ($shape[0]+".overrideColor") 22;   
+        }
+        else if($side=="r"){
+            setAttr ($shape[0]+".overrideColor") 13;   
+        }
+        else{
+            setAttr ($shape[0]+".overrideColor") 6;     
+        }  
+    }
+
+    for($i=0;$i<(size($sel)-1);$i++){
+        $j=$i+1;
+        select -r ($sel[$j]+"_ctrl_ofs");
+        select -add ($sel[$i]+"_ctrl");
+        parent;
+    }
+
+    int $size=size($sel);
+
+    if( $fkcon==3 ){
+        addAttr -ln "rot" -nn "--------" -at "enum" -en "Rot XYZ:" -k 1 ($sel[$size-1]+"_ctrl");
+        setAttr -lock true ($sel[$size-1]+"_ctrl.rot");
+
+        addAttr -ln "ctrlVis"  -at bool -k 1 ($sel[$size-1]+"_ctrl");
+        setAttr -keyable false -channelBox true ($sel[$size-1]+"_ctrl.ctrlVis");
+        addAttr -ln "rotX"  -at double -k 1 ($sel[$size-1]+"_ctrl");
+        addAttr -ln "rotY"  -at double -k 1 ($sel[$size-1]+"_ctrl");
+        addAttr -ln "rotZ"  -at double -k 1 ($sel[$size-1]+"_ctrl");
+
+
+    for($i=0;$i<size($sel);$i++){
+        connectAttr -f ($sel[$size-1]+"_ctrl.rotX") ($sel[$i]+"_ctrl_drv.rotateX");
+        connectAttr -f ($sel[$size-1]+"_ctrl.rotY") ($sel[$i]+"_ctrl_drv.rotateY");
+        connectAttr -f ($sel[$size-1]+"_ctrl.rotZ") ($sel[$i]+"_ctrl_drv.rotateZ");    
+    }
+
+    for($i=0;$i<(size($sel)-1);$i++){
+        string $shap[]=`listRelatives -s ($sel[$i]+"_ctrl")`;
+
+        connectAttr -f ($sel[$size-1]+"_ctrl.ctrlVis") ($shap[0]+".v");
+            }
+    }
+    select -cl;
+    print " # created successfully !";
+
+        }
+}
+
+
+
+ControllerBuilderWin();

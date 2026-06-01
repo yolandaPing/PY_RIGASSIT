@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<menu>
+  <button>
+    <label>script Editor</label>
+    <icon>none</icon>
+    <command><![CDATA[none]]></command>
+  </button>
+
+  <button>
+    <label>charcoalEditor2</label>
+    <icon>cmdWndIcon.png</icon>
+    <command><![CDATA[import maya.cmds as cmds
+if not cmds.pluginInfo('CharcoalEditor2', q=True, l=True):
+    cmds.loadPlugin('CharcoalEditor2')
+mel.eval("charcoalEditor2;")]]></command>
+  </button>
+
+  <button>
+    <label>skin weight tool</label>
+    <icon>none</icon>
+    <command><![CDATA[none]]></command>
+  </button>
+
+  <button>
+    <label>skinner</label>
+    <icon>icons/skinner.png</icon>
+    <command><![CDATA[import skinner.window as skinWin
+skinWin.App()]]></command>
+  </button>
+
+  <button>
+    <label>ngSkinTools2.2.4</label>
+    <icon>icons/ngSkinTools2ShelfIcon.png</icon>
+    <command><![CDATA[import maya.cmds as cmds
+if not cmds.pluginInfo('ngSkinTools2', q=True, l=True):
+    cmds.loadPlugin('ngSkinTools2')
+import ngSkinTools2; ngSkinTools2.open_ui()]]></command>
+  </button>
+
+  <button>
+    <label>brSmoothWeights 1.2.0</label>
+    <icon>icons/SmoothWeights.png</icon>
+    <command><![CDATA[import maya.cmds as cmds
+if not cmds.pluginInfo('brSmoothWeights', q=True, l=True):
+    cmds.loadPlugin('brSmoothWeights')
+mel.eval("brSmoothWeightsToolCtx; toolPropertyWindow;")]]></command>
+  </button>
+
+</menu>

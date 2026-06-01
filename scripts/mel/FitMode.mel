@@ -1,0 +1,522 @@
+global proc string advasUniqueName (string $obj)
+{
+string $newName=$obj;
+string $tempString[]=`ls $obj`;
+if (size($tempString)>1)
+	for ($i=1;$i<99;$i++)
+		if (!`objExists ($obj+$i)`)
+			{
+			$newName=$obj+$i;
+			rename $tempString[0] $newName;
+			break;
+			}
+return $newName;
+}
+
+global proc string advasLabel (string $obj)
+{
+string $label;
+if (size(`ls -ap $obj`)>1)
+	error ("More than one object matches name: "+$obj+"\n");
+if (!`objExists $obj`)
+	return "AA";
+if (!`attributeExists "type" $obj`)
+	return "BB";
+int $labelNum=`getAttr ($obj+".type")`;
+if (!`getAttr ($obj+".drawLabel")`)
+	return "";
+
+$label=`advasLabelCodeLookup $labelNum 0`;
+if ($labelNum==18)
+	{
+	$label=`getAttr ($obj+".otherType")`;
+	}
+
+return $label;
+}
+
+global proc string advasRlaParent (string $joint)
+{
+string $tempString[]=`listRelatives -p -type joint $joint`;
+string $rlaParent=$tempString[0];
+return $rlaParent;
+}
+
+global proc string advasRlaChild (string $joint)
+{
+float $scale=1;
+// if (`objExists FitSkeleton`)
+//     $scale=`getAttr FitSkeleton.sx`;
+float $centerTolerance=0.01*$scale;
+string $children[]=`listRelatives -type joint -c $joint`;
+string $rlaChild="";
+float $pos[3]=`xform -q -ws -t $joint`;
+int $center=0;
+if ($pos[0]>-$centerTolerance && $pos[0]<$centerTolerance) $center=1;
+for ($y=0;$y<size($children);$y++)
+	{
+	float $childPos[3]=`xform -q -ws -t $children[$y]`;
+	int $childCenter=0;
+	if ($childPos[0]>-$centerTolerance && $childPos[0]<$centerTolerance) $childCenter=1;
+	if ($center && $childCenter) $rlaChild=$children[$y];
+	if (!$center && !$childCenter) $rlaChild=$children[$y];
+	//Use `first` child as $rlaChild
+	if ($rlaChild!="")
+	 break;
+	}
+
+//if (!$center && size($children)>1)
+//	$rlaChild="";
+
+//Preferred $rlaChild
+if (`gmatch $joint "*Head*"`)
+	for ($y=0;$y<size($children);$y++)
+		if (`gmatch $children[$y] "*Head*"`)
+			$rlaChild=$children[$y];
+if (`gmatch $joint "*Ankle*"`)
+	for ($y=0;$y<size($children);$y++)
+		if (`gmatch $children[$y] "*Toes*"`)
+			$rlaChild=$children[$y];
+if (`gmatch $joint "*Toes*"`)
+	for ($y=0;$y<size($children);$y++)
+		if (`gmatch $children[$y] "*Toes*"`)
+			$rlaChild=$children[$y];
+if (`gmatch $joint "*Root*"`)
+	for ($y=0;$y<size($children);$y++)
+		if (`gmatch $children[$y] "*Spine*"`)
+			$rlaChild=$children[$y];
+
+return $rlaChild;
+}
+
+
+global proc advFitModeSelectionChanged ()
+{
+global int $FitModeScriptJobNr2[];
+global string $FitModeOffRLA[];
+for ($i=0;$i<size($FitModeOffRLA);$i++)
+	if (`objExists $FitModeOffRLA[$i]`)
+		setAttr ($FitModeOffRLA[$i]+".displayLocalAxis") 0;
+
+clear $FitModeOffRLA;
+for ($i=0;$i<size($FitModeScriptJobNr2);$i++)
+	if ($FitModeScriptJobNr2[$i])
+		if (`scriptJob -ex $FitModeScriptJobNr2[$i]`)
+			{
+			scriptJob -kill $FitModeScriptJobNr2[$i];
+			$FitModeScriptJobNr2[$i]=0;
+			}
+string $sel[]=`ls -sl -type joint`;
+string $tempString[];
+string $rlaParent,$rlaChild;
+float $pos[];
+string $aimParents;
+for ($i=0;$i<size($sel);$i++)
+	{
+	//Parent
+//	if (size(`ls -ap $sel[$i]`)>1)
+//		continue;
+	$rlaParent=`advasRlaParent $sel[$i]`;
+	if (!`objExists $rlaParent`)
+		continue;
+//	string $parentOtherChildren[]=`listRelatives -c -type joint $rlaParent`;
+//	$parentOtherChildren=`stringArrayRemove {$sel[$i]} $parentOtherChildren`;
+//	if (size($parentOtherChildren) && $sel[$i]!="BackA")
+//		continue;
+
+	if (!`getAttr ($rlaParent+".displayLocalAxis")`)
+		$FitModeOffRLA[$i]=$rlaParent;
+	setAttr ($rlaParent+".displayLocalAxis") 1;
+	if ($aimParents!="")
+		$aimParents+="@";
+	$aimParents+=$sel[$i];
+	}
+
+for ($i=0;$i<size($sel);$i++)
+	{
+	//Child
+	$rlaChild=`advasRlaChild $sel[$i]`;
+//	if (size(`ls -ap $rlaChild`)!=1)
+//		continue;
+	$aimParents+="@"+$rlaChild;
+	if (`attributeExists fatYabs $sel[$i]`)
+		$FitModeScriptJobNr2[2]=`scriptJob -cu 1 -killWithScene -ac ($sel[0]+".fatYabs") ("FitModeUpdateFat \""+$sel[$i]+"\"")`;
+	if (`attributeExists fatZabs $sel[$i]`)
+		$FitModeScriptJobNr2[3]=`scriptJob -cu 1 -killWithScene -ac ($sel[0]+".fatZabs") ("FitModeUpdateFat \""+$sel[$i]+"\"")`;
+	if (`attributeExists twistJoints $sel[$i]`)
+		$FitModeScriptJobNr2[3]=`scriptJob -cu 1 -killWithScene -ac ($sel[0]+".twistJoints") ("FitModeUpdateAllGeometry")`;
+
+	}
+if ($aimParents!="")
+	{
+	$FitModeScriptJobNr2[0]=`scriptJob -cu 1 -killWithScene -ac ($sel[0]+".translate") ("advFitModeUpdateJoints \""+$aimParents+"\" 0")`;
+	$FitModeScriptJobNr2[1]=`scriptJob -cu 1 -killWithScene -ac ($sel[0]+".rotate") ("advFitModeUpdateJoints \""+$aimParents+"\" 0")`;
+	}
+}
+
+
+global proc advFitModeUpdateJoints (string $jointsString, int $recursive)
+{
+int $upV[3]={0,1,0};
+int $childNr,$newChildNr;
+int $editPivotMode=`manipMoveContext -q -editPivotMode Move`;
+float $scale=1;
+float $pos[3],$rot[];
+// if (`objExists FitSkeleton`)
+//     $scale=`getAttr FitSkeleton.sx`;
+float $centerTolerance=0.01*$scale;
+// advFitModeUpdateScale;
+string $sel[]=`ls -sl`;
+string $tempString[],$joints[],$jointAllDescendents[],$otherJointsInIK[],$connectCmds[],$rlaParentChildren[],$newRlaParentChildren[];
+string $trs[]={"t","r","s"};
+string $xyz[]={"x","y","z"};
+string $generatedTransform1,$generatedTransform2,$IKParentJoint,$IKChildJoint,$jointLongName,$worldOrient;
+string $rlaParent,$rlaParentLabel,$rlaChild,$rlaParentRlaChild;
+tokenize $jointsString "@" $joints;
+for ($joint in $joints)
+	{
+	if (size(`ls -ap $joint`)!=1)
+		continue;
+	string $rlaParent=`advasRlaParent $joint`;
+	$rlaParent=`advasUniqueName $rlaParent`;
+	$rlaParentLabel=`advasLabel $rlaParent`;
+	string $rlaChild=`advasRlaChild $joint`;
+	$rlaChild=`advasUniqueName $rlaChild`;
+
+	int $childNr=0;
+	clear $rlaParentChildren;
+	if ($rlaParent!="")
+		{
+		$rlaParentRlaChild=`advasRlaChild $rlaParent`;
+		$rlaParentChildren=`listRelatives -type joint -c $rlaParent`;
+		if (size($rlaParentChildren)>1)
+			for ($i=0;$i<size($rlaParentChildren);$i++)
+				{
+				if ($joint==$rlaParentChildren[$i])
+					$childNr=$i;
+				}
+		}
+	if (!`objExists $rlaParent`)
+		continue;
+	if (`attributeExists freeOrient $rlaParent`)
+		continue;
+	if (`advasRlaChild $rlaParent`!=$joint && $rlaParent!="Cup")
+		continue;
+	$worldOrient="";
+	if (`attributeExists worldOrient $rlaParent`)
+		$worldOrient=`getAttr ($rlaParent+".worldOrient")`;
+	$flipOrient=0;
+	if (`attributeExists flipOrient $joint`)
+		if (`getAttr ($joint+".flipOrient")`)
+			$flipOrient=!$flipOrient;
+	string $rlaParentParent=`advasRlaParent $rlaParent`;
+	clear $otherJointsInIK;
+	$tempString=`ls -l $joint`;
+	$jointLongName=$tempString[0];
+	$jointAllDescendents=`listRelatives -allDescendents -type joint $joint`;
+	$jointAllDescendents[size($jointAllDescendents)]=$joint;
+	string $parentOtherChildren[]=`listRelatives -c $rlaParent`;
+	$parentOtherChildren=`stringArrayRemove {$joint} $parentOtherChildren`;
+	int $center=0;
+	$pos=`xform -q -ws -t $joint`;
+	if ($pos[0]>-$centerTolerance && $pos[0]<$centerTolerance) $center=1;
+
+	//IK-plane ($flip)
+	tokenize $jointLongName "|" $tempString;
+	for ($i=size($tempString)-1;$i>-1;$i--)
+		{
+		if (!$recursive)
+			if (!`stringArrayCount $tempString[$i] $joints`)
+				$otherJointsInIK[size($otherJointsInIK)]=$tempString[$i];
+		if (`attributeExists flipOrient $tempString[$i]`)
+			if (`getAttr ($tempString[$i]+".flipOrient")`)
+				$flipOrient=!$flipOrient;
+		$label=`advasLabel $tempString[$i]`;
+		if (`gmatch $label "*Shoulder*"` || `gmatch $label "*Hip*"`)
+			{
+			$IKParentJoint=$tempString[$i];
+			break;
+			}
+		}
+	for ($i=size($jointAllDescendents)-1;$i>-1;$i--)
+		{
+		if (!$recursive)
+			if (!`stringArrayCount $jointAllDescendents[$i] $joints`)
+				$otherJointsInIK[size($otherJointsInIK)]=$jointAllDescendents[$i];
+		$label=`advasLabel $jointAllDescendents[$i]`;
+		if (`gmatch $label "*Hand*"` || `gmatch $label "*Foot*"`)
+			{$IKChildJoint=$jointAllDescendents[$i];break;}
+		}
+
+	int $lockTX=`getAttr -l ($joint+".tx")`;int $lockTY=`getAttr -l ($joint+".ty")`;int $lockTZ=`getAttr -l ($joint+".tz")`;
+	int $lockRX=`getAttr -l ($joint+".rx")`;int $lockRY=`getAttr -l ($joint+".ry")`;int $lockRZ=`getAttr -l ($joint+".rz")`;
+	int $lockPTX=`getAttr -l ($rlaParent+".tx")`;int $lockPTY=`getAttr -l ($rlaParent+".ty")`;int $lockPTZ=`getAttr -l ($rlaParent+".tz")`;
+	int $lockPRX=`getAttr -l ($rlaParent+".rx")`;int $lockPRY=`getAttr -l ($rlaParent+".ry")`;int $lockPRZ=`getAttr -l ($rlaParent+".rz")`;
+	setAttr -l 0 ($joint+".tx");setAttr -l 0 ($joint+".ty");setAttr -l 0 ($joint+".tz");
+	setAttr -l 0 ($joint+".rx");setAttr -l 0 ($joint+".ry");setAttr -l 0 ($joint+".rz");
+	setAttr -l 0 ($rlaParent+".tx");setAttr -l 0 ($rlaParent+".ty");setAttr -l 0 ($rlaParent+".tz");
+	setAttr -l 0 ($rlaParent+".rx");setAttr -l 0 ($rlaParent+".ry");setAttr -l 0 ($rlaParent+".rz");
+
+	if (size($parentOtherChildren))
+		{
+		createNode -n otherChildrenPlaceHolder -p $rlaParent transform;
+		parent -w otherChildrenPlaceHolder;
+		}
+	for ($i=0;$i<size($parentOtherChildren);$i++)
+		{
+		$tempString=`parent $parentOtherChildren[$i] otherChildrenPlaceHolder`;
+		$parentOtherChildren[$i]=$tempString[0];
+		}
+		
+	$tempString=`parent -w $joint`;
+	$joint=$tempString[0];
+	$tempString=`listRelatives -p $joint`;
+	if (size($tempString))
+		$generatedTransform1=$tempString[0];
+
+	//disconnect connections
+	clear $connectCmds;
+	for ($y=0;$y<size($trs);$y++)
+		for ($z=0;$z<size($xyz);$z++)
+			{
+			$tempString=`listConnections -p 1 ($rlaParent+"."+$trs[$y]+$xyz[$z])`;
+			if ($tempString[0]!="")
+				{
+				$connectCmds[size($connectCmds)]="connectAttr -f "+$tempString[0]+" "+$rlaParent+"."+$trs[$y]+$xyz[$z]+";";
+				disconnectAttr $tempString[0] ($rlaParent+"."+$trs[$y]+$xyz[$z]);
+				}
+			}
+
+	if ($center && $joint==$rlaParentRlaChild) // Center
+		{
+//print ("$joint="+$joint+", $rlaParent="+$rlaParent+", $rlaParentRlaChild="+$rlaParentRlaChild+"\n");
+		$upV={0,0,1}; if ($flipOrient) $upV={0,0,-1};
+		$tempString=`aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector $upV[0] $upV[1] $upV[2] -worldUpType "vector" -worldUpVector 1 0 0 $joint $rlaParent`;
+		delete $tempString[0];
+		}
+	if (($IKParentJoint=="" || $IKChildJoint=="") && !$center) // Non-IK (side)
+		{
+		$upV={0,1,0}; // if ($flipOrient) $upV={0,-1,0}; These are free oriented, so no flip
+		string $upVecObj=`createNode joint`;
+		parent -r $upVecObj $rlaParent;
+		setAttr ($upVecObj+".translate") 0 3 0;
+		parent -w $upVecObj;
+		$tempString=`listRelatives -p $upVecObj`;
+		if (size($tempString))
+			$generatedTransform2=$tempString[0];
+		$tempString=`aimConstraint -aimVector 1 0 0 -upVector $upV[0] $upV[1] $upV[2] -worldUpType "object" -worldUpObject $upVecObj $joint $rlaParent`;
+		delete $tempString[0] $upVecObj;
+		}
+
+	if (($IKParentJoint!="" && $IKChildJoint!="") && !$center) // IK
+		{
+		$upV={0,1,0}; if ($flipOrient) $upV={0,-1,0};
+		$label=`advasLabel $IKParentJoint`;
+		if (`gmatch $label "*Hip*"`)
+			$upV={0,-1,0};
+		string $upVecObj=`createNode joint`;
+		parent -r $upVecObj $rlaParent;
+		setAttr ($upVecObj+".translate") 0 3 0;
+		parent -w $upVecObj;
+		$tempString=`listRelatives -p $upVecObj`;
+		if (size($tempString))
+			$generatedTransform2=$tempString[0];
+		pointConstraint $IKParentJoint $IKChildJoint $upVecObj;
+		$tempString=`aimConstraint -aimVector 1 0 0 -upVector $upV[0] $upV[1] $upV[2] -worldUpType "object" -worldUpObject $upVecObj $joint $rlaParent`;
+		delete $tempString[0];
+/*
+if (`gmatch $label "*Hip*"`)//flip hip for reversed knee
+{
+makeIdentity -a 1 -t 0 -r 1 -s 0 $rlaParent;
+$rot=`xform -q -ws -ro $rlaParent`;
+print ($joint+":"+$rlaParent+":"+$rot[1]+"\n");
+if ($rot[1]>0)
+	{
+print "FLIP\n";
+$upV={0,1,0};
+$tempString=`aimConstraint -aimVector 1 0 0 -upVector $upV[0] $upV[1] $upV[2] -worldUpType "object" -worldUpObject $upVecObj $joint $rlaParent`;
+delete $tempString[0];
+	}
+}
+*/
+		delete $upVecObj;
+		}
+	else
+		clear $otherJointsInIK;
+
+	//Special case, $worldOrient
+	if ($worldOrient!="" && `objExists $rlaParentParent`)
+		{
+		$upVecObj=$rlaParentParent;
+		$upVecObj=`createNode -n tempUpVector -p $joint transform`;
+		parent -w $upVecObj;
+		move -r -ws 0 1 0 $upVecObj;
+		float $upVec=1;
+		parent $upVecObj $rlaParentParent;
+		//Could be `reverse-knee`
+		if (!`attributeExists reverseKnee $rlaParent`)
+			addAttr -k 0 -ln reverseKnee -at bool -dv 0 $rlaParent;
+		if (`getAttr ($upVecObj+".ty")`<0)
+			{
+			$upVec=-1;
+			setAttr ($rlaParent+".reverseKnee") 1;
+			}
+		createNode -n tempAimAt -p $rlaParent transform;
+		parent -w tempAimAt;
+		move -r -ws 0 -1 0 tempAimAt;
+		if ($worldOrient==0) $tempString=`aimConstraint -aimVector -1 0 0 -upVector 0 $upVec 0 -worldUpType "object" -worldUpObject $upVecObj tempAimAt $rlaParent`;
+		if ($worldOrient==1) $tempString=`aimConstraint -aimVector 0 -1 0 -upVector $upVec 0 0 -worldUpType "object" -worldUpObject $upVecObj tempAimAt $rlaParent`;
+		if ($worldOrient==2) $tempString=`aimConstraint -aimVector 0 0 -1 -upVector $upVec 0 0 -worldUpType "object" -worldUpObject $upVecObj tempAimAt $rlaParent`;
+		if ($worldOrient==3) $tempString=`aimConstraint -aimVector 1 0 0  -upVector 0 $upVec 0 -worldUpType "object" -worldUpObject $upVecObj tempAimAt $rlaParent`;
+		if ($worldOrient==4) $tempString=`aimConstraint -aimVector 0 1 0  -upVector $upVec 0 0 -worldUpType "object" -worldUpObject $upVecObj tempAimAt $rlaParent`;
+		if ($worldOrient==5) $tempString=`aimConstraint -aimVector 0 0 1  -upVector $upVec 0 0 -worldUpType "object" -worldUpObject $upVecObj tempAimAt $rlaParent`;
+
+		delete $tempString[0] $upVecObj tempAimAt;
+		}
+	//Special case, Ball
+	$label=`advasLabel $rlaParent`;
+	if (`gmatch $label "*Ball*"`)
+		{
+		//Could be `reverse-knee`
+		float $upVec=1;
+		createNode -n tempAimAt -p $rlaParentParent transform;
+		asAlign tempAimAt $joint 1 0 0 0;
+		if (`getAttr tempAimAt.ty`<0)
+			$upVec=-1;
+		delete tempAimAt;
+		$tempString=`aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 $upVec 0 -worldUpType "vector" -worldUpVector 0 1 0 $joint $rlaParent`;
+		delete $tempString[0];
+		}
+	//Special case, Scapula
+	if (`gmatch $rlaParent "Scapula*"` && $IKParentJoint!="")
+		{
+		$upVecObj=$IKParentJoint;
+		$tempString=`aimConstraint -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "objectrotation" -worldUpVector 0 1 0 -worldUpObject $upVecObj $joint $rlaParent`;
+		delete $tempString[0];
+		}
+	//Special case, LegAim
+	if (`gmatch $label "LegAim*"`)
+		{
+		$upVecObj=$IKParentJoint;
+		$tempString=`aimConstraint -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "objectrotation" -worldUpVector 0 1 0 -worldUpObject $upVecObj $joint $rlaParent`;
+		delete $tempString[0];
+		}
+	//Special case, Cup
+	if ($rlaParent=="Cup" && `objExists RingFinger1` && `objExists MiddleFinger1`)
+		{
+		$upVecObj=`advasRlaParent $rlaParent`;
+		$tempString=`aimConstraint -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "objectrotation" -worldUpVector 0 1 0 -worldUpObject $upVecObj RingFinger1 MiddleFinger1 $rlaParent`;
+		delete $tempString[0];
+		}
+	//Special case, Eyes
+	if (`gmatch $rlaParent "Eye*"`)
+		{
+		$tempString=`aimConstraint -aimVector 1 0 0 -upVector 0 -1 0 -worldUpType "vector" -worldUpVector 0 1 0 $joint $rlaParent`;
+		delete $tempString[0];
+		}
+	//Special case, Root with no centered child
+	if ($rlaParent=="Root" && !$center)
+		{
+		setAttr -type float3 ($rlaParent+".rotate") 0 0 0;
+		setAttr -type float3 ($rlaParent+".jointOrient") 90 0 90;
+		}
+
+	makeIdentity -a 1 -t 0 -r 1 -s 0 $rlaParent;
+
+	if (size($parentOtherChildren))
+		{
+		parent $parentOtherChildren $rlaParent;
+		delete otherChildrenPlaceHolder;
+		}
+
+	parent $joint $rlaParent;
+	//restore sibiling order
+	if (size($rlaParentChildren)>1)
+		{
+		$newRlaParentChildren=`listRelatives -type joint -c $rlaParent`;
+		for ($i=0;$i<size($newRlaParentChildren);$i++)
+			{
+			if ($joint==$newRlaParentChildren[$i])
+				$newChildNr=$i;
+			}
+		if ($newChildNr!=$childNr)
+			{
+//			print ($joint+":"+$childNr+"\n");
+//			print ("reorder -relative ("+$childNr+"-"+$newChildNr+")="+($childNr-$newChildNr)+" "+$joint+";\n");
+			reorder -relative ($childNr-$newChildNr) $joint;
+			}
+		}
+	if (`objExists $generatedTransform1`) delete $generatedTransform1;
+	if (`objExists $generatedTransform2`) delete $generatedTransform2;
+
+	//restore connections
+	for ($i=0;$i<size($connectCmds);$i++)
+		if (catchQuiet (`eval ($connectCmds[$i])`)) 
+			warning ("Failed: "+$connectCmds[$i]+"\n");
+
+	//update lenght
+	if (`objExists ($rlaParent+"ScaleYMultiDiv1")`)
+		setAttr ($rlaParent+"ScaleYMultiDiv1.input1Y") (`getAttr ($rlaParent+"ScaleYMultiDiv1.dummyInput1Y")`*(1.0/$scale));
+
+	//update skeleton scale
+	if (`objExists ($rlaParent+"Bone")` && `objExists ($rlaParent+"Distance")`)
+		{
+		float $lenght=`getAttr ($rlaParent+"Distance.distance")`*(1.0/$scale);
+		setAttr ($rlaParent+"Bone.sx") $lenght;
+		}
+
+	//update scale from FitSkeleton
+//	if (`objExists ($joint+"Aim")`)
+//		setAttr ($joint+"Aim.sx") (1.0/$scale);
+
+	setAttr -l $lockTX ($joint+".tx");setAttr -l $lockTY ($joint+".ty");setAttr -l $lockTZ ($joint+".tz");
+	setAttr -l $lockRX ($joint+".rx");setAttr -l $lockRY ($joint+".ry");setAttr -l $lockRZ ($joint+".rz");
+	setAttr -l $lockPTX ($rlaParent+".tx");setAttr -l $lockPTY ($rlaParent+".ty");setAttr -l $lockPTZ ($rlaParent+".tz");
+	setAttr -l $lockPRX ($rlaParent+".rx");setAttr -l $lockPRY ($rlaParent+".ry");setAttr -l $lockPRZ ($rlaParent+".rz");
+	}
+
+//Update the other joints in the same IK to ensure IK-plane
+for ($i=0;$i<size($otherJointsInIK);$i++)
+	advFitModeUpdateJoints $otherJointsInIK[$i] 1;
+if (`objExists FitSkeletonPoleVectors`) {asFitDisplayPoleVector 0;asFitDisplayPoleVector 1;}
+select $sel;
+//Restore `insert-mode`, as newer version of Maya will drop this when:createNode
+if ($editPivotMode)
+	if (!`manipMoveContext -q -editPivotMode Move`)
+		EnterEditMode;
+}
+
+global proc FitMode ()
+{
+global int $FitModeScriptJobNr1;
+global int $FitModeScriptJobNr3;
+string $sel[]=`ls -sl`;
+int $onOff=1;
+if ($FitModeScriptJobNr1 && `scriptJob -ex $FitModeScriptJobNr1`)
+	$onOff=0;
+//asByPassSDK $onOff;
+select -cl;
+if ($onOff)
+	{
+	$FitModeScriptJobNr1=`scriptJob -cu 1 -killWithScene -e SelectionChanged advFitModeSelectionChanged`;
+	print "// Entered Joint Orientations \n";
+	}
+else
+	{
+	if (`scriptJob -ex $FitModeScriptJobNr1` && $FitModeScriptJobNr1!=0)
+		{
+		scriptJob -kill $FitModeScriptJobNr1;
+		$FitModeScriptJobNr1=0;
+		}
+	if (`scriptJob -ex $FitModeScriptJobNr3`  && $FitModeScriptJobNr3!=0)
+		{
+		scriptJob -kill $FitModeScriptJobNr3;
+		$FitModeScriptJobNr3=0;
+		}
+	advFitModeSelectionChanged;
+
+	print "// Exited Joint Orientations \n";
+	}
+select $sel;
+}
+

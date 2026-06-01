@@ -1,0 +1,83 @@
+global proc jointOnCur(string $cur, int $locNum){
+for($i=0;$i<$locNum;$i++){
+   spaceLocator -n ($cur+"_"+($i+1)+"_loc")-p 0 0 0;
+   
+    select -tgl $cur;
+pathAnimation -n ($cur+"_"+($i+1)+"_loc_path") -fractionMode true -follow true -followAxis x -upAxis y -worldUpType "vector" -worldUpVector 0 1 0 -inverseUp false -inverseFront false -bank false -startTimeU 1 -endTimeU 1;
+selectKey -add -k -t 1 -t 1 ($cur+"_"+($i+1)+"_loc_path_uValue");
+cutKey -animation keys -clear;
+connectAttr ($cur+"_"+($i+1)+"_loc_path.allCoordinates") ($cur+"_"+($i+1)+"_loc.translate");
+delete `listConnections -t "addDoubleLinear"`;
+
+shadingNode -asUtility multiplyDivide -n ($cur+"_"+($i+1)+"_loc_md");
+setAttr ($cur+"_"+($i+1)+"_loc_md.operation") 2;
+setAttr ($cur+"_"+($i+1)+"_loc_md.input2X") ($locNum-1);
+setAttr ($cur+"_"+($i+1)+"_loc_md.input1X") $i;
+connectAttr ($cur+"_"+($i+1)+"_loc_md.outputX") ($cur+"_"+($i+1)+"_loc_path.uValue");
+delete ($cur+"_"+($i+1)+"_loc_md");
+
+}
+group -n ($cur+"_"+"loc_grp") -em;
+parent ($cur+"_"+"*_loc") ($cur+"_"+"loc_grp") ;
+select -cl;
+/*************************************************************************create joints*********************************************************************************************************/
+
+joint -n dup_joint;
+
+for ($j=0;$j<$locNum;$j++){
+	duplicate  -n ($cur+"_"+($j+1)+"_joint") dup_joint;
+	if ($j>0){
+		parent ($cur+"_"+($j+1)+"_joint") ($cur+"_"+$j+"_joint");
+		setAttr ($cur+"_"+($j+1)+"_joint.translateX") 1;
+		}
+	
+}
+delete dup_joint;
+
+/*************************************************************************create rotate cards*********************************************************************************************************/
+select -hi ($cur+"_"+"1_joint") ;
+string $born[]=`ls -sl`;
+for($b=0;$b<$locNum;$b++){
+	polyPlane -w 1 -h 1 -sx 1 -sy 1  -n ($born[$b]+"_rot_geo");	
+	move -rpr -0.5 0 0 (($born[$b]+"_rot_geo")+".scalePivot") (($born[$b]+"_rot_geo")+".rotatePivot");
+	delete `parentConstraint  $born[$b] ($born[$b]+"_rot_geo")`;
+	
+	spaceLocator -n ($born[$b]+"_rot_loc");
+	delete`parentConstraint $born[$b] ($born[$b]+"_rot_loc")`;	
+	
+    shadingNode -asUtility distanceBetween -n ($born[$b]+"_dist");
+    if($b>0){
+		connectAttr (($born[$b]+"_rot_loc")+".translate") (($born[$b]+"_dist")+".point1");
+		connectAttr (($born[$b-1]+"_rot_loc")+".translate") (($born[$b]+"_dist")+".point2");
+		connectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleX");
+		connectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleY");
+		connectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleZ");
+		disconnectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleX");
+		disconnectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleY");
+		disconnectAttr (($born[$b]+"_dist")+".distance") (($born[$b-1]+"_rot_geo")+".scaleZ");
+		select -r ("*_rot_geo");
+		makeIdentity -apply true -t 0 -r 0 -s 1 -n 0 -pn 1 ;    
+		parent ($born[$b]+"_rot_geo") ($born[$b-1]+"_rot_geo");
+		
+		}
+	
+    
+    pointConstraint -n ($born[$b]+"_rotptcon") ($born[$b]+"_rot_geo") $born[$b];	
+	connectAttr (($born[$b]+"_rot_geo")+".rotate") ($born[$b]+".jointOrient");
+	string $opsit = substituteAllString($born[$b], "joint", "loc");
+	string $opsit1 = substituteAllString($born[$b+1], "joint", "loc");
+	delete `pointConstraint $opsit ($born[$b]+"_rot_geo")`;
+	if($b<($locNum-1)){
+
+delete `aimConstraint -offset 0 0 0 -weight 1 -aimVector 1 0 0 -upVector 0 1 0 -worldUpType "vector" -worldUpVector 0 1 0 $opsit1 ($born[$b]+"_rot_geo")`;
+	}
+
+}	
+delete ($cur+"_"+"loc_grp");
+delete ("*_rot_loc");
+delete ("*_rotptcon*");
+delete ("*_rot_geo*");
+
+print("Creation completed ! ");
+
+}

@@ -1,0 +1,383 @@
+// yolanda_p_hotKey
+
+global proc add_blendshap_target() {
+    // Get selection ordered by selection order
+    string $sel[] = `ls -os`;
+    int $numTargets = size($sel) - 1;
+
+    // Validate selection
+    if ($numTargets < 1) {
+        error "Select at least one target and one base geometry";
+        return;
+    }
+
+    string $baseGeo = $sel[$numTargets];
+    string $bsNode;
+
+    // Find existing blendShape node
+    string $deformers[] = `findDeformers $baseGeo`;
+    for ($df in $deformers) {
+        if (`objectType $df` == "blendShape") {
+            $bsNode = $df;
+            break;
+        }
+    }
+
+    if ($bsNode == "") {
+        // Create new blendShape node if none exists
+        string $bsNodes[] = `blendShape -frontOfChain -tc 0 -n ($baseGeo + "_blendShape") $sel[0] $baseGeo`;
+        $bsNode = $bsNodes[0]; // Get first element of returned array
+
+        // Set initial weights
+        for ($i = 0; $i < $numTargets; $i++) {
+            setAttr ($bsNode + ".w[" + $i + "]") 1;
+        }
+
+        // Special case for 2 targets (3 selected items)
+        if (size($sel) == 3) {
+            setAttr ($bsNode + ".w[1]") -1;
+        }
+    } else {
+        // Add targets to existing blendShape
+        int $nextIndex = `getAttr -size ($bsNode + ".weight")`;
+
+        for ($i = 0; $i < $numTargets; $i++) {
+            blendShape -e -t $baseGeo $nextIndex $sel[$i] 1 $bsNode;
+            setAttr ($bsNode + ".w[" + $nextIndex + "]") 1;
+            $nextIndex++;
+        }
+    }
+
+    print "Add complete.\n";
+}
+
+global proc deleteAllIntermediates( string $geo )
+{
+    //
+    // deletes all intermediate shapes nodes;
+    // used for cleanup after duplicating a mesh;
+    // if the mesh name is not given the custom intermediate will be deleted;
+    // custom intermediates are created when the blend shape node is not the first
+    //
+    global string $gShapes_customOriginal[];
+
+    if ($geo == "")
+    {
+        if (size($gShapes_customOriginal) > 0)
+        {
+            delete $gShapes_customOriginal[0];
+            clear $gShapes_customOriginal;
+        }
+        return;
+    }
+
+    string $allShapes[] = `listRelatives -s -f $geo`;
+    // print $allShapes;
+    string $shapes[] = `listRelatives -s -ni -f $geo`;
+    // print $shapes;
+    string $intermediates[] = stringArrayRemove($shapes, $allShapes);
+    
+    if (size($intermediates))
+        delete $intermediates;
+        print("# Result delete intermediates\n" );
+        print $intermediates;
+}
+
+global proc string pygetActiveModelPanel()
+{
+    string $panel = `getPanel -withFocus`;
+    if (`getPanel -typeOf $panel` == "modelPanel")
+        return $panel;
+    else
+        return "modelPanel4"; // 兜底透视�
+}
+
+global proc showJoints()
+{
+  string $panel = `pygetActiveModelPanel`;
+  modelEditor -edit -joints (!`modelEditor -query -joints $panel`) $panel;
+
+}
+
+global proc showMeshs()
+{
+    string $panel = `pygetActiveModelPanel`;
+    modelEditor -edit -polymeshes (!`modelEditor -query -polymeshes $panel`) $panel;
+
+}
+
+global proc showCurves()
+{
+    string $panel = `pygetActiveModelPanel`;
+    modelEditor -edit -nurbsCurves (!`modelEditor -query -nurbsCurves $panel`) $panel; 
+}
+
+global proc showOnlyNurbsSurfaces()
+{
+    string $panel = `pygetActiveModelPanel`;
+    modelEditor -e -allObjects false $panel; 
+    modelEditor -e -nurbsSurfaces true $panel;      
+}
+
+global proc showCurvesMeshs()
+{
+    string $panel = `pygetActiveModelPanel`;
+    modelEditor -e -allObjects false $panel; 
+    modelEditor -e -nurbsCurves true $panel;  
+    modelEditor -e -polymeshes true $panel;          
+}
+
+global proc showCurvesJoints()
+{
+    string $panel = `pygetActiveModelPanel`;
+    modelEditor -e -allObjects false $panel; 
+    modelEditor -e -nurbsCurves true $panel;    
+    modelEditor -e -joints true $panel;   
+}
+
+global proc showAll()
+{
+    string $panel = `pygetActiveModelPanel`;
+    modelEditor -e -allObjects true $panel; // 全部打开
+}
+
+
+global proc yolanda_p_hotKey(string $button)
+{   python("from CommonUse import yolanda_p_setHotKey as YHK");
+    
+    string $currentPanel = `getPanel -underPointer`;
+    if ("" == $currentPanel) {
+        $currentPanel = `getPanel -withFocus`;
+       }
+      // if ("" != $currentPanel) {
+      //     string $panelType = `getPanel -typeOf $currentPanel`;
+      // }
+
+  switch($button )
+//  XRayJoint
+  { 
+    case "XRayJoint":
+         {
+      int $n=`modelEditor -q -jointXray  $currentPanel`;
+      if($n)
+      modelEditor -e -jointXray 0 $currentPanel;
+      if(!$n)
+      modelEditor -e -jointXray 1 $currentPanel;
+            }
+       break;
+
+    case "Xray":
+    {
+            if ( (`getPanel -typeOf $currentPanel`) == "modelPanel" )
+            modelEditor -e -xray ( !`modelEditor -q -xray $currentPanel` ) $currentPanel;
+    }
+    break;
+
+    case "ObjectXray":
+    { 
+      dR_DoCmd("objectXrayTGL");
+            // if ( (`getPanel -typeOf $currentPanel`) == "modelPanel" )
+            // modelEditor -e -objectXray ( !`modelEditor -q -objectXray $currentPanel` ) $currentPanel;
+    }
+    break;
+
+    case "Grid":
+    {
+            optionVar -intValue showGrid (!`optionVar -query showGrid`); 
+            grid -toggle (`optionVar -query showGrid`);
+    }
+    break;
+
+    case "UseDefaultMaterial":
+    {
+        string $panelType = `getPanel -typeOf $currentPanel`;
+        if ($panelType ==  "modelPanel") {
+          int $usingDefaultMaterial = `modelEditor -query -useDefaultMaterial $currentPanel`;
+          modelEditor -edit -useDefaultMaterial (1 - $usingDefaultMaterial) $currentPanel;
+        } 
+    }
+    break;
+
+//       wireframeOnShaded
+
+      case "WireframeOnShaded":
+      {
+        int $wos=`modelEditor -q -wos  $currentPanel`;
+        if($wos)
+        modelEditor -e -wos 0 $currentPanel;
+        if(!$wos)
+        modelEditor -e -wos 1 $currentPanel;
+        }
+       break;
+
+        case "PaintSkinWeights":
+      {
+        string $selectObj[]=`ls -sl`;
+        if (size($selectObj) !=0){
+           artAttrSkinToolScript 4 ;
+        }
+        }
+       break;
+////////////////////////////////////////////////////////////////////////////////////////////
+    case "DeleteLockObject" :
+        {
+          string $locked[] = `ls  -sl`;
+          select -hierarchy;
+          lockNode -l 0;
+          delete $locked;
+
+          print" >>> Delete selected successfully  !";
+                  }
+        break;
+
+    case "UnLockObject" :
+        {
+          select -hierarchy;
+          lockNode -l 0;
+          select -cl;
+          print" >>> successfully unlocked !";
+                            }
+        break;
+
+    case "seletcteEdgeMidVtexs" :
+                {
+                  string $sel[] = `ls -sl -fl`;
+                  string $vtx;
+                  for($i=0;$i<size($sel);$i++)if(`match ".vtx\\[" $sel[$i]` == ".vtx[")$vtx = $sel[$i];
+                  select -d $vtx;
+                  ConvertSelectionToVertices;
+                  $sel = `ls -sl -fl`;
+                  string $inVtx[];
+                  int $size;
+                  select -r $vtx;
+                  for($i=0;$i<200;$i++)
+                  {
+                      PolySelectTraverse 1;
+                      select -d $sel;
+                      $size = `size($inVtx)`;
+                      $inVtx = `ls -sl -fl`;
+                      if(`size($inVtx)` == $size)break;
+                  }
+                  select -r $inVtx $sel;
+                }
+      break;
+
+      case "AddBlendShape" :
+                {
+                  add_blendshap_target();
+
+                }
+      break;
+
+       case "setDefaultsBySelect":
+        {
+
+            python("YHK.yolandap_setDefaultsBySelect()");
+        }
+        break;
+
+
+        case "zreoTranslate":
+        {
+         
+          python("YHK.yolandap_zreoTrans()");
+        }
+        break;
+
+         case "zreoRotate":
+        {
+
+          python("YHK.yolandap_zreoRotate()");
+        }
+        break;
+
+         case "zreoScale":
+        {
+
+          python("YHK.yolandap_zreoScale()");
+        }
+        break;
+        
+         case "incrementalSave":
+        {
+        
+          python("YHK.yolandap_incrementalSave()");
+        }
+        break;
+        
+         case "CopyVertexWeights":
+        {
+          artAttrSkinWeightCopy;
+          // string $nameCommandCmd = "nameCommand -ann \"CopyVertexWeightsNameCommand\" -command (\"CopyVertexWeights\") CopyVertexWeightsNameCommand"; eval($nameCommandCmd);
+
+        }
+        
+         case "PasteVertexWeights":
+        {
+          artAttrSkinWeightPaste;
+          // string $nameCommandCmd = "nameCommand -ann \"PasteVertexWeightsNameCommand\" -command (\"PasteVertexWeights\") PasteVertexWeightsNameCommand"; eval($nameCommandCmd);
+
+        }
+        
+        break;
+        
+
+         case "showJoints":
+        {
+
+          showJoints;
+        }
+        break;
+        
+        case "showMeshs":
+        {
+    
+          showMeshs;
+        }
+        break;
+        
+        
+        case "showCurves":
+        {
+         
+          showCurves;
+        }
+        break;
+        
+        case "showCurvesMeshs":
+        {
+         
+          showCurvesMeshs;
+        }
+        break;
+        
+         case "showCurvesJoints":
+        {
+         
+          showCurvesJoints;
+        }
+        break;
+
+        case "showAll":
+        {
+         
+          showAll;
+        }
+        break;
+
+        case "deleteAllIntermediates":
+        {
+          string $sels[]=`ls -sl`;
+          for ($i = 0; $i < size($sels); $i++) {
+            deleteAllIntermediates($sels[$i]);
+        }
+          
+        }
+        break;
+        
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+   }
+}

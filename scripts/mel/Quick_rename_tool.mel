@@ -1,0 +1,490 @@
+
+//======================================================================
+// Window Procedures
+//======================================================================
+global proc Quick_rename_tool ()
+  {//Quick_rename_toolWindow
+
+  if (`window -q -exists Quick_rename_toolWindow`) deleteUI Quick_rename_toolWindow;
+  
+  window -s 1 -title "Quick_rename_tool" -maximizeButton 0 -minimizeButton 1 Quick_rename_toolWindow ;
+
+//======================================================================
+// Rename Tools
+columnLayout;
+rowColumnLayout -numberOfColumns 1 -columnWidth 1 313 ;
+//frameLayout -label "Rename and Number"  -bgc 0.25 0.25 0.25 -w 313 -fn "tinyBoldLabelFont" ;
+	
+  textFieldGrp -label "Rename:" -text "" -columnWidth 1 70 -columnWidth 2 235 KK_RenameRenameTFG;
+			
+rowColumnLayout -numberOfColumns 2 -columnWidth 1 130 -columnWidth 2 170;
+	intFieldGrp -label "Start #:" -v1 1 -columnWidth 1 68 -columnWidth 2 60 KK_RenameStartIFG;
+	intFieldGrp -label "Padding:" -v1 2 -columnWidth 1 64 -columnWidth 2 60 KK_RenamePaddingIFG;
+setParent..;
+	rowColumnLayout -numberOfColumns 1 -columnWidth 1 306 ;
+	button -h 23 -w 100 -l "Rename and Number" -bgc 0.1 0.2 0.2 -c "Rename_KK_Kename(3)";
+setParent..;
+separator -style "in" -w 315 ;
+	
+			
+//======================================================================
+// Remove
+//frameLayout -label "Simple rename"  -bgc 0.25 0.25 0.25 -w 313 -fn "tinyBoldLabelFont";	
+rowColumnLayout -numberOfColumns 3 -cs 1 10 -cs 3 4 -columnWidth 1 84 -columnWidth 2 104 -columnWidth 3 104;
+	text -label "Remove..." -align "left";
+	button -h 23 -w 60 -l "First Character-->" -bgc 0.1 0.2 0.2 -c "remove_FirstChr()";
+	button -h 23 -w 60 -l "<--Last Character" -bgc 0.1 0.2 0.2 -c "remove_LastChr()";
+setParent..;
+				
+rowColumnLayout -numberOfColumns 3 -cs 1 10 -columnWidth 1 70 -columnWidth 2 170 -columnWidth 3 56;
+	text -l " Hash Rename:";
+	textFieldGrp -label "" -text "name_####_suffix" -columnWidth 1 10 -columnWidth 2 153 Rename_js_hashRenameTFG;
+	button -h 23 -w 48 -l "Rename" -bgc 0.1 0.2 0.2 -c "Rename_js_hashRename_MainProc()"; 
+	setParent..;
+separator -style "in" -w 315 ;
+	
+//======================================================================
+// Prefix - Suffix
+	//frameLayout -label " Add prefix or suffix"  -bgc 0.25 0.25 0.25 -w 313 -fn "tinyBoldLabelFont";
+	//text -l "" -h 1;
+	rowColumnLayout -numberOfColumns 3 -cs 1 10 -columnWidth 1 55 -columnWidth 2 185 -columnWidth 3 56;
+	text -l "prefix: ";
+	textFieldGrp -label "" -text "" -columnWidth 1 10 -columnWidth 2 168 prefixTFG;
+	button -h 21 -l "Add" -bgc 0.1 0.2 0.2 -c "Rename_KK_Kename(1)";
+setParent..;
+
+text -l "" -h 1;
+	rowColumnLayout -numberOfColumns 3 -cs 1 10 -columnWidth 1 55 -columnWidth 2 185 -columnWidth 3 56;
+	text -l "suffix: ";
+	textFieldGrp -label "" -text "" -columnWidth 1 10 -columnWidth 2 168 suffixTFG;
+	button -h 21 -l "Add" -bgc 0.1 0.2 0.2 -c "Rename_KK_Kename(2)";
+setParent..;
+separator -style "in" -w 315 ;
+	
+//======================================================================
+// Quick suffix
+//frameLayout -label " Add quick suffix"  -bgc 0.25 0.25 0.25 -w 313 -fn "tinyBoldLabelFont";	
+rowColumnLayout -numberOfColumns 5 -columnWidth 1 61 -columnWidth 2 61 -columnWidth 3 61 -columnWidth 4 61 -columnWidth 5 62;
+	
+	button -l "jnt" -bgc 0.1 0.2 0.2 -c "quickSuffix _jnt";
+	button -l "ctrl" -bgc 0.1 0.2 0.2 -c "quickSuffix _ctrl";
+	button -l "drv" -bgc 0.1 0.2 0.2 -c "quickSuffix _drv";
+	button -l "ofs" -bgc 0.1 0.2 0.2 -c "quickSuffix _ofs";
+	button -l "grp" -bgc 0.1 0.2 0.2 -c "quickSuffix _grp";
+	setParent ..;
+separator -style "in" -w 315 ;       
+        
+
+//======================================================================
+// Search and Replace 
+//frameLayout -label "Search and Replace"  -bgc 0.25 0.25 0.25 -w 311 -fn "tinyBoldLabelFont";
+rowColumnLayout -numberOfColumns 1 -columnWidth 1 313 ;	
+	textFieldGrp -label "Search:" -text "pasted_" -columnWidth 1 70 -columnWidth 2 233 SearchAndReplace_SearchTFG;
+	textFieldGrp -label "Replace:" -text "" -columnWidth 1 70 -columnWidth 2 233 SearchAndReplace_ReplaceTFG;
+	radioButtonGrp -bgc 0.25 0.25 0.25 -numberOfRadioButtons 3 -label "" -sl 1 -labelArray3 "Hierarchy" "Selected" "All" -columnWidth 1 30 SearchAndReplace_OptionRBG;
+	rowColumnLayout -numberOfColumns 1 -columnWidth 1 305 ;
+	button  -h 23 -w 40-l "Apply" -bgc 0.1 0.2 0.2 -c "SearchAndRename()";
+	setParent..;
+setParent..;
+
+window -e -wh 313 302 Quick_rename_toolWindow;
+showWindow Quick_rename_toolWindow;
+
+}//Quick_rename_tool_Window
+
+//======================================================================
+//======================================================================
+// ---->  Remove Last character <----
+//======================================================================
+//======================================================================
+
+global proc remove_LastChr()
+{//remove_LastChr
+
+
+	string $jointSelected[0]= `ls -sl -long`;
+	int $jointSelectedSize = size($jointSelected);
+
+	for ($i=$jointSelectedSize-1; $i >= 0; $i--)
+	{
+		string $obj = $jointSelected[$i];
+	
+		string $pathNodes[];
+		int $numTokens = tokenize($obj, "|", $pathNodes);
+		string $myObj = $pathNodes[$numTokens - 1];
+		
+		int $stringSize = size($myObj);
+
+		
+		if ($stringSize > 1) 
+		{
+			string $newName = `substring $myObj 1 ($stringSize - 1)`;
+			rename $obj $newName;
+		}
+	}	
+}//remove_LastChr
+
+
+
+//======================================================================
+//======================================================================
+// ---->  Remove First character <----
+//======================================================================
+//======================================================================
+
+global proc remove_FirstChr()
+{//remove_FirstChr
+
+	
+	string $jointSelected[0]= `ls -sl -long`;
+	int $jointSelectedSize = size($jointSelected);
+
+	for ($i=$jointSelectedSize-1; $i >= 0; $i--)
+	{
+		string $obj = $jointSelected[$i];
+	
+		string $pathNodes[];
+		int $numTokens = tokenize($obj, "|", $pathNodes);
+		string $myObj = $pathNodes[$numTokens - 1];
+		
+		int $stringSize = size($myObj);
+		
+		if ($stringSize > 1) 
+		{
+			string $newName = `substring $myObj 2 $stringSize`;
+			rename $obj $newName;
+		}
+	}
+}//remove_FirstChr
+
+
+
+//======================================================================
+//======================================================================
+// ---->  Rename Selected Shapes <----
+//======================================================================
+//======================================================================
+
+global proc KK_RenameSelectedShape()
+{//KK_RenameSelectedShape
+	string $objects[] = `ls -sl`;
+
+	string $objTransform;
+	for ($objTransform in $objects)
+	{
+	
+		string $shapes[] = `listRelatives -s -f $objTransform`;
+		
+		string $pathTransNodes[];
+		int $numTokens = tokenize($objTransform, "|", $pathTransNodes);
+		string $myTransObj = $pathTransNodes[$numTokens - 1];
+		
+		string $obj;
+		int $num = 1;
+		
+		for ($obj in $shapes)
+		{
+			string $newShapeName = ($myTransObj + "_Shape" + $num);
+			rename $obj $newShapeName;
+			$num += 1;
+		}
+	}
+}//KK_RenameSelectedShape
+
+
+
+//======================================================================
+//======================================================================
+// ---->  Search and Rename <----
+//======================================================================
+//======================================================================
+
+global proc SearchAndRename()
+{
+    string $search = `textFieldGrp -q -tx SearchAndReplace_SearchTFG`;
+	string $replace = `textFieldGrp -q -tx SearchAndReplace_ReplaceTFG`;
+	string $options = `radioButtonGrp -q -sl SearchAndReplace_OptionRBG`;
+	
+	if ($options == 1)
+	{
+			searchReplaceNames $search $replace "hierarchy";
+	}
+	
+	else if ($options == 2)
+	{
+			searchReplaceNames $search $replace "selected";
+	}
+	
+	else if ($options == 3)
+	{
+			searchReplaceNames $search $replace "all";
+	}
+}
+
+
+
+//======================================================================
+//======================================================================
+// ---->  Quick suffix <----
+//======================================================================
+//======================================================================
+
+global proc quickSuffix(string $suffix)
+{//quickSuffix
+
+	string $jointSelected[0]= `ls -sl -long`;
+	int $jointSelectedSize = size($jointSelected);
+
+	for ($i=$jointSelectedSize-1; $i >= 0; $i--)
+	{
+		string $obj = $jointSelected[$i];
+	
+		string $pathNodes[];
+		int $numTokens = tokenize($obj, "|", $pathNodes);
+		string $myObj = $pathNodes[$numTokens - 1];
+		
+		rename $obj ($myObj + $suffix);
+	}
+}//quickSuffix
+
+//======================================================================
+//======================================================================
+// ---->  hashRename
+//======================================================================
+//======================================================================
+
+global proc Rename_js_hashRename_MainProc()
+{
+
+    string $search = `textFieldGrp -q -tx Rename_js_hashRenameTFG`;
+    
+    if ($search != "")
+    {
+		evalEcho ("Rename_js_hashRename \"" + $search + "\"");
+    }
+}
+
+
+
+global proc string Rename_js_replaceHash (string $string, int $number)
+{
+
+    string $result;
+    // we want to replace the #'s in the name with the $number.
+
+    string $substring = "#+";
+    $substring = `match $substring $string`;
+
+    // $substring is now the number of #'s
+    string $substringNum = substituteAllString($substring, "#", "0");
+    // now add the number at the end
+    string $numString = $number;
+
+    string $newString = ($substringNum + $numString);
+
+    // now strip away the start numbers so we only have the num left
+    int $fullSize =`size($newString)`;
+    int $numSize = `size($numString)`;
+    if ($numSize < size($substringNum))
+    {
+        $numSize = $numSize+1;
+        $numString = `substring $newString $numSize $fullSize`;
+    } 
+    $result = `substitute $substring $string $numString`;
+    return $result;
+}
+
+
+
+global proc string[] Rename_js_hashRename (string $newName)
+{
+    // this procedure will rename the selected objects with $newName, and it will replace the # with a count.  It will zero-pad with the
+    // number of hashes
+
+    string $objs[0];
+    int $count = 0;
+    string $return[0];
+
+    $objs = `ls -sl`;
+
+    if (size($objs) > 0)
+    {
+        // create a dummy node for keeping track of all the objects.  when we rename them, it may change the object's
+        // names, which could get confusing for maya.
+        $node = `createNode unknown`;
+        addAttr -ln "selObjects" -at message -multi -im 0;
+
+        for ($obj in $objs)
+        {
+            // connect the attributes
+            connectAttr -na ($obj + ".message") ($node + ".selObjects");
+        }
+        
+        $con = `listConnections ($node + ".selObjects")`;
+       
+        for ($x = 0; $x < size($con); $x++)
+        {
+            string $tmp[0];
+            $tmp = `listConnections ($node + ".selObjects["+$x+"]")`;
+            string $object = $tmp[0];
+      
+            // check the searchString for the #'s.  Based on the number of hashes, we'll replace them with the index number
+            $name = `Rename_js_replaceHash $newName ($x + 1)`;
+
+            // rename the object
+            $result = `rename $object $name`;
+            
+            print ("// Renamed: " + $object + " --> " + $result + "\n");
+        } 
+        $return = `listConnections ($node + ".selObjects")`;
+        delete $node;
+
+    }
+    if ((`size $return`) > 0)
+        select $return;
+    return $return;
+}
+
+//======================================================================
+//======================================================================
+// ---->  cometRename.mel  procedures
+//======================================================================
+//======================================================================
+
+
+/*
+ 
+ */
+proc string getShortName(string $obj)
+{
+    string $ret = "";
+    
+    if ($obj == "")
+        return $ret;
+        
+    string $parts[];
+    int $cnt = tokenize($obj, "|", $parts);
+    
+    if ($cnt <= 0)
+        $ret = $obj;
+    else
+        $ret = $parts[($cnt-1)];
+    
+    return $ret;
+}
+
+// --------------------------------------------------------------------------
+
+proc string chop(string $str)
+{
+    string $ret = "";
+
+    int $cnt = size($str);
+    
+    if ($cnt <= 1)
+        return $ret;
+    
+    $ret = `substring $str 1 ($cnt-1)`;
+
+    return $ret;
+}
+
+// --------------------------------------------------------------------------
+
+global proc Rename_KK_Kename(int $mode)
+{//Rename_KK_Kename
+    string $objs[] = `ls -sl -long`;
+    int $objCnt = size($objs);
+    int $i;
+
+	// Get all UI data...
+	//
+    string $prefix = `textFieldGrp -q -tx prefixTFG`;
+    string $suffix = `textFieldGrp -q -tx suffixTFG`;
+    string $rename = `textFieldGrp -q -tx KK_RenameRenameTFG`;
+    int $start = `intFieldGrp -q -v1 KK_RenameStartIFG`;
+    int $padding = `intFieldGrp -q -v1 KK_RenamePaddingIFG`;
+    
+    string $shortName;
+    string $newShortName;
+    string $newName;
+
+	// Now do it
+	//
+    for ($i=0; $i < $objCnt; ++$i)
+        {
+	$obj = $objs[$i];
+	
+	$shortName = getShortName($obj);
+		
+	switch ($mode)
+	    {
+	    case 1:
+	        if ($prefix == "")
+	            {
+	            warning -sl 0 ("Can't add prefix, prefix entry field is blank!");
+	            return;
+	    	    }
+	        $newShortName = ($prefix + $shortName);
+	        break;
+
+	    case 2:
+	        if ($suffix == "")
+	            {
+	            warning -sl 0 ("Can't add suffix, suffix entry field is blank!");
+	            return;
+	    	    }
+	        $newShortName = ($shortName + $suffix);
+	        break;
+
+	    case 3:
+	        if ($rename == "")
+	            {
+	            warning -sl 0 ("Can't rename and number, rename entry field is blank!");
+	            return;
+	            }
+	    		// get index of string as user wants
+	    	int $n = $i + $start;
+	    		// pad of 0's
+	    	string $padStr = "";
+	    	
+	    		// Add padding as needed
+	    	for ($p=1; $p < $padding; ++$p)
+	    	{
+				if ($n < pow(10, $p) )
+					$padStr += "0";
+		    }
+	    	
+	    	$newShortName = ($rename+$padStr+$n);
+	        break;
+
+	    } // end of switch
+	
+	
+	$newName = `rename $obj $newShortName`;
+	select -r $newName;
+	string $newLongNames[] = `ls -sl -long`;
+	string $newLongName = $newLongNames[0];
+	
+	    // Now update rest of stuff in list in case |long|names
+	    // required it
+	for ($j=0; $j < $objCnt; ++$j)
+	    {
+	    string $tmp = $objs[$j];
+
+	    $tmp += "|";	// add to end for easy replacing
+	    $tmp = `substitute ($obj+"|") $tmp ("|"+$newLongName+"|")`;
+	    $tmp = chop($tmp);
+	    
+	    $objs[$j] = $tmp;
+	    }
+	
+
+	}  // end of for all objs
+
+    select $objs;
+}//Rename_KK_Kename
+
+//--------------------------
+//--------------------------
+Quick_rename_tool;

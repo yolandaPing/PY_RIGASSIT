@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<melLayout>
+    <button>
+        <label>Create Ctrls</label>
+        <file>createFKctrls</file>
+        <annotation>关节链创建控制器工具</annotation>
+    </button>
+
+     <button>
+        <label>Quick rename tool</label>
+        <file>Quick_rename_tool</file>
+        <annotation>重命名工具</annotation>
+    </button>
+
+    <button>
+            <label>abSymMesh</label>
+            <file>abSymMesh</file>
+            <annotation>镜像模型工具</annotation>
+    </button>
+
+    <!-- <button>
+        <label>separator</label>
+        <file>none</file>
+    </button> -->
+
+
+   
+
+
+    <!-- 以下省略其余按钮，保持相同结构 -->
+</melLayout>
+
+
+<!-- 只读取PY_RIGASSIT\scripts\mel下工具 -->

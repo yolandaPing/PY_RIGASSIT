@@ -1,0 +1,24 @@
+{
+    "about.title": "About Hotbox Designer",
+    "about.version": "Version",
+    "about.compat": "Compatibility",
+    "about.modified": "Modified by",
+    "about.features": "Major Modifications",
+    "about.license": "License",
+    "about.license_desc": "Based on original project",
+
+    "feature.nested": "Nested submenu system (Hotbox inside Hotbox)",
+    "feature.editor": "Menu Editor support for internal submenu editing",
+
+    "ui.language": "Language",
+    "ui.close": "Close",
+
+    "menu.add_button": "Add Button",
+    "menu.add_text": "Add Text",
+    "menu.add_bg": "Add Background",
+
+    "submenu.enable": "Enable Submenu",
+    "submenu.edit": "Edit Submenu",
+
+    "feature.ui": "UI/UX improvements and workflow optimization"
+}

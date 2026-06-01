@@ -1,0 +1,94 @@
+/*
+    Script:     js_cutPlane.mel
+    Version:    1.0
+    Author:     Jason Schleifer
+    Website:    http://jonhandhisdog.com
+
+    Descr:      Used to help segmenting geometry into easily digestible chunks
+
+    Proc:       js_cutPlane_create
+    Descr:      This procedure creates a cut plane for the selected object.
+	            you can create as many as you want, just execute the script
+	            as many times as necessary.
+
+    Proc:       js_cutPlane_cut ( int $deletePlanes )
+                This procedure takes the selected object and cuts it
+                based on the cutPlanes that exist on it.
+                if $deletePlanes is 1, it will delete the cutPlanes.
+                if it's 0, then it will leave the cutPlanes there.
+    
+                it will return the results as follows:
+                "origObject:cutObj1:cutObj2:cutObj3";
+   
+*/
+global proc string js_cutPlane_create ()
+{
+	// This procedure creates a cut plane for the selected object.
+	// you can create as many as you want, just execute the script
+	// as many times as necessary.
+
+    string $objs[0];
+    string $obj;
+    string $cutPlane;
+    $objs = `ls -sl`;
+    if (size($objs) > 0)
+    {
+        $obj = $objs[0];
+        // we're going to create a cutPlane for the selected polygon.
+        // check and make sure it's a poly
+        string $shape[0];
+        $shape = `listRelatives -f -s $obj`;
+        if (`nodeType $shape` == "nurbsSurface")
+        {
+            // we probably have one of the cutPlanes selected.. if that's the case, we
+            // should find the actual object, and create the cutPlane for that.
+            string $object = `js_cutPlane_findObj $obj`;
+            if ($object != "")
+            {
+                // redefine $obj and $shape
+                $obj = $object;
+                $shape = `listRelatives -f -s $obj`; 
+            }
+
+        }
+        if (`nodeType $shape[0]` == "mesh")
+        {
+            // cool, we can create a plane
+            $plane = `nurbsPlane -p 0 0 0 -ax 0 0 1 -w 1 -lr 1 -d 3 -u 1 -v 1 -ch 1`;
+            $cutPlane = `rename ($plane[0]) "cutPlane"`;
+
+            // add the cutPlane attribute to the object, if it doesn't already exist
+            if (!`attributeQuery -exists -node $obj "cutPlanes"`)
+            {
+                addAttr -ln "cutPlanes" -at "message" -multi -im 0 $obj;
+            }
+
+            // connect the cutPlane to the object
+            connectAttr -na ($cutPlane + ".message") ($obj + ".cutPlanes");
+
+            // if the number of cutPlanes is > 1, then grab the position of the most recent 
+            // and move the current cutPlane ot that location
+            string $planes[0];
+            $planes = `listConnections ($obj + ".cutPlanes")`;
+            $size = `size($planes)`;
+            float $p[0];
+            float $r[0];
+            if ($size > 1)
+            {
+                $p = `getAttr ($planes[($size-2)] + ".t")`; 
+                $r = `getAttr ($planes[($size-2)] + ".r")`; 
+            }
+            else
+            {
+                $p = `xform -q -ws -t $obj`;
+                $r = `xform -q -ws -ro $obj`;
+            }
+
+            setAttr ($cutPlane + ".t") $p[0] $p[1] $p[2];
+            setAttr ($cutPlane + ".r") $r[0] $r[1] $r[2];
+            
+        }
+    }
+    return $cutPlane;
+}
+

@@ -1,0 +1,42 @@
+global proc SkinDoubleShift(){
+    string $sel[]=`ls -sl `;
+
+    for ($ii=0;$ii<size($sel);$ii++){
+        
+        string $skinCluster = findRelatedSkinCluster($sel[$ii]);
+        
+        if ($skinCluster == ""){
+            string $text=($sel[$ii]+" not skinCluster nodes");
+            warning ($text);
+            continue;    }
+
+        // print $skinCluster;
+        $SC = $skinCluster;
+        
+        string $inf[] = `skinCluster -q -inf $SC`;
+        for($i=0;$i<size($inf);$i++)
+        {
+            string $con[] = `listConnections -type "skinCluster" ($inf[$i]+".worldMatrix[0]")`;
+            string $conA[] = `listConnections -p 1 -type "skinCluster" ($inf[$i]+".worldMatrix[0]")`;
+            int $index = stringArrayFind( $SC, 0, $con );
+            string $idx = `substitute ($SC + ".matrix\\[") $conA[$index] ""`;
+            $idx = `substitute "]" $idx ""`;
+            
+            string $ctrl = $inf[$i] + "_ctrl_con";
+            if(`objExists $ctrl`){
+                connectAttr ($ctrl + ".worldInverseMatrix[0]") ($SC + ".bindPreMatrix[" + $idx + "]");
+                }
+            else{
+                warning ($ctrl + " does not exist !");
+                continue;
+                } 
+       }
+
+    }
+
+    
+}
+
+
+
+SkinDoubleShift();

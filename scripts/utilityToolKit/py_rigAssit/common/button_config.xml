@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <category name="joint_quick">
+        <button>
+            <label>Show Axis</label>
+            <tooltip><![CDATA[]]></tooltip>
+            <color><![CDATA[]]></color>
+        </button>
+        <button>
+            <label>Hide Axis</label>
+            <tooltip><![CDATA[]]></tooltip>
+            <color><![CDATA[]]></color>
+        </button>
+        <button>
+            <label>Zero Axis</label>
+            <tooltip><![CDATA[清零jointOrient]]></tooltip>
+            <color><![CDATA[]]></color>
+        </button>
+        <button>
+            <label>Show Joint</label>
+            <tooltip><![CDATA[显示骨骼]]></tooltip>
+            <color><![CDATA[]]></color>
+        </button>
+        <button>
+            <label>Hide Joint</label>
+            <tooltip><![CDATA[隐藏骨骼]]></tooltip>
+            <color><![CDATA[]]></color>
+        </button>
+        <button>
+            <label>Quick Orient</label>
+            <tooltip><![CDATA[快速骨骼朝向处理]]></tooltip>
+            <color><![CDATA[]]></color>
+        </button>
+        <button>
+            <label>World</label>
+            <tooltip><![CDATA[世界模式]]></tooltip>
+            <color><![CDATA[main]]></color>
+        </button>
+        <button>
+            <label>Return</label>
+            <tooltip><![CDATA[恢复原状态]]></tooltip>
+            <color><![CDATA[main]]></color>
+        </button>
+        <button>
+            <label>Orient</label>
+            <tooltip><![CDATA[骨骼定向工具]]></tooltip>
+            <color><![CDATA[main]]></color>
+        </button>
+    </category>
+
+    <category name="joint_edit">
+        <button>
+            <label>Select Child joints</label>
+            <tooltip><![CDATA[选择所有子关节]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Select Skin joints</label>
+            <tooltip><![CDATA[选择权重关节]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Inherits Transform</label>
+            <tooltip><![CDATA[]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Segment Scale Compensate</label>
+            <tooltip><![CDATA[]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Resrt Skined Pose</label>
+            <tooltip><![CDATA[重置蒙皮]]></tooltip>
+            <color><![CDATA[green]]></color>
+        </button>
+        <button>
+            <label>Remove unInfluences</label>
+            <tooltip><![CDATA[移除场景里skinCluster没有权重的关节]]></tooltip>
+            <color><![CDATA[green]]></color>
+        </button>
+    </category>
+
+    <category name="center_create">
+        <button>
+            <label>center > joint</label>
+            <tooltip><![CDATA[选择点线面创建轴心关节]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>mesh > Bind</label>
+            <tooltip><![CDATA[选择模型单独绑定]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>point > joint</label>
+            <tooltip><![CDATA[选择点创建关节]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="joint_create">
+        <button>
+            <label>curve > joint</label>
+            <tooltip><![CDATA[曲线创建关节]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>joints > curve</label>
+            <tooltip><![CDATA[关节链创建曲线]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>InsertJoints</label>
+            <tooltip><![CDATA[插入关节, 选择起始关节]]></tooltip>
+            <color><![CDATA[main]]></color>
+        </button>
+    </category>
+
+    <category name="joint_skin">
+        <button>
+            <label>Soft to skin</label>
+            <tooltip><![CDATA[软选后加选权重关节（需要解锁分摊权重的关节）]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Soft add ctrl</label>
+            <tooltip><![CDATA[软选创建权重关节（需要解锁分摊权重的关节）]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Auto IK Weight</label>
+            <tooltip><![CDATA[选择模型自动权重（参与权重的关节需要按顺序的）]]></tooltip>
+            <color><![CDATA[main]]></color>
+        </button>
+    </category>
+
+    <category name="joint_Make">
+        <button>
+            <label>To Parent</label>
+            <tooltip><![CDATA[将选择的对象层级化]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Group Clearing</label>
+            <tooltip><![CDATA[添加loc清零组]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>snape center</label>
+            <tooltip><![CDATA[将对象吸附到所选模型点|线|面的轴心
+先选择参考模型的点|线|面 + 被吸附对象]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Make Group</label>
+            <tooltip><![CDATA[添加组]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Make Global</label>
+            <tooltip><![CDATA[添加Global]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Make Pivot</label>
+            <tooltip><![CDATA[添加轴心位移控制]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="curve_edit">
+        <button>
+            <label>Mirror L/R</label>
+            <tooltip><![CDATA[选择需要镜像的控制器(L)镜像形态到它的对边(R)]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Mirror self</label>
+            <tooltip><![CDATA[选中曲线镜像自身 +x > -x]]></tooltip>
+            <color><![CDATA[null]]></color>
+        </button>
+        <button>
+            <label>build Curve</label>
+            <tooltip><![CDATA[根据选中对象位置创建曲线]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Vis</label>
+            <tooltip><![CDATA[显示/隐藏曲线shape]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="attribute_edit">
+        <button>
+            <label>Shift Up</label>
+            <tooltip><![CDATA[属性上移]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Shift Down</label>
+            <tooltip><![CDATA[属性下移]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Move value</label>
+            <tooltip><![CDATA[移动属性值到父级]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Attr Store</label>
+            <tooltip><![CDATA[储存当前选中对的T R S 属性]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Attr Return</label>
+            <tooltip><![CDATA[返回储存对象的 T R S 属性]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Copy Attr</label>
+            <tooltip><![CDATA[Select your transforms that you want to duplicate to first,
+lastly select the source transform with attributes you want to duplicate and run the script.
+选择需要拷贝的对象，加选拷贝源，然后选择属性通道里需要拷贝的属性名称]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="node_edit">
+        <button>
+            <label>Remove Double</label>
+            <tooltip><![CDATA[权重逆矩阵去除双倍]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Rename SkinNode</label>
+            <tooltip><![CDATA[重命名蒙皮节点]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Rename BsNode</label>
+            <tooltip><![CDATA[重命名blendshape节点]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="global_vis">
+        <button>
+            <label>Global ctrl</label>
+            <tooltip><![CDATA[创建Global/Master控制器*(可去往PY_RIGASSIT/files/更改Global_Ctrl.ma里的内容)]]></tooltip>
+            <color><![CDATA[cld_yellow]]></color>
+        </button>
+        <button>
+            <label>Create visibility</label>
+            <tooltip><![CDATA[创建visibility_ctrl]]></tooltip>
+            <color><![CDATA[cld_yellow]]></color>
+        </button>
+        <button>
+            <label>Connect Mesh</label>
+            <tooltip><![CDATA[visibility connect Mesh]]></tooltip>
+            <color><![CDATA[cld_yellow]]></color>
+        </button>
+    </category>
+
+    <category name="mesh_edit">
+        <button>
+            <label>Fip Shape</label>
+            <tooltip><![CDATA[select targets + source 反转目标体: 选择目标模型 + 源模型]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Correct Shape</label>
+            <tooltip><![CDATA[反算矫正目标体: 源模型 + 目标模型]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Split Shape</label>
+            <tooltip><![CDATA[权重拆分目标体: 源模型 + 目标模型]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Move local</label>
+            <tooltip><![CDATA[移动点位置: select the point at the position to be moved + the source model
+选择需要移动模型的点，加选base模型]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Move world</label>
+            <tooltip><![CDATA[移动点位置: select the point at the position to be moved + the source model
+选择需要移动模型的点，加选base模型]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>UV move Shape</label>
+            <tooltip><![CDATA[根据uv传递形态：选中目标模型 + 源模型]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="data_edit">
+        <button>
+            <label>Export curve</label>
+            <tooltip><![CDATA[选中曲线导出点位置]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Export Pos</label>
+            <tooltip><![CDATA[选中对象导出位置]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Export SDK</label>
+            <tooltip><![CDATA[选中SDK节点导出信息]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Import curve</label>
+            <tooltip><![CDATA[导入储存的曲线点位置]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Import Pos</label>
+            <tooltip><![CDATA[导入储存对象的位置]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Import SDK</label>
+            <tooltip><![CDATA[导入储存sdk信息]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="artist_tool">
+        <button>
+            <label>Create Ctrls</label>
+            <tooltip><![CDATA[Create Ctrls]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>abSymMesh</label>
+            <tooltip><![CDATA[镜像模型工具]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Quick rename</label>
+            <tooltip><![CDATA[重命名工具]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>QuadRemesher</label>
+            <tooltip><![CDATA[模型重拓扑神器]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>intersecSolver</label>
+            <tooltip><![CDATA[交叉求解器]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>muscleTool</label>
+            <tooltip><![CDATA[肌肉工具]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>CurveFromTubes</label>
+            <tooltip><![CDATA[根据模型创建关节]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Curve_Rigger</label>
+            <tooltip><![CDATA[曲线绑定]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Ribbon_Nacho</label>
+            <tooltip><![CDATA[曲面绑定]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>CopySDK</label>
+            <tooltip><![CDATA[拷贝SDK]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>UKDPEyelidRig</label>
+            <tooltip><![CDATA[眼皮绑定]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>EyelidRig</label>
+            <tooltip><![CDATA[眼皮绑定]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+</config>

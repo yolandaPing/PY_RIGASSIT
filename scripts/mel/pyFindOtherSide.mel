@@ -1,0 +1,16 @@
+/*
+time: 20250322
+author: you P
+email: yolandaping1224@gmail.com
+*/
+
+
+global proc string pyFindOtherSide(string $joint, string $lKeyA[], string $rKeyA[]) {
+    // Ö»¼ì²é×ó¹Ø¼ü×Ö
+    for ($side = 0; $side < size($lKeyA); $side++) {
+        if (`gmatch $joint ("*"+$lKeyA[$side]+"*")`) {
+            return `substitute $lKeyA[$side] $joint $rKeyA[$side]`;
+        }
+    }
+    return "";
+}

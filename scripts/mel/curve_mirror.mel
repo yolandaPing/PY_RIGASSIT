@@ -1,0 +1,44 @@
+global proc Mirror_selected_curve(){
+    string $sel[] = `ls -sl`;
+    string $shape[];
+    string $cv[];
+    int $size;
+    int $st_idx;
+    float $posi_cv0[];
+    float $posi_cv[];
+    for($s in $sel)
+    {
+        $shape = `listRelatives -s $s`;
+        if(!`size $shape`)continue;
+        if(`objectType $shape[0]` != "nurbsCurve")continue;
+        $cv = `ls -fl ($s + ".cv[*]")`;
+        $size = `size $cv`;
+        $posi_cv0 = `xform -q -ws -t $cv[0]`;
+        if($posi_cv0[0]>0)
+        {
+            $st_idx = 0;
+            for($i=($size-1);$i>($size/2);$i--)
+            {
+                $posi_cv = `xform -q -ws -t $cv[$st_idx]`;
+                xform -ws -t ($posi_cv[0] * -1) $posi_cv[1] $posi_cv[2] $cv[$i];
+                $st_idx++;
+            }
+        }else{
+            $st_idx = $size-1;
+            for($i=0;$i<($size/2);$i++)
+            {
+                $posi_cv = `xform -q -ws -t $cv[$st_idx]`;
+                xform -ws -t ($posi_cv[0] * -1) $posi_cv[1] $posi_cv[2] $cv[$i];
+                $st_idx--;
+            }
+        }
+        if(($size*2/2) != $size)
+        {
+            $posi_cv = `xform -q -ws -t $cv[$size/2]`;
+            xform -ws -t 0 $posi_cv[1] $posi_cv[2] $cv[$size/2];
+        }
+    }
+}
+
+
+Mirror_selected_curve;

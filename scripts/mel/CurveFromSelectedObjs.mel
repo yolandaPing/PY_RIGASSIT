@@ -1,0 +1,20 @@
+global proc CurveFromObjs(){
+    int $degree = 3;
+    string $sel[]=`ls -sl`;
+    vector $storePositions[];
+    int $x = 0;
+    for ($i in $sel){
+        $storePositions[$x] =`xform -query -worldSpace -translation $i`;
+        $x++;
+    }
+    string $buildCur = ("curve -d " + $degree);
+    for($each in $storePositions){
+        $buildCur += (" -p " + $each );
+    }
+    eval $buildCur;
+    
+    print (" created successfully !");
+}
+
+
+CurveFromObjs();
