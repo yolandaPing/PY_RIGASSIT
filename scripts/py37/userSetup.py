@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 import inspect,os
 import sys
@@ -175,9 +174,3 @@ startup()
 
 # cmds.evalDeferred('import ShelfButton')
 # cmds.evalDeferred("import CommonUse.yolanda_p_setHotKey as YHK\nYHK.setHotkey()")
-=======
-import maya.cmds as cmds
-
-cmds.evalDeferred('import ShelfButton')
-#PY_RIGASSIT hotkey are not enabled
->>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5

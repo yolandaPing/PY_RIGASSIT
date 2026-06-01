@@ -1,9 +1,21 @@
 # PY_RIGASSIT 
+
+
 Why Should I use this ?
-=======================
-* 这是一款能帮助你提高绑定效率的maya绑定助手
-<<<<<<< HEAD
+
+* 这是一款能帮助你提高maya绑定效率的得力助手
+
 ``This is a Maya rigging assistant that can help you improve binding efficiency.``
+
+============================================================
+
+``If you have any questions about this tool, look forward to your timely feedback``
+
+**Feedback mailbox ：pyrigassit@gmail.com **
+
+*Copyright: Yolanda Ping*
+
+============================================================
 
 # 当前版本 0.6.1.1
 
@@ -44,44 +56,18 @@ Why Should I use this ?
 * ✔️ snake rigging
 
 * 上百套功能，实用功能满足你所需，更多功能介绍及演示请转B站：https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0或B站搜索 我有一只猛犬；
-=======
- 
-``This is a Maya rigging assistant that can help you improve binding efficiency.``
 
 * 内部有权重模块；copy blendShape修型， weight模块；驱动模块；SDK拷贝和镜像模块；动力学绑定；拉链绑定等等
-
->>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5
 * 建议安装numpy， 可以使用到变形器转权重，极速版权重导出导入！！！
 
-============================================================
-
-``If you have any questions about this tool, look forward to your timely feedback``
-
-<<<<<<< HEAD
-**Feedback mailbox ：pyrigassit@gmail.com **
-=======
-**Feedback mailbox ：yolandaping1224@gmail.com **
->>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5
-
-*Author: Yolanda Ping*
 
 ============================================================
-
-<<<<<<< HEAD
-=======
-# 版本 05.3.4
->>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5
 
 # 使用
 关于PY_RIGASSIT 工具使用 [About PY_RIGASSIT Tool](https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0)
 
-<<<<<<< HEAD
-# 网盘共享
-PY_RIGASSIT 网盘下载 [PY_RIGASSIT](https://pan.quark.cn/s/fe8c6e815f8e)
-=======
 # 闲鱼下载
 PY_RIGASSIT 下载 [PY_RIGASSIT](https://m.tb.cn/h.7lqLwhV?tk=kDADUV6ekXE)
->>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5
 
 # 安装
 * 请确保你的maya已安装pymel ！！！安装和导入 PyMEL [Autodesk Maya PyMel]((https://pan.quark.cn/s/fe8c6e815f8e))
@@ -91,7 +77,6 @@ PY_RIGASSIT 下载 [PY_RIGASSIT](https://m.tb.cn/h.7lqLwhV?tk=kDADUV6ekXE)
 * uninstall卸载.bat 输入 y 卸载工具，n 取消
 * 支持maya2017-2024
 
-============================================================
 
 ![工具安装](https://github.com/user-attachments/assets/2b55c755-48bb-458d-88ba-dea12f37b45d)
 ![卸载](https://github.com/user-attachments/assets/cece5589-fdce-4285-a86f-fed28c0d9984)

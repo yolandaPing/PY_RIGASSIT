@@ -1,8 +1,9 @@
-<<<<<<< HEAD
 @echo off
-chcp 65001
+chcp 65001 >nul
+setlocal enabledelayedexpansion
 
-REM Copyright (c) 2025 Yolanda Ping
+
+REM Copyright (c) 2026 Yolanda Ping
 rem Get the "Documents" directory.
 FOR /F "tokens=2* delims= " %%A IN ('REG QUERY "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Personal"') DO SET Documents=%%B
 
@@ -23,7 +24,7 @@ echo  ==========================Uninstall PY_RIGASSIT Tool======================
 echo.
 
 rem List of Maya versions
-set "versions=2017 2018 2019 2020 2022 2023 2024 "
+set "versions=2017 2018 2019 2020 2022 2023 2024 2025 2026 "
 
 set /p input=" >>> 请确定卸载 PY_RIGASSIT Tool [" %cd% "] yes/no ?  [ y/n ] :  "
 set /p brt_input=" >>> 是否卸载 brSmoothWeights Tool [" %cd% "] yes/no ? [ y/n ] :  "

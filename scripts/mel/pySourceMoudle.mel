@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 //###########################################
 // Name: pySourceModule
 // Description: Finds all the mel files in a path (and potentially subpath) and sources them 
@@ -20,27 +19,4 @@ global proc pySourceModule(string $path)
 		print ("//// Source: " + $cmdString + "\n"); 
 		catch(`eval $cmdString`); 
 	} 
-=======
-//###########################################
-// Name: pySourceModule
-// Description: Finds all the mel files in a path (and potentially subpath) and sources them 
-// Input: path - The path to look in (string)
-// Returns: none
-//###########################################
-
-
-global proc pySourceModule(string $path)
-{ 
-	string $melFiles[] = `getFileList -folder $path -filespec "*.mel"`; 
-	string $eachFile; 
-	print ("----- Sourcing " + $path + "------\n"); 
-	print ("//////////////////////////////////////////////////////\n");
-	for ($eachFile in $melFiles) 
-	{ 
-		string $scriptFile = ($path + $eachFile); 	
-		string $cmdString = ("source \"" + $scriptFile + "\"");
-		print ("//// Source: " + $cmdString + "\n"); 
-		catch(`eval $cmdString`); 
-	} 
->>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5
 }

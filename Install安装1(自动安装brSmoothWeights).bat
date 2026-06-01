@@ -1,5 +1,7 @@
 @echo off
-chcp 65001
+chcp 65001 >nul
+setlocal enabledelayedexpansion
+
 
 rem Get the "Documents" directory.
 FOR /F "tokens=2* delims= " %%A IN ('REG QUERY "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Personal"') DO SET Documents=%%B
