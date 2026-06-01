@@ -1,0 +1,76 @@
+//AK
+global  proc op_autoComponent()
+{
+		string $assetName = strip(`textField -q -tx op_newAssetNameField`);
+		string $selectedItem[] = openPipelineGetCurrentlySelectedItem(2, 1);
+		string $assetType = $selectedItem[0];
+		if($assetType=="characters"){
+				openPipelineCreateNewItem 2 $assetType $assetName "MDL_Hi" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "RIG_Hi" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "RIG_Lo" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "body" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "body_loc" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "head" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "head_corner" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "head_eyesbrow" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "head_lips" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "head_zero" 1;
+				
+				//openPipelineCreateNewItem 2 $assetType $assetName "body_ctl" 1;
+				//openPipelineCreateNewItem 2 $assetType $assetName "body_ske" 1;
+				//openPipelineCreateNewItem 2 $assetType $assetName "body_wei" 1;
+				//openPipelineCreateNewItem 2 $assetType $assetName "head_loc" 1;
+				//openPipelineCreateNewItem 2 $assetType $assetName "rig_sim" 1;
+				
+				//texture directory
+				string $projName = `optionMenu -q -v op_projNameMenu`;
+				string $projXml = openPipelineGetSingleProjectXml($projName);
+				string $projPath = openPipelineGetXmlData($projXml, "path");	
+				string $texPSDPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/psd");
+				string $texHiPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/hi");
+				string $texLowPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/low");
+				sysFile -makeDir $texPSDPath;
+				sysFile -makeDir $texHiPath;
+				sysFile -makeDir $texLowPath;
+		}
+		if($assetType=="props"){
+				openPipelineCreateNewItem 2 $assetType $assetName "MDL" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "RIG" 1;
+				//texture directory
+				string $projName = `optionMenu -q -v op_projNameMenu`;
+				string $projXml = openPipelineGetSingleProjectXml($projName);
+				string $projPath = openPipelineGetXmlData($projXml, "path");
+				string $texPSDPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/psd");
+				string $texHiPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/hi");
+				string $texLowPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/low");
+				sysFile -makeDir $texPSDPath;
+				sysFile -makeDir $texHiPath;
+				sysFile -makeDir $texLowPath;					
+		}		
+		if($assetType=="scenery"){
+				openPipelineCreateNewItem 2 $assetType $assetName "MDL" 1;
+				openPipelineCreateNewItem 2 $assetType $assetName "RIG" 1;
+				//texture directory
+				string $projName = `optionMenu -q -v op_projNameMenu`;
+				string $projXml = openPipelineGetSingleProjectXml($projName);
+				string $projPath = openPipelineGetXmlData($projXml, "path");
+				string $texPSDPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/psd");
+				string $texHiPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/hi");
+				string $texLowPath = ($projPath+"textures/"+$assetType+"/"+$assetName+"/low");
+				sysFile -makeDir $texPSDPath;
+				sysFile -makeDir $texHiPath;
+				sysFile -makeDir $texLowPath;
+		}
+}
+global  proc op_autoShot()
+{
+		string $assetName = strip(`textField -q -tx op_newShotNameField`);
+		string $selectedItem[] = openPipelineGetCurrentlySelectedItem(3, 1);
+		string $assetType = $selectedItem[0];
+		
+		openPipelineCreateNewItem 3 $assetType $assetName "layout" 1;
+		openPipelineCreateNewItem 3 $assetType $assetName "animation" 1;
+		openPipelineCreateNewItem 3 $assetType $assetName "lighting" 1;
+		openPipelineCreateNewItem 3 $assetType $assetName "effects" 1;
+		
+}

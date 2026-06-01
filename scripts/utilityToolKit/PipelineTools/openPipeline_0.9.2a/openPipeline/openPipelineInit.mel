@@ -1,0 +1,104 @@
+// openPipeline Initialization 
+
+//###########################################
+// Name: 					openPipelineInitialize
+// Description: 	Initializes all of the optionVars and global variables for openPipeline
+// Input:					none
+// Returns: 			none
+//###########################################
+global proc openPipelineInitialize()
+{
+	global string $openPipeline_name = "OpenPipeline";
+	global string $openPipeline_version = "0.9.2_a";
+	global string $openPipeline_projList = "openPipeline_projects.xml";
+	global string $openPipeline_iconFilename = "openPipelineIcon.jpg";
+	global string $openPipeline_defaultPreviewFilename = "defaultPreview.jpg";
+	global string $openPipeline_noPreviewFilename = "noPreview.jpg";
+	global string $openPipeline_userName;
+	if (`size $openPipeline_userName` < 1 )
+		$openPipeline_userName = `getenv USER`;
+	if (!`optionVar -ex "op_currProjectName"`)
+		optionVar -sv "op_currProjectName" "";
+	if (!`optionVar -ex "op_currentUser"`)
+			optionVar -sv "op_currentUser" "default";
+	if (`optionVar -q "op_currProjectName"` =="")
+	{
+			optionVar -sv "op_currOpenType" "";
+			optionVar -sv "op_currOpenCategory" "";
+			optionVar -iv "op_currOpenVersion" 0;
+			optionVar -sv "op_currOpenLevel1" "";
+			optionVar -sv "op_currOpenLevel2" "";
+			optionVar -sv "op_currOpenLevel3" "";
+			optionVar -iv "op_currOpenTab" 0;
+			optionVar -sv "op_currProjectPath" "";
+			optionVar -sv "op_libPath" "";
+			optionVar -sv "op_shotPath" "";
+			optionVar -sv "op_scriptsPath" "";
+			optionVar -sv "op_rendersPath" "";
+			optionVar -sv "op_particlesPath" "";
+			optionVar -sv "op_texturesPath" "";
+			optionVar -sv "op_archivePath" "";
+			optionVar -sv "op_deletePath" "";
+			optionVar -sv "op_workshopFormat" "";
+			optionVar -sv "op_masterFormat" "";
+			optionVar -sv "op_workshopName" "";
+			optionVar -sv "op_masterName" "";
+	}
+	else
+	{
+		if (!`optionVar -ex "op_currOpenType"`)
+				optionVar -sv "op_currOpenType" "";
+		if (!`optionVar -ex "op_currOpenCategory"`)
+				optionVar -sv "op_currOpenCategory" "";
+		if (!`optionVar -ex "op_currOpenVersion"`)
+				optionVar -iv "op_currOpenVersion" 0;
+		if (!`optionVar -ex "op_currOpenLevel1"`)
+			optionVar -sv "op_currOpenLevel1" "";
+		if (!`optionVar -ex "op_currOpenLevel2"`)
+			optionVar -sv "op_currOpenLevel2" "";
+		if (!`optionVar -ex "op_currOpenLevel3"`)
+			optionVar -sv "op_currOpenLevel3" "";
+		if (!`optionVar -ex "op_currOpenTab"`)
+			optionVar -iv "op_currOpenTab" 0;
+		if (!`optionVar -ex "op_currProjectPath"`)
+			optionVar -sv "op_currProjectPath" "";
+		if (!`optionVar -ex "op_libPath"`)
+			optionVar -sv "op_libPath" "";
+		if (!`optionVar -ex "op_shotPath"`)
+			optionVar -sv "op_shotPath" "";
+		if (!`optionVar -ex "op_scriptsPath"`)
+			optionVar -sv "op_scriptsPath" "";
+		if (!`optionVar -ex "op_rendersPath"`)
+			optionVar -sv "op_rendersPath" "";
+		if (!`optionVar -ex "op_particlesPath"`)
+			optionVar -sv "op_particlesPath" "";
+		if (!`optionVar -ex "op_texturesPath"`)
+			optionVar -sv "op_texturesPath" "";
+		if (!`optionVar -ex "op_archivePath"`)
+			optionVar -sv "op_archivePath" "";
+		if (!`optionVar -ex "op_deletePath"`)
+			optionVar -sv "op_deletePath" "";
+		if (!`optionVar -ex "op_workshopFormat"`)
+			optionVar -sv "op_workshopFormat" "";
+		if (!`optionVar -ex "op_masterFormat"`)
+			optionVar -sv "op_masterFormat" "";
+		if (!`optionVar -ex "op_workshopName"`)
+			optionVar -sv "op_workshopName" "";
+		if (!`optionVar -ex "op_masterName"`)
+			optionVar -sv "op_masterName" "";
+	}
+}
+
+//###########################################
+// Name: 					openPipelineReset
+// Description: 	Resets all of the optionVars and global variables for openPipeline
+//								This reverts openPipeline to a state in which no project is activated 
+//								and no item is open for editing.
+// Input:					none
+// Returns: 			none
+//###########################################
+global proc openPipelineReset()
+{
+	optionVar -sv "op_currProjectName" "";
+	openPipelineInitialize();
+}

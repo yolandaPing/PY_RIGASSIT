@@ -1,0 +1,306 @@
+// openPipeline Notes Functions
+
+//###########################################
+// Name: 				openPipelineReadXML
+// Description: Formats notes in XML format to be displayed
+// Input: 			$inputPath - the path of the notes
+// Returns: 		A string array with each entry representing a Note in display format
+//###########################################
+global proc string[] openPipelineReadXML(string $inputPath)
+{
+	string $outputString[];
+
+	string $notes[] = `openPipelineReadAllNotes($inputPath)`;
+	
+	// format string for display...
+	int $i=0;
+	for($note in $notes)
+	{
+			$outputString[$i] = openPipelineFormatXML($note);
+			$i++;
+	}
+	return $outputString;
+}
+
+//###########################################
+// Name: 				openPipelineFormatXML
+// Description: Formats an XML note to be displayed
+// Input: 			$line - the note in XML(string)
+// Returns: 		A string with the note in display mode
+//###########################################
+global proc string openPipelineFormatXML(string $line)
+{
+	int $debug = 0;
+	string $formatedXML;
+	// cull leading white space escape quotes
+	$line = `strip($line)`; // may not be needed
+	$line = `encodeString($line)`;	
+	// match the author
+	string $author = `match "<author>[a-zA-Z0-9 \".-!?=\\]*</author>" $line`;
+	$author = substitute("<author>", $author, "");
+	$author = substitute("</author>", $author, "");
+	// match the date
+	string $date = `match "<date>[a-zA-Z0-9 \"-=\\]*</date>" $line`;
+	$date = substitute("<date>", $date, "");
+	$date = substitute("</date>", $date, "");
+	// match the time
+	string $time = `match "<time>[a-zA-Z0-9 \"-:!?=\\]*</time>" $line`;
+	$time = substitute("<time>", $time, "");
+	$time = substitute("</time>", $time, "");
+	// match the event
+	string $event = `match "<event>[a-zA-Z0-9 \"-=\\]*</event>" $line`;
+	$event = substitute("<event>", $event, "");
+	$event = substitute("</event>", $event, "");
+	// match the version
+	string $version = `match "<version>[0-9]*</version>" $line`;
+	$version = substitute("<version>", $version, "");
+	$version = substitute("</version>", $version, "");
+	// match the comment
+	string $comment = `match "<comment>[a-zA-Z0-9 -:=\\\"]**</comment>" $line`;
+	$comment = substitute("<comment>", $comment, "");
+	$comment = substitute("</comment>", $comment, "");
+	// finally return content
+	$formatedXML = ("Author: " + $author + "\n" + 
+					"Date: " + $date + " " + $time + "\n" + 
+					"Event: " + $event);
+	if($version != "")
+	{
+		$formatedXML += (" (Version: " + $version + ")\n");
+	}
+	else
+	{
+		$formatedXML += ("\n");
+	}
+			
+	if($comment != "")
+	{
+		$formatedXML += ("Comment: " + $comment + "\n\n");
+	}
+	else
+	{
+		$formatedXML += ("\n");
+	}
+	if ($debug) print ($formatedXML+"\n");
+	return $formatedXML;
+}
+
+//###########################################
+// Name: 				openPipelineReadAllNotes
+// Description: Read all notes of a specified item
+// Input: 			$inputPath - The note path of the item to be queried (string)
+// Returns: 		A string array with each entry representing a note
+//###########################################
+global proc string[] openPipelineReadAllNotes(string $inputPath)
+{
+	string $noteContents[];
+	if(`filetest -f $inputPath` == 0)
+	{
+		return $noteContents;
+	}
+	$fileId = `fopen $inputPath "r"`;
+	string $nextLine = `fgetline $fileId`;
+	int $i = 0;
+	while(size($nextLine)>0)
+	{
+		$nextLine = openPipelineGetCleanLineXML($nextLine);
+		$noteMatch = gmatch($nextLine, "<note>");
+		if($noteMatch == 1)
+		{
+			$nextLine = `fgetline $fileId`;
+			$nextLine = openPipelineGetCleanLineXML($nextLine);
+			string $foo;
+			while(`match "</note>" $nextLine` == "")
+			{
+				$foo += $nextLine;
+				$nextLine = `fgetline $fileId`;
+				$nextLine = openPipelineGetCleanLineXML($nextLine);
+			}
+			$noteContents[$i] = $foo;
+			$foo = "";
+			$i++;
+		}
+		else
+		{
+			$nextLine = `fgetline $fileId`;
+			$nextLine = openPipelineGetCleanLineXML($nextLine);
+		}
+	}
+	fclose $fileId;
+	int $i;
+	int $x=0;
+	string $output[];
+	//reverse order before returning
+	for ($i=size($noteContents);$i>0;$i--)
+	{
+		$output[$x] = $noteContents[$i-1];
+		$x++;
+	}
+	return $output;
+}
+
+//###########################################
+// Name: 				openPipelineCountNotes
+// Description: Counts the number of note entries for a specific item
+// Input: 			$inputPath - the path of the item to query
+// Returns: 		The number of note entries (int)
+//###########################################
+global proc int openPipelineCountNotes(string $inputPath)
+{
+	string $allTheNotes[] = openPipelineReadAllNotes($inputPath);
+	int $count = size($allTheNotes);
+	return $count;
+}
+
+//###########################################
+// Name: 				openPipelineReadIndividualNote
+// Description: Reads an individual note
+// Input: 			$inputPath - the note path of the item (string)
+//							$index - the index of the individual note to return
+// Returns: 		A string with the specified note
+//###########################################
+global proc string openPipelineReadIndividualNote(string $inputPath, int $index)
+{
+	string $noteContents;
+	string $allTheNotes[] = openPipelineReadAllNotes($inputPath);
+	if(($index >=0) && ($allTheNotes[$index] != ""))
+	{
+		$noteContents = $allTheNotes[$index];
+	}
+	else
+	{
+		$noteContents = "";
+	}
+	return $noteContents;
+}
+
+//###########################################
+// Name: 				openPipelineReadNotesByEvent
+// Description: Read all notes that describe a particular event
+// Input: 			$inputPath - The note path for the item to be queried (string)
+//							$type - The type of event to look for (created, workshop, etc.) (string)
+// Returns: 		A string array with the notes that match the given event (in XML format)
+//###########################################
+global proc string[] openPipelineReadNotesByEvent(string $inputPath, string $type)
+{
+	string $allTheNotes[] = openPipelineReadAllNotes($inputPath);
+	string $noteMatch = ("*<event>" + $type + "</event>*");
+	string $noteContents[];
+	
+	int $i = 0;
+	for($eachNote in $allTheNotes)
+	{
+		int $test = gmatch($eachNote, $noteMatch);
+		if($test)
+		{
+			$noteContents[$i] = $eachNote;
+			$i++;
+		}
+	}
+	return $noteContents;
+}
+
+//###########################################
+// Name: 				openPipelineReadNotesByType
+// Description: Read all notes that match a particular type
+// Input: 			$inputPath - The note path for the item to be queried (string)
+//							$type - The type to look for (creation, workshop, master, etc.) (string)
+// Returns: 		A string array with the notes that match the given type (in XML format)
+//###########################################
+global proc string[] openPipelineReadNotesByType(string $inputPath, string $type)
+{
+	string $allTheNotes[] = openPipelineReadAllNotes($inputPath);
+	string $noteMatch = ("*<notetype>" + $type + "</notetype>*");
+	string $noteContents[];
+	
+	int $i = 0;
+	for($eachNote in $allTheNotes)
+	{
+		int $test = gmatch($eachNote, $noteMatch);
+		if($test)
+		{
+			$noteContents[$i] = $eachNote;
+			$i++;
+		}
+	}
+	return $noteContents;
+}
+
+//###########################################
+// Name: 				openPipelineReadNotesByVersion
+// Description: Read all notes that match a particular version
+// Input: 			$inputPath - The note path for the item to be queried (string)
+//							$version - The version to look for (int)
+// Returns: 		A string array with the notes that match the given version (in XML format)
+//###########################################
+global proc string[] openPipelineReadNotesByVersion(string $inputPath, int $version)
+{
+	string $allTheNotes[] = openPipelineReadAllNotes($inputPath);
+	string $noteMatch = ("*<version>" + $version + "</version>*");
+	string $noteContents[];
+	
+	int $i = 0;
+	for($eachNote in $allTheNotes)
+	{
+		int $test = gmatch($eachNote, $noteMatch);
+		if($test)
+		{
+			$noteContents[$i] = $eachNote;
+			$i++;
+		}
+	}
+	return $noteContents;
+}
+
+//###########################################
+// Name: 				openPipelineCullNotesByVersion
+// Description: Read all notes that match a particular version
+// Input: 			$allTheNotes - All the notes to be considered (string array)
+//							$version - The version to look for (int)
+// Returns: 		A string array with the notes that match the given version (in XML format)
+// Note: 				This proc has the same functionality as "openPipelineReadNotesByVersion" 
+//							but it takes in the actual notes as an input rather than a path to the note file.
+//###########################################
+global proc string[] openPipelineCullNotesByVersion(string $allTheNotes[], int $version)
+{
+	string $noteMatch = ("*<version>" + $version + "</version>*");
+	string $noteContents[];
+	
+	int $i = 0;
+	for($eachNote in $allTheNotes)
+	{
+		int $test = gmatch($eachNote, $noteMatch);
+		if($test)
+		{
+			$noteContents[$i] = $eachNote;
+			$i++;
+		}
+	}
+	return $noteContents;
+}
+
+//###########################################
+// Name: 				openPipelineGetCleanLineXML
+// Description: Removes the white space from a string and adds escape characters to 
+// Input: 			$nextLine - The line to clean (string)
+// Returns: 		The cleaned line as a string
+//###########################################
+global proc string openPipelineGetCleanLineXML(string $nextLine)
+{
+	$nextLine = `strip($nextLine)`;
+	$nextLine = `encodeString($nextLine)`;
+	return $nextLine;
+}
+
+//###########################################
+// Name: 				openPipelineFilePermisson
+// Description: Sets the file permission for a file
+// Input: 			$inputMode
+//							$input_Path
+// Returns: 		none
+// Note:				not used
+//###########################################
+global proc openPipelineFilePermisson(string $inputMode, string $input_Path)
+{
+	string $exeCommand = "ATTRIB " + $inputMode + " " + $input_Path;
+	system($exeCommand);
+}

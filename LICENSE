@@ -1,5 +1,6 @@
 MIT License
 
+<<<<<<< HEAD
 Tool Name: Pose Driver Tool（RBF Drive PoseTool）
 
 Version: 2.0.0
@@ -13,6 +14,9 @@ Copyright (c) 2024 Yolanda Ping
 Includes portions of "weightDriver" by Ingo Clemens, brave rabbit
 
 Distributed under the MIT License  
+=======
+Copyright (c) 2025 yolandaPing
+>>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,8 +35,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+<<<<<<< HEAD
 
 
 
 1.weightDriver 节点免费下载的，不收取任何费用；Copyright (c) 2021-2023 Ingo Clemens, brave rabbit
 2.修型工具只收取修型功能和驱动链接，拷贝，和编辑功能的部分费用 ；Copyright (c) 2024 Yolanda Ping  
+=======
+>>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5

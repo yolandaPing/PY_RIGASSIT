@@ -1,0 +1,460 @@
+//openPipeline Misc. Utilities
+
+//###########################################
+// Name: 					openPipelinePad
+// Description: 	Returns a non-negative integer as a string with padding
+// Input: 				$num - input integer (int) 
+//								$padding - the padding to apply (int)
+// Returns: 			The number as a padded string (an input of 12 and 4 yields "0012")
+// 								Note: If the padding specified doesn't exceed the number of digits 
+//								in the number, no leading zeroes are addded
+//###########################################
+global proc string openPipelinePad(int $num, int $padding)
+{
+	string $prefix="";
+	string $numString = string($num);
+	int $length = size($numString);
+	int $i;
+	for ($i=$length; $i<$padding; $i++)
+		$prefix = $prefix + "0";
+	return ($prefix+$numString);
+}
+
+//###########################################
+// Name: 					openPipelineUnpad
+// Description: 	Returns an integer from a padded string representation of a number
+// Input: 				$numString - string to be "unpadded"
+// Returns: 			The number as an integer (an input of "00304" yields the integer 304)
+//###########################################
+global proc int openPipelineUnpad(string $numString)
+{
+	string $prefix = `match "^0*" $numString`;
+	int $padding = size($prefix);
+	int $size = size($numString);
+	string $subString;
+	$subString = endString($numString,($size-$padding));
+	return (int($subString));
+}
+
+//###########################################
+// Name: 					openPipelineGetVersionFromFile
+// Description: 	Returns the version of an ma or mb file, assuming a padding of 4
+// Input: 				file - the filename (string) 	
+// Returns: 			The version of the file (int)
+// Note: 					This proc is designed to work with files that adhere to the numbering 
+//								conventions of openPipeline (e.g. "filename0034.mb")
+//###########################################
+global proc int openPipelineGetVersionFromFile(string $file)
+{
+	string $suffix = endString($file,7);
+	$suffix = startString($suffix,4);
+	int $version = openPipelineUnpad($suffix);
+	return $version;
+}
+
+//###########################################
+// Name: 					openPipelineGetFolderFromPath
+// Description: 	Returns the folder name at a given depth of a path
+// Input: 				$path - the full path (string) 
+//								offsetFromLast - the depth of the folder, counting backwards from the deepest (string)
+// Returns: 			The name of the folder
+// Note: 					passing in 0 as the second parameter has the same function as the "basename" mel command
+//###########################################
+global proc string openPipelineGetFolderFromPath(string $path, int $offsetFromLast)
+{
+	string $tokenizedPath[];
+	int $depth = tokenize($path,"/",$tokenizedPath);
+	if (($depth-1-$offsetFromLast)>=0)
+	    return ($tokenizedPath[$depth-1-$offsetFromLast]);
+	else
+	    return "";
+}
+
+//###########################################
+// Name: 					openPipelineIsValidFolder
+// Description: 	Returns whether a folder exists and doesn't have a period "." at the start of its name
+// Input: 				$path - the path to be tested (string)
+// Returns: 			1 of valid, 0 if not
+// Note: 					This proc was created to prevent oP from mistaking folders like ".svn" for project folders
+//###########################################
+global proc int openPipelineIsValidFolder(string $path)
+{
+	if (!`filetest -d $path`)
+		return 0;
+	else
+	{
+	string $base = basename($path,"");
+	string $firstChar = startString($base,1);
+	if ($firstChar==".")
+		return 0;
+	else
+		return 1;
+	}
+}
+
+//###########################################
+// Name: 					openPipelineGetXmlAll
+// Description: 	Parses an xml file and returns each tag and entry as a separate array entry
+// Input: 				$xmlFile - the file to be evaluated (string)
+// Returns: 			A string array with each entry holding either an xml tag or data
+//###########################################
+global proc string[] openPipelineGetXmlAll(string $xmlFile)
+{
+	string $output[];
+	int $index = 0;
+	int $lineNum = 1;
+	int $open = 1;
+	string $data = "";
+	string $char;
+	string $tag;
+	int $fileId = `fopen $xmlFile "r"`;
+	string $currLine = `fgetline $fileId`;
+	while ($currLine!="")
+	{	
+		for ($i=1;$i<size($currLine);$i++)
+		{			
+			$char = `substring $currLine $i $i`;
+			if ($char=="<")
+			{
+				$data = strip($data); 
+				if ($data!="")
+				{
+					$output[$index] = $data;
+					$data = "";
+					$index++;
+				}
+				$i++;
+				$tag = "";
+				$char = `substring $currLine $i $i`;
+				$open = 1;
+				if ($char=="/")			
+				{
+					$i++;
+					$char = `substring $currLine $i $i`;
+					$open = 0;
+				}
+				
+				while (($char!=">")&&($i<=size($currLine)))
+				{
+					$i++;
+					$tag += $char;
+					$char = `substring $currLine $i $i`;
+					if ($i>size($currLine))
+					{
+						warning("XML formatting error in file "+$xmlFile+" on line "+ $lineNum+". Check file before proceeding");
+					}
+				}
+				if ($open)
+				{
+					$output[$index] = ("<"+$tag+">");
+					$index++;
+				}
+				else 
+				{
+					$output[$index] = ("</"+$tag+">");
+					$index++;
+				}
+			}
+			else
+			{
+				$data += $char;
+				$i++;
+				$char = `substring $currLine $i $i`;
+				while (($char!="<")&&($i<size($currLine)))
+				{
+					$data += $char;
+					$i++;
+					if (size($currLine))
+						$char = `substring $currLine $i $i`;
+				}
+				$i--;
+			}	
+		}
+		$currLine = `fgetline $fileId`;
+		$lineNum++;
+	}
+	fclose $fileId;
+	return $output;
+}
+
+//###########################################
+// Name: 					openPipelineGetXmlTop
+// Description: 	Returns all the xml data which is a child to the root element specific by "$tag"
+// Input: 				$xml - The input xml with tags and data as separate entries in a string array (string array)
+//								$tag - the root element tag in the xml file (string)
+// Returns: 			A string array with each entry holding either an xml tag or data
+//###########################################
+global proc string[] openPipelineGetXmlTop(string $xml[], string $tag)
+{
+    int $i=0;
+    int $j=0;
+    string $output[];
+    for ($i=0; $i<size($xml); $i++)
+            {
+            $line = strip($xml[$i]);
+            if (openPipelineIsXmlInTag($line,$tag))
+                {
+                $i++;
+                $line = strip($xml[$i]);
+                while (!openPipelineIsXmlOutTag($line,$tag)&&($i<size($xml)))
+                   {
+                   $output[$j] = $line;
+                   $j++;
+                   $i++;
+                   $line = strip($xml[$i]);
+                   }
+                }
+             }
+        
+    return $output;
+}
+
+//###########################################
+// Name: 					openPipelineIsXmlInTag
+// Description: 	Checks if a string is a specific opening xml tag
+// Input: 				$xml - the string to be evaluated (string) 
+//								$tag - the name of the tag being tested (string)
+// Returns: 			1 if the string is the correct opening tag, 0 if not
+//###########################################
+global proc int openPipelineIsXmlInTag(string $xml, string $tag)
+{
+    string $matchString = "<[ ]*"+$tag+"[ ]*.*>";
+    int $match = isValidString($xml,$matchString);
+    return $match;
+}
+
+//###########################################
+// Name: 					openPipelineIsXmlOutTag
+// Description: 	XML tool
+// Input: 				$xml - xml data (string) 
+//								$tag - the tag to be searched for (string)
+// Returns: 			1 if the string is the correct closing tag, 0 if not
+//###########################################
+global proc int openPipelineIsXmlOutTag(string $xml, string $tag)
+{
+    string $matchString = "</[ ]*"+$tag+"[ ]*>";
+    int $match = isValidString($xml,$matchString);
+    return $match;
+}
+
+//###########################################
+// Name: 					openPipelineGetXmlSecondary
+// Description: 	XML tool
+// Input: 				$xml - xml data (string array)
+//								$tag - the tag to be searched for (string)
+// Returns: 			1 if the string is the correct closing tag, 0 if not
+//###########################################
+global proc string[] openPipelineGetXmlSecondary(string $xml[], string $tag)
+{
+    int $i=0;
+    int $j=0;
+    string $output[];
+    for ($i=0; $i<size($xml); $i++)
+    {
+       string $line = strip($xml[$i]);
+       if (openPipelineIsXmlInTag($line,$tag))
+       {
+           $i++;
+           $line = strip($xml[$i]);
+           while ((!openPipelineIsXmlOutTag($line,$tag))&&($i<size($xml)))
+           {
+               $output[$j]=$output[$j]+$line;
+               $i++;
+               $line = strip($xml[$i]);
+           }
+           $j++;
+       }
+   }   
+   return $output;
+}
+
+//###########################################
+// Name: 					openPipelineGetXmlData
+// Description: 	XML tool - returns the data encapsulated by the opening and closing tags of an xml element
+// Input: 				$xml - xml data (string) 
+//								$tag - the tag to be searched for (string)
+// Returns: 			The data found (string)
+//###########################################
+global proc string openPipelineGetXmlData(string $xml, string $tag)
+{
+    $xml = strip($xml);
+    string $inTag = "<[ ]*"+$tag+"[ ]*>";
+    string $outTag = "<[ ]*/"+$tag+"[ ]*>";   
+    string $matchString = $inTag+"[ !-~]*"+$outTag;
+    string $output = `match $matchString $xml`;
+    $output = substitute($inTag, $output, "");
+    $output = substitute($outTag, $output, "");
+    $output = encodeString($output);
+    if ( $tag == "path" )
+    {
+		python("import os");
+		$output = `python("os.path.expandvars('" + $output + "').replace('\\\\','/')")`;
+		
+	}
+    return $output;
+}
+
+//###########################################
+// Name: 					openPipelineGetDepth
+// Description: 	Returns the depth of a given item
+// Input: 				$tab, $level1, $level2, $level3 - the item
+// Returns: 			The depth (int)
+//###########################################
+global proc int openPipelineGetDepth(string $level1, string $level2, string $level3)
+{
+	int $depth = 0;
+	if (size($level1))
+	{
+		$depth++;
+		if (size($level2))
+		{
+			$depth++;
+			if (size($level3))
+				$depth++;
+		}
+	}
+	return $depth;
+}
+
+//###########################################
+// Name: 					openPipelineArrayHasRepeats
+// Description: 	Determines whether any string in the given array appears more than once
+// Input: 				$array - the string array
+// Returns: 			1 of there are repeats, 0 if not
+//###########################################
+global proc int openPipelineArrayHasRepeats(string $array[])
+{
+	int $hasRepeats = 0;
+	for ($item in $array)
+	{
+		if (`stringArrayCount $item $array`>1)
+			$hasRepeats = 1;
+	}
+	return $hasRepeats;
+}
+
+//###########################################
+// Name: 					openPipelineAddSlash
+// Description: 	Adds a slash ("/") to the end of a string if there isn't one already there
+// Input: 				$path - the string
+// Returns: 			The new string
+//###########################################
+global proc string openPipelineAddSlash(string $path)
+{
+	if (!endsWith($path,"/")) 
+ 	 $path += "/"; 
+  return $path;
+}
+
+//###########################################
+// Name: 					openPipelineCreateNewFolder
+// Description: 	Creates a new folder
+// Input: 				$path - the folder to be created
+// Returns: 			success - 1, failure - 0
+//###########################################
+global proc int openPipelineCreateNewFolder(string $path)
+{
+	int $status=0;
+	if (!`filetest -d $path`)
+	{
+		if (!`sysFile -md $path`)
+			$status = 0;
+		else
+			$status = 1;
+	}
+	else
+		$status=2;
+	return $status;
+}
+
+//###########################################
+// Name: 					openPipelineSourceModule
+// Description: 	Sources all the MEL files in a given folder
+// Input: 				$path - the folder
+// Returns: 			none
+//###########################################
+global proc openPipelineSourceModule(string $path)
+{ 
+	string $melFiles[] = `getFileList -folder $path -filespec "*.mel"`; 
+	string $eachFile; 
+	print ("----- Sourcing " + $path + "------\n"); 
+	print ("//////////////////////////////////////////////////////\n");
+	for ($eachFile in $melFiles) 
+	{ 
+		string $scriptFile = ($path + $eachFile); 	
+		string $cmdString = ("source \"" + $scriptFile + "\"");
+		print ("//// Source: " + $cmdString + "\n"); 
+		catch(`eval $cmdString`); 
+	} 
+} 
+
+//###########################################
+// Name: 					openPipelineImportRefs
+// Description: 	Flattens the scene by importing all the referenced files
+// Input: 				none
+// Returns: 			none
+//###########################################
+global proc openPipelineImportRefs()
+{
+	// list all references in shot
+	string $referencedFiles[] = `file -q -reference`;
+	string $eachReference;
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $mName = `optionVar -q "op_masterName"`;
+	if (`size($referencedFiles)` <= 0)
+	{
+		warning ("openPipelineImportRefs: no references to import\n");
+	}
+	
+	for ($eachReference in $referencedFiles)
+	{
+		if (`file -q  -dr $eachReference`)
+		{
+			string $result = `confirmDialog -button "Keep" -button "Remove" -defaultButton "Keep" -message ("Referenced file \""+$eachReference+"\" is currently unloaded and cannot be imported.\nWould you like keep or remove this reference in the "+$mName+" file (it will remain in the "+$wName+" file) ?")`;
+			if ($result=="Remove")
+				file -removeReference $eachReference;
+		}
+		else
+		{
+			file -importReference $eachReference;
+			print ("openPipeline: " + $eachReference + " imported into current file\n");
+		}
+	}
+}
+
+//###########################################
+// Name: 		openPipelineCompareFirstToSecondList
+//
+// Description: 	Compares each item from one list to another, and returns a list
+//			that consists of all the names from the first list that are
+//			also in the second list
+//
+// Input: 		parameter1 - the list with items you want to create a new list from
+//			parameter2 - the list you want to diff against
+//
+// Returns: 		a new list that contains items from the first list that are also
+//			present in the second list
+//###########################################
+global proc string[] openPipelineCompareFirstToSecondList(string $questionableList[], string $comparisonList[]) {
+
+	string $returnList[];
+	int $i = 0;
+	
+	for ($qItem in $questionableList) {
+	
+		int $testItem = 0;
+		for ($cItem in $comparisonList)
+		{
+			if ($qItem == $cItem)
+			{
+				$testItem = 1;
+			}
+		}
+		if ($testItem)
+		{
+			$returnList[$i] = $qItem;
+			$i++;
+		}
+	}
+	return $returnList;
+}

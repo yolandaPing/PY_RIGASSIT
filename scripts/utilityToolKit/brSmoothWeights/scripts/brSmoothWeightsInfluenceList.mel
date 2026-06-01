@@ -1,0 +1,759 @@
+// ---------------------------------------------------------------------
+// brSmoothWeightsInfluenceList.mel
+//
+// This script creates and handles the influence list for the smooth
+// weights tool.
+//
+// ---------------------------------------------------------------------
+
+
+// ---------------------------------------------------------------------
+// search and filter
+// ---------------------------------------------------------------------
+
+//
+// Procedure Name:
+//      clearRecall
+//
+// Description:
+//      Remove the optionVars which help to recall the last selection
+//      and search filter.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+proc clearRecall()
+{
+    global string $gSmoothWeightsSearchString;
+    global string $gSmoothWeightsInfluenceSelection[];
+
+    $gSmoothWeightsSearchString = "";
+    $gSmoothWeightsInfluenceSelection = {};
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsSearchJointString
+//
+// Description:
+//      Go through the list of influences and check which items match
+//      one of the given search strings. All matching items will be set
+//      set to visible in the list.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsSearchJointString()
+{
+    global string $gSmoothWeightsSearchString;
+
+    string $query = `textFieldGrp -query -text brSmoothWeightsSearchField`;
+    string $items[] = `treeView -query -children "" brSmoothWeightsJointTree`;
+
+    string $queryList[];
+    tokenize $query "+" $queryList;
+
+    for ($i in $items)
+    {
+        int $state = 0;
+        for ($q in $queryList)
+        {
+            if (`gmatch $i ("*" + $q + "*")`)
+                $state = 1;
+        }
+        treeView -edit -itemVisible $i $state brSmoothWeightsJointTree;
+    }
+
+    $gSmoothWeightsSearchString = $query;
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsClearSearch
+//
+// Description:
+//      Set all influence items in the list to visible and clear the
+//      search field.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsClearSearch()
+{
+    global string $gSmoothWeightsSearchString;
+
+    string $items[] = `treeView -query -children "" brSmoothWeightsJointTree`;
+
+    textFieldGrp -edit -text "" brSmoothWeightsSearchField;
+
+    if (size($items) == 0)
+        return;
+
+    for ($i in $items)
+        treeView -edit -itemVisible $i 1 brSmoothWeightsJointTree;
+
+    $gSmoothWeightsSearchString = "";
+}
+
+
+// ---------------------------------------------------------------------
+// actions
+// ---------------------------------------------------------------------
+
+//
+// Procedure Name:
+//      brTransferWeightsSelectionChanged
+//
+// Description:
+//      Track the order of the influence selection in the list by
+//      matching the current and last selected influence with the names
+//      stored in the optionVars.
+//      Display the influence names in the source and destination
+//      fields.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsSelectionChanged()
+{
+    global string $gSmoothWeightsInfluenceSelection[];
+
+    $gSmoothWeightsInfluenceSelection = `treeView -query -selectItem brSmoothWeightsJointTree`;
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsSelectAffectedVertices
+//
+// Description:
+//      Select all vertices which are affected by the given influence.
+//
+// Input Arguments:
+//      string item         The name of the influence.
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsSelectAffectedVertices( string $item )
+{
+    global string $gSmoothWeightsMesh;
+    global string $gSmoothWeightsSkinCluster;
+
+    select -cl;
+    skinCluster -edit -selectInfluenceVerts $item $gSmoothWeightsSkinCluster;
+    doMenuComponentSelection($gSmoothWeightsMesh, "vertex");
+
+    if (!size(`ls -selection`))
+        select -replace $gSmoothWeightsMesh;
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsSelectAffectedVerticesFromMenu
+//
+// Description:
+//      Select vertices which are affected by the selected influence/s.
+//      This procedure is called when selecting the vertices based on
+//      the selected items in the influence list through the right-click
+//      menu. The procedure can be called in three different ways:
+//          1. add = 0; remove = 0 : Select affected vertices.
+//          2. add = 1; remove = 0 : Add affected vertices.
+//          3. add = 0; remove = 1 : Remove affected vertices.
+//
+// Input Arguments:
+//      int add             True, if the affected vertices should get
+//                          added to the current selection.
+//      int remove          True, if the affected vertices should get
+//                          removed from the current selection.
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsSelectAffectedVerticesFromMenu( int $add, int $remove )
+{
+    global string $gSmoothWeightsMesh;
+    global string $gSmoothWeightsSkinCluster;
+
+    string $joints[] = `treeView -query -selectItem brSmoothWeightsJointTree`;
+
+    if (!size($joints))
+        return;
+
+    string $cmd = "skinCluster -edit ";
+    for ($joint in $joints)
+    {
+        $cmd += "-selectInfluenceVerts ";
+        $cmd += $joint;
+        $cmd += " ";
+    }
+
+    if ($add)
+        $cmd += "-addToSelection ";
+    else if ($remove)
+        $cmd += "-removeFromSelection ";
+
+    $cmd += $gSmoothWeightsSkinCluster;
+    eval $cmd;
+
+    doMenuComponentSelection($gSmoothWeightsMesh, "vertex");
+
+    if (!size(`ls -selection`))
+        select -replace $gSmoothWeightsMesh;
+}
+
+
+// ---------------------------------------------------------------------
+// get the mesh selection and the skin cluster
+// ---------------------------------------------------------------------
+
+//
+// Procedure Name:
+//      getSkinCluster
+//
+// Description:
+//      Return the skin cluster name from the history of the given mesh.
+//
+// Input Arguments:
+//      string shape        The name of the mesh shape node.
+//
+// Return Value:
+//      string              The name of the skin cluster nocde.
+//
+proc string getSkinCluster( string $shape )
+{
+    string $hist[] =`listHistory -pruneDagObjects 1 -future 0 -interestLevel 2 $shape`;
+    if (size($hist) == 0)
+        return "";
+    for ($h in $hist)
+    {
+        if (`nodeType $h` == "skinCluster")
+            return $h;
+    }
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsGetSelection
+//
+// Description:
+//      Get the mesh shape node of the current selection. If the
+//      selection is valid get the skin cluster name and list the
+//      influences.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsGetSelection()
+{
+    global string $gSmoothWeightsMesh;
+    global string $gSmoothWeightsSkinCluster;
+
+    string $sel[] = `ls -selection -long`;
+    if (size($sel) == 0)
+    {
+        brSmoothWeightsClear;
+        return;
+    }
+
+    string $node[];
+    tokenize $sel[0] "." $node;
+
+    string $skin;
+    if (`nodeType $node[0]` == "transform")
+    {
+        string $shape[] = `listRelatives -shapes -noIntermediate -fullPath $node[0]`;
+        if (size($shape) == 0 || `nodeType $shape[0]` != "mesh")
+        {
+            brSmoothWeightsClear;
+            return;
+        }
+        $node[0] = $shape[0];
+    }
+
+    if (`nodeType $node[0]` == "mesh")
+    {
+        $skin = getSkinCluster($node[0]);
+    }
+
+    if ($skin != "")
+    {
+        int $newMesh = 1;
+        if ($gSmoothWeightsMesh == $node[0])
+            $newMesh = 0;
+        $gSmoothWeightsMesh = $node[0];
+        $gSmoothWeightsSkinCluster = $skin;
+        brSmoothWeightsListInfluences($skin, $newMesh);
+    }
+    else
+        brSmoothWeightsClear;
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsClear
+//
+// Description:
+//      Clear the influence list.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsClear()
+{
+    global string $gSmoothWeightsMesh;
+
+    treeView -edit -removeAll brSmoothWeightsJointTree;
+    $gSmoothWeightsMesh = "";
+}
+
+
+// ---------------------------------------------------------------------
+// influence listing
+// ---------------------------------------------------------------------
+
+//
+// Procedure Name:
+//      brSmoothWeightsListInfluences
+//
+// Description:
+//      Get all influences of the given skin cluster and populate the
+//      list. Since filling the list with all influences can take some
+//      time, depending on the number of influences (simply adding the
+//      items to the list is a slow process by itself), the refresh is
+//      only triggered when a new mesh has been selected or when the
+//      number of influences has changed.
+//      Retrieving the influences and their parents for creating the
+//      list order is cloned from the paint skin cluster weights tool.
+//
+// Input Arguments:
+//      string skin         The name of the skin cluster.
+//      int newMesh         True, if the mesh is different from the
+//                          previous usage of the context.
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsListInfluences( string $skin, int $newMesh )
+{
+    global string $gSmoothWeightsSearchString;
+    global string $gSmoothWeightsInfluenceSelection[];
+    global string $gSmoothWeightsJoints[];
+
+    int $refresh = 1;
+
+    string $joints[] = `skinCluster -query -influence $skin`;
+    if (!$newMesh && size($gSmoothWeightsJoints) == size($joints))
+        $refresh = 0;
+
+    if ($refresh)
+    {
+        $gSmoothWeightsJoints = $joints;
+
+        treeView -edit -removeAll brSmoothWeightsJointTree;
+
+        // The listing of influences has been extracted from the
+        // procedure skinClusterInflPopulate() in the file
+        // skinClusterInflMenu.mel to list the influences by hierarchy.
+        source skinClusterInflMenu;
+
+        string $inflList[];
+        string $inflListShortNames[];
+        int $inflListParentIndexes[];
+        int $inflTypes[];
+        int $sortList = 2;
+
+        skinClusterInflFindInfluenceNodes({$skin},
+                                          $inflList,
+                                          $inflListShortNames,
+                                          $inflListParentIndexes,
+                                          $inflTypes,
+                                          $sortList);
+
+        int $numInfls = size($inflList);
+        for ($i = 0; $i < $numInfls; $i ++)
+        {
+            string $infl = $inflList[$i];
+            string $inflParent = "";
+
+            if ($inflListParentIndexes[$i] >= 0)
+            {
+                $inflParent = $inflList[$inflListParentIndexes[$i]];
+            }
+
+            brSmoothWeightsAddInfluenceToList $infl $inflParent;
+        }
+
+        // Clear the last selection and search.
+        clearRecall;
+    }
+    // If the mesh hasn't changed since the last use of the tool try to
+    // recall the search and re-select the last selection.
+    else
+    {
+        if ($gSmoothWeightsSearchString != "")
+        {
+            textFieldGrp -edit -text $gSmoothWeightsSearchString brSmoothWeightsSearchField;
+            evalDeferred("brSmoothWeightsSearchJointString");
+        }
+
+        if (size($gSmoothWeightsInfluenceSelection))
+        {
+            // Store the last selection. Because re-selecting the
+            // previous selection causes the selection command of the
+            // list to get triggered which overwrites the last
+            // selection. This way a previous multi-selection turns into
+            // a single selection because items are re-selected one
+            // after another. If then the new selection is re-selected
+            // the next time there is only one item in the list.
+            string $temp[] = $gSmoothWeightsInfluenceSelection;
+
+            // Scroll the list to the first item of the previous
+            // selection.
+            if (`treeView -query -itemExists $temp[0] brSmoothWeightsJointTree`)
+                treeView -edit -showItem $temp[0] brSmoothWeightsJointTree;
+
+            // Re-select all items.
+            for ($item in $temp)
+            {
+                if (`treeView -query -itemExists $item brSmoothWeightsJointTree`)
+                    treeView -edit -selectItem $item 1 brSmoothWeightsJointTree;
+            }
+
+            // Save the previous selection.
+            $gSmoothWeightsInfluenceSelection = $temp;
+        }
+    }
+}
+
+
+//
+// Procedure Name:
+//      getLockImage
+//
+// Description:
+//      Return the name of the image for the lock icon depending on the
+//      lock state of the influence.
+//
+// Input Arguments:
+//      string item         The name of the influence.
+//
+// Return Value:
+//      string              The name of the lock image.
+//
+proc string getLockImage( string $item )
+{
+    string $lockImage = "Lock_OFF_grey.png";
+    if (`attributeQuery -n $item -exists "liw"`)
+    {
+        if (`getAttr($item + ".liw")`)
+            $lockImage = "Lock_ON.png";
+    }
+    return $lockImage;
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsAddInfluenceToList
+//
+// Description:
+//      Add the given item with the given parent to the influence list.
+//
+// Input Arguments:
+//      string item         The name of the influence.
+//      string parent       The name of the item parent in the list.
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsAddInfluenceToList( string $item, string $parent )
+{
+    string $lock = getLockImage($item);
+    treeView -edit
+             -addItem $item $parent
+             -pressCommand 1 brSmoothWeightsToggleLockState
+             brSmoothWeightsJointTree;
+    treeView -edit
+             -image $item 1 $lock
+             brSmoothWeightsJointTree;
+}
+
+
+//
+// Procedure Name:
+//      toggleLockState
+//
+// Description:
+//      Invert the locked state for the list of given influences.
+//
+// Input Arguments:
+//      string[] joints     The list of influences.
+//
+// Return Value:
+//      None
+//
+proc toggleLockState( string $joints[] )
+{
+    for ($joint in $joints)
+    {
+        if (`attributeQuery -node $joint -exists "liw"`)
+        {
+            int $lock = `getAttr($joint + ".liw")`;
+            setAttr($joint + ".liw", !$lock);
+            string $image = getLockImage($joint);
+            treeView -edit -image $joint 1 $image brSmoothWeightsJointTree;
+        }
+    }
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsToggleLockState
+//
+// Description:
+//      Invert the locked state for either the given item passed by the
+//      button or all selected items in the list.
+//
+// Input Arguments:
+//      string button       The name of the influence the button belongs
+//                          to. If the procedure is called from the menu
+//                          this string is empty.
+//      int state           The state of the lock.
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsToggleLockState( string $button, int $state )
+{
+    string $joints[] = `treeView -query -selectItem brSmoothWeightsJointTree`;
+    if ($button != "")
+        toggleLockState({$button});
+    else
+        toggleLockState($joints);
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsInvertLockState
+//
+// Description:
+//      Invert the locked state for all items in the list.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsInvertLockState()
+{
+    string $joints[] = `treeView -query -children "" brSmoothWeightsJointTree`;
+    toggleLockState($joints);
+}
+
+
+//
+// Procedure Name:
+//      brSmoothWeightsLockInfluence
+//
+// Description:
+//      Set the locked state for either all unselected, all selected
+//      or all items in the list.
+//
+// Input Arguments:
+//      int choice          The type of selection the state gets changed
+//                          for:
+//                              0: unselected
+//                              1: selected
+//                              2: all
+//      int state           The state of the lock.
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsLockInfluence( int $choice, int $state )
+{
+    string $sel[] = `treeView -query -selectItem brSmoothWeightsJointTree`;
+    string $all[] = `treeView -query -children "" brSmoothWeightsJointTree`;
+
+    string $joints[];
+    // unselected
+    if ($choice == 0)
+        $joints = stringArrayRemove($sel, $all);
+    // selected
+    else if ($choice == 1)
+        $joints = $sel;
+    // all
+    else if ($choice == 2)
+        $joints = $all;
+
+    for ($joint in $joints)
+    {
+        if (`attributeQuery -node $joint -exists "liw"`)
+        {
+            setAttr($joint + ".liw", $state);
+            string $image = getLockImage($joint);
+            treeView -edit -image $joint 1 $image brSmoothWeightsJointTree;
+        }
+    }
+}
+
+
+// ---------------------------------------------------------------------
+// building the influence ui
+// ---------------------------------------------------------------------
+
+//
+// Procedure Name:
+//      brSmoothWeightsInfluenceList
+//
+// Description:
+//      Build all control items for the influence list in the tool
+//      settings window.
+//
+// Input Arguments:
+//      None
+//
+// Return Value:
+//      None
+//
+global proc brSmoothWeightsInfluenceList()
+{
+    frameLayout -label "Influences"
+                -labelIndent 3
+                -collapsable 1
+                -collapse (`optionVar -query "brSmoothWeightsInfluenceFrameState"`)
+                -marginWidth 10
+                -marginHeight 5
+                brSmoothWeightsInfluenceFrame;
+
+        string $influenceForm = `formLayout`;
+
+            textFieldGrp -label ""
+                         -placeholderText "Enter search string. Use + for combinations"
+                         -columnWidth2 0 135
+                         -columnAttach2 "left" "right"
+                         -columnOffset2 0 0
+                         -adjustableColumn2 2
+                         -tcc brSmoothWeightsSearchJointString
+                         brSmoothWeightsSearchField;
+            string $clearButton = `button -label "Clear"
+                                          -width 46
+                                          -command
+                                          brSmoothWeightsClearSearch`;
+
+            // ---------------------------------------------------------
+            // influence list
+            // ---------------------------------------------------------
+            treeView -height 200
+                     -numberOfButtons 1
+                     -attachButtonRight 0
+                     -allowDragAndDrop 1
+                     -allowReparenting 0
+                     -selectionChangedCommand brSmoothWeightsSelectionChanged
+                     -itemDblClickCommand brSmoothWeightsSelectAffectedVertices
+                     brSmoothWeightsJointTree;
+
+            popupMenu;
+                menuItem -label "Toggle Lock"
+                         -command "brSmoothWeightsToggleLockState(\"\", 0)";
+                menuItem -label "Invert All Locks"
+                         -command "brSmoothWeightsInvertLockState";
+                menuItem -divider 1;
+                menuItem -label "Lock Selected"
+                         -command "brSmoothWeightsLockInfluence(1, 1)";
+                menuItem -label "Unlock Selected"
+                         -command "brSmoothWeightsLockInfluence(1, 0)";
+                menuItem -label "Lock Unselected"
+                         -command "brSmoothWeightsLockInfluence(0, 1)";
+                menuItem -label "Unlock Unselected"
+                         -command "brSmoothWeightsLockInfluence(0, 0)";
+                menuItem -divider 1;
+                menuItem -label "Lock All"
+                         -command "brSmoothWeightsLockInfluence(2, 1)";
+                menuItem -label "Unlock All"
+                         -command "brSmoothWeightsLockInfluence(2, 0)";
+                menuItem -divider 1;
+                menuItem -label "Select Affected Vertices"
+                         -command "brSmoothWeightsSelectAffectedVerticesFromMenu(0, 0)";
+                menuItem -label "Add Affected Vertices To Selection"
+                         -command "brSmoothWeightsSelectAffectedVerticesFromMenu(1, 0)";
+                menuItem -label "Remove Affected Vertices From Selection"
+                         -command "brSmoothWeightsSelectAffectedVerticesFromMenu(0, 1)";
+
+            formLayout -edit
+
+                       -attachForm brSmoothWeightsSearchField "top" 5
+                       -attachForm brSmoothWeightsSearchField "left" 0
+
+                       -attachForm $clearButton "top" 5
+                       -attachForm $clearButton "right" 0
+
+                       -attachForm brSmoothWeightsJointTree "left" 5
+                       -attachForm brSmoothWeightsJointTree "right" 0
+                       -attachForm brSmoothWeightsJointTree "bottom" 0
+
+                       -attachControl brSmoothWeightsSearchField "right" 2 $clearButton
+
+                       -attachControl brSmoothWeightsJointTree "top" 5 brSmoothWeightsSearchField
+
+                       $influenceForm;
+
+        setParent ..;
+
+    setParent ..;
+}
+
+// ---------------------------------------------------------------------
+// MIT License
+//
+// Copyright (c) 2021 Ingo Clemens, brave rabbit
+// brSmoothWeights is under the terms of the MIT License
+//
+// Permission is hereby granted, free of charge, to any person obtaining
+// a copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to
+// permit persons to whom the Software is furnished to do so, subject to
+// the following conditions:
+//
+// The above copyright notice and this permission notice shall be
+// included in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+// EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+// IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+// CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+// TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+// SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
+// Author: Ingo Clemens    www.braverabbit.com
+// ---------------------------------------------------------------------

@@ -1,0 +1,220 @@
+//AK
+global  proc op_cacheActions(string $action)
+{
+	if($action=="geoCacheSet"){
+		op_geoCacheSet;
+	}
+	if($action=="exportCache"){
+		op_exportCache;
+	}	
+	if($action=="flattenAnim"){
+		op_flattenAnim;
+	}		
+	if($action=="importAnimCache"){
+		op_importAnimCache;
+	}		
+}
+global  proc op_flattenAnim()
+{
+	//---switch to model ref file---//
+	string $ref[] = `ls -references`;
+	for($x in $ref)
+	{
+		string $refName = $x;
+		string $refTrueName =  `substitute "RN" $refName ""`;
+		//get ref info
+		string $fileName = `referenceQuery -filename $x`;
+		string $buffer[];
+		tokenize $fileName "/" $buffer;
+		string $type = $buffer[5];
+		string $name = $buffer[6];
+		string $step = $buffer[8];
+		string $t1 = `substitute $step $fileName "model"`;
+		string $t2 = `substitute ("_"+$step) $t1 "_model"`;
+		$model = `file -q -exists $t2`;
+		
+		if($model)
+		{
+			//file -removeReference $fileName;
+			//file -reference -namespace $refName $t2;
+			file -loadReference $refName -type "mayaAscii" -options "v=1" $t2;
+			//delete ($refTrueName+":*");
+		}
+		
+	}
+	delete `ls -type animCurve`;
+	
+	//---import animation cache---//
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	//get project info
+	string $fileName = `file -q -sceneName`;
+	string $buffer[];
+	tokenize $fileName "/" $buffer;	
+	string $projectName = $buffer[2];
+	string $projectPath = ($buffer[0]+"/"+$buffer[1]+"/");
+	//export cache
+	string $cacheDir = ($projectPath + $projectName + "/project_files/cache/" + $level1 + "/" + $level1 + "_" + $level2+"/");
+	string $cacheFileName = ($level1+ "_" + $level2 + "_animCache.xml");	
+	
+	//$cacheDir= "R:/3D_projects/demoProject/project_files/data/Cache/SC01_shot01/";
+	//string $cacheFileName[] = `getFileList -folder $cacheDir -filespec "*.xml"`;
+	select -r "*:gc*";
+	string $geo[]= `ls -sl`;
+	doImportCacheFile ($cacheDir + $cacheFileName) "xml" $geo {};
+	
+	select -d;
+	print ("successfully convert to lighting scense!" + "\n");
+
+}
+
+/*
+global proc op_importAnimCache()
+{
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	//get project info
+	string $fileName = `file -q -sceneName`;
+	string $buffer[];
+	tokenize $fileName "/" $buffer;	
+	string $projectName = $buffer[2];
+	string $projectPath = ($buffer[0]+"/"+$buffer[1]+"/");
+	//export cache
+	string $cacheDir = ($projectPath + $projectName + "/project_files/data/Cache/" + $level1 + "_" + $level2+"/");
+	string $cacheFileName = ($level1+ "_" + $level2 + "_animCache.xml");	
+
+	//$cacheDir= "R:/3D_projects/demoProject/project_files/data/Cache/SC01_shot01/";
+	//string $cacheFileName[] = `getFileList -folder $cacheDir -filespec "*.xml"`;
+	select -r "*:gc*";
+	string $geo[]= `ls -sl`;
+	doImportCacheFile ($cacheDir + $cacheFileName) "xml" $geo {};
+	
+}
+*/
+
+global  proc op_exportCache()
+{
+		//get project info
+    string $fileName = `file -q -sceneName`;
+    string $buffer[];
+    tokenize $fileName "/" $buffer;
+		
+		string $projectPath = ($buffer[0]+"/"+$buffer[1]+"/");
+    string $projectName = $buffer[2];
+
+		string $level1 = `optionVar -q "op_currOpenLevel1"`;
+		string $level2 = `optionVar -q "op_currOpenLevel2"`;
+		string $level3 = `optionVar -q "op_currOpenLevel3"`;
+		int $tab = `optionVar -q "op_currOpenTab"`;
+
+		select -r "*:gc*";
+    displaySmoothness -divisionsU 0 -divisionsV 0 -pointsWire 4 -pointsShaded 1 -polygonObject 1;
+    subdivDisplaySmoothness -smoothness 1;
+		
+    //export cache
+    string $path = ($projectPath + $projectName + "/project_files/cache/" + $level1 + "/" +$level1 + "_" + $level2);
+    string $cacheName = ($level1+ "_" + $level2 + "_animCache");
+   
+    doCreateGeometryCache 5 { "2", "1", "10", "OneFilePerFrame", "1", $path,"0",$cacheName,"0", "export", "0", "1", "1","0","1","mcc" } ;        
+    select -d;
+
+}
+
+global  proc op_geoCacheSet()
+{
+	string $ext = `optionVar -q "op_workshopFormat"`;
+	string $wName = `optionVar -q "op_workshopName"`;
+	string $level1 = `optionVar -q "op_currOpenLevel1"`;
+	string $level2 = `optionVar -q "op_currOpenLevel2"`;
+	string $level3 = `optionVar -q "op_currOpenLevel3"`;
+	int $tab = `optionVar -q "op_currOpenTab"`;
+	
+	string $Sets;
+	string $layer;
+	
+	if($level3=="model"){
+		if($level1=="characters"){
+			$Sets = ("gc_char_"+$level2);
+			if(!`objExists $Sets`){
+					sets -n $Sets;
+			}
+			$layer = ("geo_"+$level2);
+			if(!`objExists $layer`){
+				createDisplayLayer -name $layer -number 1 -empty;
+			}
+		}
+		
+		if($level1=="props"){
+			$Sets = ("gc_prop_"+$level2);
+			if(!`objExists $Sets`){
+					sets -n $Sets;
+			}
+			$layer = ("geo_"+$level2);
+			if(!`objExists $layer`){
+				createDisplayLayer -name $layer -number 1 -empty;
+			}
+		}
+	
+		if($level1=="scenery"){
+			$Sets = ("gc_scene_"+$level2);
+			if(!`objExists $Sets`){
+					sets -n $Sets;
+			}
+			$layer = ("geo_"+$level2);
+			if(!`objExists $layer`){
+				createDisplayLayer -name $layer -number 1 -empty;
+			}	
+		}
+	}
+	else if($level3=="rig" || $level3=="rig_low" || $level3=="rig_hi" ||$level3=="rig_sim"  ){
+		if($level1=="characters"){
+			//$Sets = ("gc_char_"+$level2);
+			//if(!`objExists $Sets`){
+			//		sets -n $Sets;
+			//}
+			//$layerGeo = ("geo_"+$level2);
+			//if(!`objExists $layerGeo`){
+			//	createDisplayLayer -name $layerGeo -number 1 -empty;
+			//}
+			//$layerCtrls = ("ctrls_"+$level2);
+			//if(!`objExists $layerCtrls`){
+			//	createDisplayLayer -name $layerCtrls -number 1 -empty;
+			//}			
+		}
+		
+		if($level1=="props"){
+			$Sets = ("gc_prop_"+$level2);
+			if(!`objExists $Sets`){
+					sets -n $Sets;
+			}
+			$layerGeo = ("geo_"+$level2);
+			if(!`objExists $layerGeo`){
+				createDisplayLayer -name $layerGeo -number 1 -empty;
+			}
+			$layerCtrls = ("ctls_"+$level2);
+			if(!`objExists $layerCtrls`){
+				createDisplayLayer -name $layerCtrls -number 1 -empty;
+			}					
+		}
+	
+		if($level1=="scenery"){
+			$Sets = ("gc_scene_"+$level2);
+			if(!`objExists $Sets`){
+					sets -n $Sets;
+			}
+			$layerGeo = ("geo_"+$level2);
+			if(!`objExists $layerGeo`){
+				createDisplayLayer -name $layerGeo -number 1 -empty;
+			}
+			$layerCtrls = ("ctls_"+$level2);
+			if(!`objExists $layerCtrls`){
+				createDisplayLayer -name $layerCtrls -number 1 -empty;
+			}					
+		}				
+
+	}
+}
