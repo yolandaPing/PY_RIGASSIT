@@ -64,10 +64,7 @@ Why Should I use this ?
 * ✔️ snake rigging
 
 * 上百套功能，实用功能满足你所需，更多功能介绍及演示请转B站：https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0或B站搜索 我有一只猛犬；
-
-* 内部有权重模块；copy blendShape修型， weight模块；驱动模块；SDK拷贝和镜像模块；动力学绑定；拉链绑定等等
 * 建议安装numpy， 可以使用到变形器转权重，极速版权重导出导入！！！
-
 
 ============================================================
 
@@ -84,7 +81,6 @@ PY_RIGASSIT 下载 [PY_RIGASSIT](https://m.tb.cn/h.7lqLwhV?tk=kDADUV6ekXE)
 
 * uninstall卸载.bat 输入 y 卸载工具，n 取消
 * 支持maya2017-2024
-
 
 ![工具安装](https://github.com/user-attachments/assets/2b55c755-48bb-458d-88ba-dea12f37b45d)
 ![卸载](https://github.com/user-attachments/assets/cece5589-fdce-4285-a86f-fed28c0d9984)
