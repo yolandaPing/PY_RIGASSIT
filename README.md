@@ -76,11 +76,9 @@ PY_RIGASSIT 下载 [PY_RIGASSIT](https://m.tb.cn/h.7lqLwhV?tk=kDADUV6ekXE)
 
 # 安装
 * 请确保你的maya已安装pymel ！！！安装和导入 PyMEL [Autodesk Maya PyMel]((https://pan.quark.cn/s/fe8c6e815f8e))
-  
 * 双击Install安装.bat 输入 y 安装工具，n 取消
-
 * uninstall卸载.bat 输入 y 卸载工具，n 取消
-* 支持maya2017-2024
+* 支持maya2018-2026
 
 ![工具安装](https://github.com/user-attachments/assets/2b55c755-48bb-458d-88ba-dea12f37b45d)
 ![卸载](https://github.com/user-attachments/assets/cece5589-fdce-4285-a86f-fed28c0d9984)
