@@ -72,7 +72,7 @@ Why Should I use this ?
 关于PY_RIGASSIT 工具使用 [About PY_RIGASSIT Tool](https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0)
 
 # 激活
-PY_RIGASSIT 用户可联系领取激活权限
+PY_RIGASSIT 新用户可联系领取激活权限
 
 # 安装
 * 请确保你的maya已安装pymel ！！！安装和导入 PyMEL [Autodesk Maya PyMel]((https://pan.quark.cn/s/fe8c6e815f8e))
