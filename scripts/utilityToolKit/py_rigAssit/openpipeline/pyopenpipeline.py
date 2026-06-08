@@ -7,11 +7,13 @@ import os
 import sys
 import json
 import shutil
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 try:
     import maya.cmds as cmds
     import maya.mel as mel
+
     IN_MAYA = True
 except ImportError:
     cmds = None
@@ -19,12 +21,13 @@ except ImportError:
     IN_MAYA = False
 
 from py_rigAssit.openpipeline.fbx_dialog import FBXExportDialog
-from py_rigAssit.openpipeline.version_context import ( show_asset_context_menu, show_subtype_context_menu, show_version_context_menu)
+from py_rigAssit.openpipeline.version_context import (show_asset_context_menu, show_subtype_context_menu, show_version_context_menu)
 from py_rigAssit.openpipeline.version import VERSION, TIMESTAMP
 from py_rigAssit.openpipeline.asset_info import PROJECTS_XML
 from Pipeline.pipelineConfig import OpenPipelineConfig
 from Pipeline.projectManager import ProjectManager
-from Pipeline.pipelineUtils import ( load_projects_from_xml, get_projects_xml_path, ensure_projects_xml, add_project_to_xml, open_folder_in_explorer,open_file_in_explorer)
+from Pipeline.pipelineUtils import (load_projects_from_xml, get_projects_xml_path, ensure_projects_xml, add_project_to_xml, open_folder_in_explorer, open_file_in_explorer)
+
 try:
     from ui_framework.core.qtCompat import *
     from ui_framework.widgets.widgets import Widgets, PyouPersistentWindow
@@ -32,11 +35,11 @@ except:
     from CommonUse.qtCompat import *
     from CommonUse.widgetsUse import Widgets, PyouPersistentWindow
 
-_widgest = Widgets()
+_widgets = Widgets()
 
 
 class PYPenpipelineDialog(PyouPersistentWindow):
-    def __init__(self, parent=_widgest.maya_main_window()):
+    def __init__(self, parent=_widgets.maya_main_window()):
         super(PYPenpipelineDialog, self).__init__("PYPenpipelineDlgApp", "PYPenpipelineDialog", parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
 
@@ -49,7 +52,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
 
         self.timeStamp = TIMESTAMP
         self.WINDOW_NAME = 'OpenPipeline v{} (Maya{})'.format(VERSION, cmds.about(version=True))
-        # self.font_size = "13px"
+
         self.pm = None
         self.current_project_path = ''
         self.current_project_name = ''
@@ -67,10 +70,27 @@ class PYPenpipelineDialog(PyouPersistentWindow):
 
         self.init_ui()
 
-        # 初始化UI后才能调用这些方法
         self.load_projects()
         self.select_last_project()
         self.load_fbx_config()
+
+    def show_info(self, title, message):
+        QtWidgets.QMessageBox.information(self, title, message)
+
+    def show_warning(self, title, message):
+        QtWidgets.QMessageBox.warning(self, title, message)
+
+    def show_critical(self, title, message):
+        QtWidgets.QMessageBox.critical(self, title, message)
+
+    def show_info_delayed(self, title, message, delay=2000):
+        QtCore.QTimer.singleShot(delay, lambda: QtWidgets.QMessageBox.information(self, title, message))
+
+    def show_warning_delayed(self, title, message, delay=2000):
+        QtCore.QTimer.singleShot(delay, lambda: QtWidgets.QMessageBox.warning(self, title, message))
+
+    def show_critical_delayed(self, title, message, delay=2000):
+        QtCore.QTimer.singleShot(delay, lambda: QtWidgets.QMessageBox.critical(self, title, message))
 
     def init_ui(self):
 
@@ -78,7 +98,6 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         main = QtWidgets.QVBoxLayout()
         main_layout.addLayout(main)
 
-        # 项目根路径行
         root_row = QtWidgets.QHBoxLayout()
         lbl_root = QtWidgets.QLabel(u'项目路径:')
         lbl_root.setStyleSheet("font: bold ; ")
@@ -86,17 +105,15 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         self.root_path_label = QtWidgets.QLabel(u'未设置')
         self.root_path_label.setStyleSheet(' color:black; ')
         self.root_path_label.setFixedWidth(320)
-        self.root_path_label.setMaximumHeight(30)
-        btn_set_root = QtWidgets.QPushButton(u'设置项目路径')
-        btn_set_root.setStyleSheet("{} color: black;".format(_widgest.button_bgc))
+
+        btn_set_root = QtWidgets.QPushButton(u' [设置项目路径] ')
+        btn_set_root.setStyleSheet("{} color: black;".format(_widgets.button_bgc))
         btn_set_root.clicked.connect(self.set_project_root_path)
-        btn_check_root = QtWidgets.QPushButton(u'检查项目')
+        btn_check_root = QtWidgets.QPushButton(u' [检查项目] ')
         btn_check_root.clicked.connect(self.check_projects_in_root)
-        btn_check_config = QtWidgets.QPushButton(u'检查配置')
+        btn_check_config = QtWidgets.QPushButton(u' [检查配置] ')
         btn_check_config.clicked.connect(self.check_config)
-        btn_check_config.setMaximumHeight(30)
-        btn_set_root.setMaximumHeight(30)
-        btn_check_root.setMaximumHeight(30)
+
         root_row.addWidget(lbl_root)
         root_row.addWidget(self.root_path_label)
         root_row.addWidget(btn_set_root)
@@ -113,19 +130,16 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         self.project_combo = QtWidgets.QComboBox()
         self.project_combo.setFixedWidth(200)
         self.project_combo.currentTextChanged.connect(self.on_project_changed)
-        btn_new = QtWidgets.QPushButton(u'新建')
-        btn_new.setStyleSheet("{} color: black;".format(_widgest.button_bgc))
+        btn_new = QtWidgets.QPushButton(u' [新建] ')
+        btn_new.setStyleSheet("{} color: black;".format(_widgets.button_bgc))
         btn_new.clicked.connect(self.create_project_dialog)
-        btn_open = QtWidgets.QPushButton('打开项目')
+        btn_open = QtWidgets.QPushButton(' [打开项目] ')
         btn_open.clicked.connect(self.open_existing_project)
         btn_refresh = QtWidgets.QPushButton('')
         btn_refresh.setIcon(QtGui.QIcon(":refresh.png"))
         btn_refresh.setToolTip(u"刷新")
         btn_refresh.clicked.connect(self.load_projects)
-        btn_new.setMaximumHeight(25)
-        btn_open.setMaximumHeight(25)
-        btn_refresh.setFixedHeight(30)
-        btn_refresh.setFixedWidth(30)
+
         prow.addWidget(lbl)
         prow.addWidget(self.project_combo)
         prow.addWidget(btn_new)
@@ -134,137 +148,143 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         prow.addStretch()
         main.addLayout(prow)
 
-        _widgest.separator(main, False)
-        _widgest.separator(main, True)
+        _widgets.separator(main, True)
 
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
 
         # left: asset types + asset list
         leftw = QtWidgets.QWidget()
+
         leftl = QtWidgets.QVBoxLayout()
-        type_row = QtWidgets.QHBoxLayout()
-        tlabel = QtWidgets.QLabel(u'类型:')
-        tlabel.setStyleSheet("font: bold ; ")
-        tlabel.setFixedWidth(80)
+        leftl.setContentsMargins(0, 0, 0, 0)
+        type_row_group = QtWidgets.QGroupBox(u"类型")
+        type_row = QtWidgets.QHBoxLayout(type_row_group)
+        type_row.setContentsMargins(4, 4, 4, 4)
         self.type_combo = QtWidgets.QComboBox()
         self.type_combo.currentTextChanged.connect(self.on_asset_type_changed)
         btn_addtype = QtWidgets.QPushButton('+')
         btn_addtype.setFixedWidth(25)
         btn_addtype.setMaximumHeight(25)
-        btn_addtype.setStyleSheet("font: bold 16px; {} color: green;".format(_widgest.button_bgc))
+        btn_addtype.setStyleSheet("font: bold 16px; {} color: green;".format(_widgets.button_bgc))
         btn_addtype.clicked.connect(self.add_asset_type)
         btn_deltype = QtWidgets.QPushButton('-')
         btn_deltype.setFixedWidth(25)
         btn_deltype.setMaximumHeight(25)
-        btn_deltype.setStyleSheet("font: bold 16px; {} color: red;".format(_widgest.button_bgc))
+        btn_deltype.setStyleSheet("font: bold 16px; {} color: red;".format(_widgets.button_bgc))
         btn_deltype.clicked.connect(self.delete_asset_type)
-        type_row.addWidget(tlabel)
-        type_row.addWidget(self.type_combo)
+        type_row.addWidget(self.type_combo, 1)
         type_row.addWidget(btn_addtype)
         type_row.addWidget(btn_deltype)
-        leftl.addLayout(type_row)
+        leftl.addWidget(type_row_group)
 
-        search_row = QtWidgets.QHBoxLayout()
-        s_lbl = QtWidgets.QLabel(u'搜索:')
-        s_lbl.setFixedWidth(40)
+        asset_group = QtWidgets.QGroupBox(u"对象名称")
+        asset_layout = QtWidgets.QVBoxLayout(asset_group)
+        asset_layout.setContentsMargins(4, 4, 4, 4)
+
         self.search_edit = QtWidgets.QLineEdit()
         self.search_edit.setPlaceholderText(u'搜索资产...')
         self.search_edit.textChanged.connect(self.filter_assets)
-        search_row.addWidget(s_lbl)
-        search_row.addWidget(self.search_edit)
-        leftl.addLayout(search_row)
+
+        leftl.addWidget(asset_group)
 
         self.asset_list = QtWidgets.QListWidget()
-        self.asset_list.itemClicked.connect(self.on_asset_clicked)
         self.asset_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.asset_list.setAlternatingRowColors(True)
+        self.asset_list.itemClicked.connect(self.on_asset_clicked)
         self.asset_list.customContextMenuRequested.connect(self.show_asset_context_menu)
-        leftl.addWidget(self.asset_list)
+
+        asset_layout.addWidget(self.search_edit)
+        asset_layout.addWidget(self.asset_list)
 
         asset_btn_row = QtWidgets.QHBoxLayout()
         self.btn_create_asset = QtWidgets.QPushButton('New')
-        self.btn_create_asset.setStyleSheet("{} color: black;".format(_widgest.button_bgc))
         self.btn_create_asset.clicked.connect(self.create_asset_dialog)
         self.btn_create_asset.setEnabled(False)
         self.btn_delete_asset = QtWidgets.QPushButton('Delete!!!')
-        self.btn_delete_asset.setStyleSheet("{} color: red;".format(_widgest.button_bgc))
         self.btn_delete_asset.clicked.connect(self.delete_asset_dialog)
+
+        self.btn_create_asset.setProperty("main", True)
+        self.btn_delete_asset.setProperty("main", True)
+        self.btn_delete_asset.setStyleSheet("color: red;")
         self.btn_delete_asset.setEnabled(False)
         self.btn_delete_asset.setVisible(False)
-        self.btn_create_asset.setMaximumHeight(25)
-        self.btn_delete_asset.setMaximumHeight(25)
         asset_btn_row.addWidget(self.btn_create_asset)
         asset_btn_row.addWidget(self.btn_delete_asset)
         asset_btn_row.addStretch()
-        leftl.addLayout(asset_btn_row)
+        asset_layout.addLayout(asset_btn_row)
         leftw.setLayout(leftl)
         leftw.setMinimumWidth(100)
 
         centerw = QtWidgets.QWidget()
         center_layout = QtWidgets.QVBoxLayout(centerw)
+        center_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 子类型部分
-        subtype_frame = QtWidgets.QFrame()
-        subtype_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        subtype_frame = QtWidgets.QGroupBox(u"任务")
         subtype_layout = QtWidgets.QVBoxLayout(subtype_frame)
-        sublb_layout = QtWidgets.QHBoxLayout()
-        sublb_layout.addWidget(QtWidgets.QLabel(u'任务:'))
+
         self.info_label = QtWidgets.QLabel(u'未选择资产')
         self.info_label.setWordWrap(True)
         self.info_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.info_label.setMaximumHeight(35)
+        self.info_label.setMaximumHeight(15)
         self.info_label.setStyleSheet('color:yellow; font-size: 12px;')
-        sublb_layout.addWidget(self.info_label)
-        subtype_layout.addLayout(sublb_layout)
+
+        subtype_layout.addWidget(self.info_label)
 
         self.subtype_list = QtWidgets.QListWidget()
+        self.subtype_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.subtype_list.setAlternatingRowColors(True)
         self.subtype_list.itemClicked.connect(self.on_subtype_clicked)
         self.subtype_list.itemDoubleClicked.connect(self.on_subtype_double_clicked)
-        self.subtype_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.subtype_list.customContextMenuRequested.connect(self.show_subtype_context_menu)
         subtype_layout.addWidget(self.subtype_list)
 
         sub_btns = QtWidgets.QHBoxLayout()
         self.btn_add_sub = QtWidgets.QPushButton(u'New')
-        self.btn_add_sub.clicked.connect(self.add_subtype_dialog)
-        self.btn_add_sub.setStyleSheet("{} color: green;".format(_widgest.button_bgc))
+
         self.btn_add_sub.setEnabled(False)
         self.btn_del_sub = QtWidgets.QPushButton(u'Delete')
-        self.btn_del_sub.clicked.connect(self.delete_subtype)
-        self.btn_del_sub.setStyleSheet("{} color: black;".format(_widgest.button_bgc))
+
         self.btn_del_sub.setEnabled(False)
         self.btn_rename_sub = QtWidgets.QPushButton(u'Rename')
-        self.btn_rename_sub.setStyleSheet("{} color: black;".format(_widgest.button_bgc))
-        self.btn_rename_sub.clicked.connect(self.rename_subtype)
+
+        self.btn_add_sub.setProperty("main", True)
+        self.btn_add_sub.setStyleSheet("color: green;")
+        self.btn_del_sub.setProperty("main", True)
+        self.btn_rename_sub.setProperty("main", True)
         self.btn_rename_sub.setEnabled(False)
-        self.btn_add_sub.setMaximumHeight(25)
-        self.btn_del_sub.setMaximumHeight(25)
-        self.btn_rename_sub.setMaximumHeight(25)
+
         sub_btns.addWidget(self.btn_add_sub)
         sub_btns.addWidget(self.btn_del_sub)
         sub_btns.addWidget(self.btn_rename_sub)
         subtype_layout.addLayout(sub_btns)
 
-        # 版本列表部分
-        version_frame = QtWidgets.QFrame()
-        version_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.btn_add_sub.clicked.connect(self.add_subtype_dialog)
+        self.btn_del_sub.clicked.connect(self.delete_subtype)
+        self.btn_rename_sub.clicked.connect(self.rename_subtype)
+
+        version_frame = QtWidgets.QGroupBox("版本")
         version_layout = QtWidgets.QVBoxLayout(version_frame)
+        version_layout.setContentsMargins(4, 4, 4, 4)
+
         version_title_layout = QtWidgets.QHBoxLayout()
-        version_title_layout.addWidget(QtWidgets.QLabel(u'版本:'))
-        self.version_count_text = QtWidgets.QLabel('')
+        version_title_layout.addWidget(QtWidgets.QLabel(''))
+        self.version_count_text = _widgets.create_text('')
         self.version_count_text.setWordWrap(True)
         version_title_layout.addWidget(self.version_count_text)
         version_layout.addLayout(version_title_layout)
+        # version_layout.addWidget(self.version_count_text)
 
         self.version_list = QtWidgets.QListWidget()
-        self.version_list.itemDoubleClicked.connect(self.open_selected_version)
         self.version_list.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.version_list.setAlternatingRowColors(True)
+        self.version_list.itemDoubleClicked.connect(self.open_selected_version)
         self.version_list.customContextMenuRequested.connect(self.show_version_context_menu)
         version_layout.addWidget(self.version_list)
 
         vbtn_row1 = QtWidgets.QHBoxLayout()
         self.btn_save_new_version = QtWidgets.QPushButton('Save Workshop')
         self.btn_save_new_version.clicked.connect(self.save_new_version)
-        self.btn_save_new_version.setStyleSheet("{} color: red;".format(_widgest.button_bgc))
+        self.btn_save_new_version.setStyleSheet("{} color: red;".format(_widgets.button_bgc))
         self.btn_save_new_version.setEnabled(False)
         self.btn_import_version = QtWidgets.QPushButton('Import')
         self.btn_import_version.clicked.connect(self.import_selected_version)
@@ -282,7 +302,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         vbtn_row2 = QtWidgets.QHBoxLayout()
         self.btn_set_master = QtWidgets.QPushButton('Save Master')
         self.btn_set_master.clicked.connect(self.save_new_master)
-        self.btn_set_master.setStyleSheet("{} color: green;".format(_widgest.button_bgc))
+        self.btn_set_master.setStyleSheet("{} color: green;".format(_widgets.button_bgc))
         self.btn_set_master.setEnabled(False)
         self.btn_open_master = QtWidgets.QPushButton('Open Master')
         self.btn_open_master.clicked.connect(self.open_master)
@@ -315,33 +335,30 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         top_container = QtWidgets.QWidget()
         top_layout = QtWidgets.QVBoxLayout(top_container)
         top_layout.setContentsMargins(0, 0, 0, 0)
+        pv_col_grp = QtWidgets.QGroupBox(u"预览")
+        pv_col = QtWidgets.QVBoxLayout(pv_col_grp)
+        pv_col.setContentsMargins(4, 6, 4, 4)
 
-        pv_row = QtWidgets.QHBoxLayout()
-        pv_col = QtWidgets.QVBoxLayout()
-        label = QtWidgets.QLabel(u'预览:')
-        label.setStyleSheet("font: bold 14px;")
-        label.setFixedHeight(30)
-        pv_col.addWidget(label)
         self.preview_label = QtWidgets.QLabel()
-        self.preview_label.setFixedSize(220, 161)
-        self.preview_label.setStyleSheet('background:#333; border:1px solid #555')
+        self.preview_label.setMinimumSize(220, 161)
         self.preview_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.preview_label.setFrameStyle(QtWidgets.QFrame.Box | QtWidgets.QFrame.Sunken)
+        self.preview_label.setStyleSheet("background-color: #2b2b2b; color: #888;")
+
         self.btn_snapshot = QtWidgets.QPushButton('Take Snapshot')
         self.btn_snapshot.clicked.connect(self.take_snapshot)
         self.btn_snapshot.setEnabled(False)
         pv_col.addWidget(self.btn_snapshot)
         pv_col.addWidget(self.preview_label)
-        pv_row.addLayout(pv_col)
-        top_layout.addLayout(pv_row)
+
+        top_layout.addWidget(pv_col_grp)
         top_container.setMinimumHeight(200)
         top_container.setMaximumHeight(500)
 
-        bottom_container = QtWidgets.QWidget()
+        bottom_container = QtWidgets.QGroupBox("Notes")
         bottom_layout = QtWidgets.QVBoxLayout(bottom_container)
-        bottom_layout.setContentsMargins(0, 5, 0, 0)
-        notes_label = QtWidgets.QLabel('Notes:')
-        notes_label.setStyleSheet("font: bold 14px;")
-        bottom_layout.addWidget(notes_label)
+        bottom_layout.setContentsMargins(4, 6, 4, 4)
+
         self.notes_text = QtWidgets.QTextEdit()
         self.notes_text.setReadOnly(True)
         self.notes_text.setMinimumHeight(150)
@@ -364,13 +381,12 @@ class PYPenpipelineDialog(PyouPersistentWindow):
 
         self.setLayout(main_layout)
 
-        _widgest.create_copyrightText(main_layout, self.timeStamp)
+        _widgets.create_copyrightText(main_layout, self.timeStamp)
 
         main_layout.setStretch(0, 1)
         main_layout.setStretch(1, 0)
         main_layout.setStretch(2, 0)
 
-        # 初始化时显示项目根路径
         self.update_root_path_label()
 
     # ================== 右键菜单功能 ==================
@@ -417,12 +433,10 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             message += u"配置文件存在: {}\n".format(config_exists)
             message += u"项目根路径: {}\n".format(self.cfg.get_project_root_path())
             message += u"上次选择的项目: {}\n".format(self.cfg.get_last_project())
-            message += u"配置文件内容:\n{}\n".format(
-                json.dumps(config_content, indent=4) if isinstance(config_content,dict) else config_content)
-
-            QtWidgets.QMessageBox.information(self, u'配置检查', message)
+            message += u"配置文件内容:\n{}\n".format(json.dumps(config_content, indent=4) if isinstance(config_content, dict) else config_content)
+            self.show_info(u'配置检查', message)
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, u'错误', u"检查配置时出错: {}".format(str(e)))
+            self.show_warning(u'错误', u"检查配置时出错: {}".format(str(e)))
 
     # ================== FBX配置管理 ==================
     def load_fbx_config(self):
@@ -465,9 +479,9 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         if new_settings[0] and new_settings[1]:
             self.fbx_config = new_settings
             self.save_fbx_config(self.fbx_config)
-            QtWidgets.QMessageBox.information(self, u'成功',
-                                              u'FBX导出设置已保存:\n\n几何体组: {}\n根关节: {}'.format(
-                                                  new_settings[0], new_settings[1]))
+            self.show_info(u'成功',
+                           u'FBX导出设置已保存:\n\n几何体组: {}\n根关节: {}'.format(
+                               new_settings[0], new_settings[1]))
         self._fbx_dialog = None
 
     # ================== 项目管理 ==================
@@ -482,7 +496,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             if success:
                 self.cfg = OpenPipelineConfig()
             else:
-                QtWidgets.QMessageBox.warning(self, u'错误', u'保存配置失败，请检查文件权限')
+                self.show_warning(u'错误', u'保存配置失败，请检查文件权限')
                 return
 
             self.update_root_path_label()
@@ -491,7 +505,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                 try:
                     self.load_projects()
                 except Exception as e:
-                    QtWidgets.QMessageBox.warning(self, u'错误', u'加载项目配置文件失败:\n{}'.format(str(e)))
+                    self.show_warning(u'错误', u'加载项目配置文件失败:\n{}'.format(str(e)))
             else:
                 reply = QtWidgets.QMessageBox.question(self, u'未找到项目配置文件',
                                                        u'在{path}中未找到{PROJECTS_XML}文件，是否创建新的项目配置文件？'.format(
@@ -505,14 +519,14 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         """检查项目根路径下的项目"""
         root_path = self.cfg.get_project_root_path()
         if not root_path:
-            QtWidgets.QMessageBox.warning(self, u'提示', u'请先设置项目根路径')
+            self.show_warning(u'提示', u'请先设置项目根路径')
             return
 
         xml_path = os.path.join(root_path, PROJECTS_XML)
         if not os.path.exists(xml_path):
-            QtWidgets.QMessageBox.information(self, u'检查结果',
-                                              u'在{path}中未找到{PROJECTS_XML}文件'.format(path=root_path,
-                                                                                    PROJECTS_XML=PROJECTS_XML))
+            self.show_info(u'检查结果',
+                           u'在{path}中未找到{PROJECTS_XML}文件'.format(path=root_path,
+                                                                        PROJECTS_XML=PROJECTS_XML))
             return
 
         projects = load_projects_from_xml(self.cfg)
@@ -539,7 +553,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             message += u'无效项目 ({count}个):\n'.format(count=len(missing_projects))
             message += '\n'.join(missing_projects)
 
-        QtWidgets.QMessageBox.information(self, u'项目检查结果', message)
+        self.show_info(u'项目检查结果', message)
 
     def load_projects(self):
         self.project_combo.clear()
@@ -644,9 +658,9 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                 self.cfg.add_project_path(normalized_path)
                 self.load_assets()
             else:
-                QtWidgets.QMessageBox.warning(self, u'错误',
-                                              u'项目路径不存在:\n{path}\n\n请检查项目是否被移动或删除。'.format(path=normalized_path))
-
+                self.show_warning(u'错误',
+                                  u'项目路径不存在:\n{path}\n\n请检查项目是否被移动或删除。'.format(
+                                      path=normalized_path))
 
     def get_library_folder_from_xml(self, project_name):
         """从XML获取项目的library_folder配置"""
@@ -672,16 +686,16 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         """打开现有项目：选择项目文件夹"""
         root_path = self.cfg.get_project_root_path()
         if not root_path:
-            QtWidgets.QMessageBox.warning(self, u'提示', u'请先设置项目根路径')
+            self.show_warning(u'提示', u'请先设置项目根路径')
             return
 
         project_dir = QtWidgets.QFileDialog.getExistingDirectory(self, u'选择项目文件夹', root_path)
         if project_dir:
             normalized_dir = project_dir.replace('\\', '/')
             if not normalized_dir.startswith(root_path.replace('\\', '/')):
-                QtWidgets.QMessageBox.warning(self, u'错误',
-                                              u'选择的项目不在项目根路径下:\n\n项目根路径: {root}\n项目路径: {project}'.format(
-                                                  root=root_path, project=normalized_dir))
+                self.show_warning(u'错误',
+                                  u'选择的项目不在项目根路径下:\n\n项目根路径: {root}\n项目路径: {project}'.format(
+                                      root=root_path, project=normalized_dir))
                 return
 
             project_name = os.path.basename(normalized_dir.rstrip('/'))
@@ -693,7 +707,8 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                     self.project_combo.setCurrentIndex(idx)
             else:
                 reply = QtWidgets.QMessageBox.question(self, u'项目未注册',
-                                                       u'项目"{name}"未在系统中注册，是否现在注册？'.format(name=project_name),
+                                                       u'项目"{name}"未在系统中注册，是否现在注册？'.format(
+                                                           name=project_name),
                                                        QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
                 if reply == QtWidgets.QMessageBox.Yes:
                     if not normalized_dir.endswith('/'):
@@ -708,7 +723,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
     def create_project_dialog(self):
         root_path = self.cfg.get_project_root_path()
         if not root_path:
-            QtWidgets.QMessageBox.warning(self, u'提示', u'请先设置项目根路径')
+            self.show_warning(u'提示', u'请先设置项目根路径')
             return
 
         dlg = QtWidgets.QDialog(self)
@@ -755,7 +770,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         lib = self.new_proj_lib.text().strip()
 
         if not name:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'请填写项目名称')
+            self.show_warning(u'错误', u'请填写项目名称')
             return
 
         if not lib:
@@ -768,7 +783,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
 
         xml_projects = load_projects_from_xml(self.cfg)
         if name in xml_projects:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'项目"{name}"已存在'.format(name=name))
+            self.show_warning(u'错误', u'项目"{name}"已存在'.format(name=name))
             return
 
         project_dir = project_root.rstrip('/')
@@ -791,7 +806,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             self.project_combo.setCurrentIndex(idx)
 
         dlg.accept()
-        QtWidgets.QMessageBox.information(self, u'成功', u'项目 {name} 创建并记录'.format(name=name))
+        self.show_info(u'成功', u'项目 {name} 创建并记录'.format(name=name))
 
     # ================== 资产管理 ==================
     def get_current_asset_types(self):
@@ -832,7 +847,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
     def add_asset_type(self):
         """添加资产类型（在lib路径下创建文件夹）"""
         if not self.pm:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'请先选择项目')
+            self.show_warning(u'错误', u'请先选择项目')
             return
 
         text, ok = QtWidgets.QInputDialog.getText(self, u'添加资产类型', u'输入资产类型名称:')
@@ -840,7 +855,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             t = text.strip()
             existing_types = self.get_current_asset_types()
             if t in existing_types:
-                QtWidgets.QMessageBox.warning(self, u'提示', u'资产类型 {t} 已存在'.format(t=t))
+                self.show_warning(u'提示', u'资产类型 {t} 已存在'.format(t=t))
                 return
 
             try:
@@ -853,26 +868,26 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                 index = self.type_combo.findText(t)
                 if index >= 0:
                     self.type_combo.setCurrentIndex(index)
-                QtWidgets.QMessageBox.information(self, u'成功', u'资产类型 {t} 已添加'.format(t=t))
+                self.show_info(u'成功', u'资产类型 {t} 已添加'.format(t=t))
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, u'错误', u'创建资产类型失败: {error}'.format(error=str(e)))
+                self.show_warning(u'错误', u'创建资产类型失败: {error}'.format(error=str(e)))
 
     def delete_asset_type(self):
         """删除资产类型（删除lib路径下的文件夹）"""
         if not self.pm:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'请先选择项目')
+            self.show_warning(u'错误', u'请先选择项目')
             return
 
         current_type = self.type_combo.currentText()
         if not current_type or current_type == u'暂无资产类型':
-            QtWidgets.QMessageBox.warning(self, u'提示', u'请先选择一个资产类型')
+            self.show_warning(u'提示', u'请先选择一个资产类型')
             return
 
         lib_path = os.path.join(self.pm.project_root, self.pm.library_folder)
         type_path = os.path.join(lib_path, current_type)
 
         if not os.path.exists(type_path):
-            QtWidgets.QMessageBox.warning(self, u'错误', u'资产类型文件夹不存在')
+            self.show_warning(u'错误', u'资产类型文件夹不存在')
             return
 
         try:
@@ -899,10 +914,10 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                 self.asset_list.clear()
                 self.subtype_list.clear()
                 self.clear_right()
-                QtWidgets.QMessageBox.information(self, u'成功',
-                                                  u'资产类型 "{current_type}" 已删除'.format(current_type=current_type))
+                self.show_info(u'成功',
+                               u'资产类型 "{current_type}" 已删除'.format(current_type=current_type))
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, u'错误', u'删除失败: {error}'.format(error=str(e)))
+                self.show_warning(u'错误', u'删除失败: {error}'.format(error=str(e)))
 
     def load_assets(self):
         self.asset_list.clear()
@@ -937,7 +952,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
 
     def create_asset_dialog(self):
         if not self.pm or not self.current_asset_type:
-            QtWidgets.QMessageBox.warning(self, u'提示', u'请先选择有效的资产类型')
+            self.show_warning(u'提示', u'请先选择有效的资产类型')
             return
         dlg = QtWidgets.QDialog(self)
         dlg.setWindowTitle(u'创建资产')
@@ -968,28 +983,28 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         self.btn_delete_asset.setEnabled(False)
         self.btn_delete_asset.setVisible(False)
         if not name:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'请输入资产名称')
+            self.show_warning(u'错误', u'请输入资产名称')
             return
         if self.pm.create_asset(self.current_asset_type, name):
             dlg.accept()
             self.load_assets()
-            QtWidgets.QMessageBox.information(self, u'成功', u'资产 {name} 创建完成'.format(name=name))
+            self.show_info(u'成功', u'资产 {name} 创建完成'.format(name=name))
         else:
-            QtWidgets.QMessageBox.warning(self, u'失败', u'资产已存在或创建失败')
+            self.show_warning(u'失败', u'资产已存在或创建失败')
 
     def delete_asset_dialog(self):
         """删除资产对话框"""
         if not self.pm or not self.current_asset_type:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'请先选择项目及资产类型')
+            self.show_warning(u'错误', u'请先选择项目及资产类型')
             return
 
         if not self.selected_asset:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'请先选择要删除的资产')
+            self.show_warning(u'错误', u'请先选择要删除的资产')
             return
 
         asset_dir = self.pm.get_asset_dir(self.current_asset_type, self.selected_asset)
         if not os.path.exists(asset_dir):
-            QtWidgets.QMessageBox.warning(self, u'错误', u'资产路径不存在:\n{}'.format(asset_dir))
+            self.show_warning(u'错误', u'资产路径不存在:\n{}'.format(asset_dir))
             return
 
         try:
@@ -1023,16 +1038,16 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             if reply == QtWidgets.QMessageBox.Yes:
                 success, message = self._delete_asset(asset_dir)
                 if success:
-                    QtWidgets.QMessageBox.information(self, u'成功', message)
+                    self.show_info(u'成功', message)
                     self.load_assets()
                     self.clear_right()
                     self.selected_asset = None
                     self.selected_subtype = None
                     self.info_label.setText(u'未选择资产')
                 else:
-                    QtWidgets.QMessageBox.warning(self, u'删除失败', message)
+                    self.show_warning(u'删除失败', message)
         except Exception as e:
-            QtWidgets.QMessageBox.warning(self, u'错误', u'检查资产信息时出错:\n{}'.format(str(e)))
+            self.show_warning(u'错误', u'检查资产信息时出错:\n{}'.format(str(e)))
 
     def _delete_asset(self, asset_dir):
         """实际删除资产文件夹"""
@@ -1094,19 +1109,19 @@ class PYPenpipelineDialog(PyouPersistentWindow):
 
     def add_subtype_dialog(self):
         if not (self.pm and self.selected_asset):
-            QtWidgets.QMessageBox.warning(self, u'提示', u'请先选择资产')
+            self.show_warning(u'提示', u'请先选择资产')
             return
         text, ok = QtWidgets.QInputDialog.getText(self, u'添加子类型', u'输入子类型名称:')
         if ok and text.strip():
             if self.pm.create_subtype(self.current_asset_type, self.selected_asset, text.strip()):
-                QtWidgets.QMessageBox.information(self, u'成功', u'子类型创建成功')
+                self.show_info(u'成功', u'子类型创建成功')
                 self.load_subtypes()
             else:
-                QtWidgets.QMessageBox.warning(self, u'失败', u'创建失败或已存在')
+                self.show_warning(u'失败', u'创建失败或已存在')
 
     def delete_subtype(self):
         if not (self.pm and self.selected_asset):
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择资产')
+            self.show_warning('提示', '请先选择资产')
             return
         text, ok = QtWidgets.QInputDialog.getText(self, '删除子类型', '输入子类型名称:')
         if ok and text.strip():
@@ -1118,17 +1133,17 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                 if r == QtWidgets.QMessageBox.Yes:
                     try:
                         shutil.rmtree(p)
-                        QtWidgets.QMessageBox.information(self, '已删除', '{text} 已删除'.format(text=text))
+                        self.show_info('已删除', '{text} 已删除'.format(text=text))
                         self.load_subtypes()
                     except Exception as e:
-                        QtWidgets.QMessageBox.warning(self, '删除失败', '删除失败: {error}'.format(error=str(e)))
+                        self.show_warning('删除失败', '删除失败: {error}'.format(error=str(e)))
             else:
-                QtWidgets.QMessageBox.warning(self, '失败', '找不到该子类型')
+                self.show_warning('失败', '找不到该子类型')
 
     def rename_subtype(self):
         """重命名子类型"""
         if not (self.pm and self.selected_asset and self.selected_subtype):
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择资产和子类型')
+            self.show_warning('提示', '请先选择资产和子类型')
             return
 
         new_name, ok = QtWidgets.QInputDialog.getText(self, '重命名子类型',
@@ -1138,12 +1153,12 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         if ok and new_name.strip():
             new_name = new_name.strip()
             if new_name == self.selected_subtype:
-                QtWidgets.QMessageBox.warning(self, '提示', '新名称与当前名称相同')
+                self.show_warning('提示', '新名称与当前名称相同')
                 return
 
             existing_subs = self.pm.list_subtypes(self.current_asset_type, self.selected_asset)
             if new_name in existing_subs:
-                QtWidgets.QMessageBox.warning(self, '失败', '子类型 "{new_name}" 已存在'.format(new_name=new_name))
+                self.show_warning('失败', '子类型 "{new_name}" 已存在'.format(new_name=new_name))
                 return
 
             success, message = self.pm.rename_subtype(
@@ -1154,11 +1169,11 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             )
 
             if success:
-                QtWidgets.QMessageBox.information(self, '成功', message)
+                self.show_info('成功', message)
                 self.load_subtypes()
                 self.selected_subtype = new_name
             else:
-                QtWidgets.QMessageBox.warning(self, '失败', message)
+                self.show_warning('失败', message)
 
     def on_subtype_clicked(self, item):
         st = item.text()
@@ -1210,14 +1225,14 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         if latest:
             if IN_MAYA:
                 try:
-                    cmds.file(latest, open=True, force=True)
-                    QtWidgets.QMessageBox.information(self, '打开', '已在 Maya 中打开最新版本')
+                    cmds.file(latest, open=True, force=True, options="v=0;")
+                    self.show_info_delayed('成功', '已在 Maya 中打开最新版本')
                 except Exception as e:
-                    QtWidgets.QMessageBox.warning(self, '错误', str(e))
+                    self.show_warning('错误', str(e))
             else:
-                QtWidgets.QMessageBox.information(self, '打开', '最新版本路径:\n' + latest)
+                self.show_info('打开', '最新版本路径:\n' + latest)
         else:
-            QtWidgets.QMessageBox.warning(self, '提示', '未找到任何版本')
+            self.show_warning('提示', '未找到任何版本')
 
     # ================== 版本操作 ==================
     def open_master(self):
@@ -1225,16 +1240,16 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             return
         mf = self.pm.get_master_file(self.current_asset_type, self.selected_asset, self.selected_subtype)
         if not mf or not os.path.exists(mf):
-            QtWidgets.QMessageBox.warning(self, '错误', 'Master 文件不存在')
+            self.show_warning('错误', 'Master 文件不存在')
             return
         if IN_MAYA:
             try:
-                cmds.file(mf, open=True, force=True)
-                QtWidgets.QMessageBox.information(self, '成功', 'Master 已打开')
+                cmds.file(mf, open=True, force=True, options="v=0;")
+                self.show_info_delayed('成功', 'Master 已打开')
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, '失败', str(e))
+                self.show_warning('失败', str(e))
         else:
-            QtWidgets.QMessageBox.information(self, '路径', mf)
+            self.show_info('路径', mf)
 
     def open_selected_version(self):
         item = self.version_list.currentItem()
@@ -1245,7 +1260,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             if latest:
                 fpath = latest
             else:
-                QtWidgets.QMessageBox.warning(self, '提示', '没有可用的版本')
+                self.show_warning('提示', '没有可用的版本')
                 return
         else:
             fname = item.text()
@@ -1255,52 +1270,52 @@ class PYPenpipelineDialog(PyouPersistentWindow):
         if os.path.exists(fpath):
             if IN_MAYA:
                 try:
-                    cmds.file(fpath, open=True, force=True)
-                    QtWidgets.QMessageBox.information(self, '成功', '版本已打开')
+                    cmds.file(fpath, open=True, force=True, options="v=0;")
+                    self.show_info_delayed('成功', '版本已打开')
                 except Exception as e:
-                    QtWidgets.QMessageBox.warning(self, '失败', str(e))
+                    self.show_warning('失败', str(e))
             else:
-                QtWidgets.QMessageBox.information(self, '路径', fpath)
+                self.show_info('路径', fpath)
         else:
-            QtWidgets.QMessageBox.warning(self, '错误', '找不到文件')
+            self.show_warning('错误', '找不到文件')
 
     def set_master(self):
         item = self.version_list.currentItem()
         if not item:
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择一个版本')
+            self.show_warning('提示', '请先选择一个版本')
             return
         fname = item.text()
         ok = self.pm.set_master(self.current_asset_type, self.selected_asset, self.selected_subtype, fname)
         if ok:
-            QtWidgets.QMessageBox.information(self, '成功', '已设为 Master')
+            self.show_info('成功', '已设为 Master')
         else:
-            QtWidgets.QMessageBox.warning(self, '失败', '设 Master 失败')
-    
+            self.show_warning('失败', '设 Master 失败')
+
     def save_new_master(self):
         """另存新master"""
         if not (self.pm and self.selected_asset and self.selected_subtype):
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择资产与子类型')
+            self.show_warning('提示', '请先选择资产与子类型')
             return
-        
-        confirm_msg = u"确认保存当前场景为Master？？？\n\n建议: 如有旧的master请去往{}下的master备份\n".format(self.selected_subtype)
+
+        confirm_msg = u"确认保存当前场景为Master？？？\n\n建议: 如有旧的master请去往{}下的master备份\n".format(
+            self.selected_subtype)
         reply = QtWidgets.QMessageBox.question(
-                self, u'确认保存Master', confirm_msg,
-                QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No
-            )
+            self, u'确认保存Master', confirm_msg,
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.No
+        )
 
         if reply == QtWidgets.QMessageBox.No:
             return
 
         if self.pm.save_master(self.current_asset_type, self.selected_asset, self.selected_subtype):
-            QtWidgets.QMessageBox.information(self, '成功', 'Master已保存')
-            
+            self.show_info_delayed('成功', 'Master已保存')
         else:
-            QtWidgets.QMessageBox.warning(self, '失败', 'Master保存失败')
+            self.show_warning('失败', 'Master保存失败')
 
     def save_new_version(self):
         """另存新版本"""
         if not (self.pm and self.selected_asset and self.selected_subtype):
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择资产与子类型')
+            self.show_warning('提示', '请先选择资产与子类型')
             return
 
         notes, ok = QtWidgets.QInputDialog.getText(self, '保存新版本', '输入版本备注:')
@@ -1308,20 +1323,20 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             return
 
         if self.pm.save_version(self.current_asset_type, self.selected_asset, self.selected_subtype, notes=notes):
-            QtWidgets.QMessageBox.information(self, '成功', '新版本已保存')
+            self.show_info_delayed('成功', '新版本已保存')
             versions = self.pm.get_workshop_versions(self.current_asset_type, self.selected_asset,
                                                      self.selected_subtype)
             self.version_list.clear()
             for v in versions:
                 self.version_list.addItem(v)
         else:
-            QtWidgets.QMessageBox.warning(self, '失败', '保存新版本失败')
+            self.show_warning('失败', '保存新版本失败')
 
     def import_selected_version(self):
         """Import选中版本"""
         item = self.version_list.currentItem()
         if not item:
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择一个版本')
+            self.show_warning('提示', '请先选择一个版本')
             return
 
         fname = item.text()
@@ -1329,23 +1344,23 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                              'components', self.selected_subtype, 'workshop', fname)
 
         if not os.path.exists(fpath):
-            QtWidgets.QMessageBox.warning(self, '错误', '找不到文件')
+            self.show_warning('错误', '找不到文件')
             return
 
         if IN_MAYA:
             try:
-                cmds.file(fpath, i=True)
-                QtWidgets.QMessageBox.information(self, '成功', 'Import 完成')
+                cmds.file(fpath, i=True, options="v=0;")
+                self.show_info('成功', 'Import 完成')
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, '失败', str(e))
+                self.show_warning('失败', str(e))
         else:
-            QtWidgets.QMessageBox.information(self, '路径', fpath)
+            self.show_info('路径', fpath)
 
     def reference_selected_version(self):
         """Reference选中版本"""
         item = self.version_list.currentItem()
         if not item:
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择一个版本')
+            self.show_warning('提示', '请先选择一个版本')
             return
 
         fname = item.text()
@@ -1353,18 +1368,18 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                              'components', self.selected_subtype, 'workshop', fname)
 
         if not os.path.exists(fpath):
-            QtWidgets.QMessageBox.warning(self, '错误', '找不到文件')
+            self.show_warning('错误', '找不到文件')
             return
 
         if IN_MAYA:
             try:
                 cmds.file(fpath, ignoreVersion=1, namespace=fname.split(".")[0], r=1, gl=1,
                           mergeNamespacesOnClash=False, options="v=0;")
-                QtWidgets.QMessageBox.information(self, '成功', 'Reference 完成')
+                self.show_info('成功', 'Reference 完成')
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, '失败', str(e))
+                self.show_warning('失败', str(e))
         else:
-            QtWidgets.QMessageBox.information(self, '路径', fpath)
+            self.show_info('路径', fpath)
 
     def reference_master(self):
         """Reference Master文件"""
@@ -1372,7 +1387,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             return
         mf = self.pm.get_master_file(self.current_asset_type, self.selected_asset, self.selected_subtype)
         if not mf or not os.path.exists(mf):
-            QtWidgets.QMessageBox.warning(self, '错误', 'Master 文件不存在')
+            self.show_warning('错误', 'Master 文件不存在')
             return
 
         if IN_MAYA:
@@ -1380,11 +1395,11 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                 fname = mf.split("master")[-1]
                 cmds.file(mf, ignoreVersion=1, namespace=fname.split(".ma")[0], r=1, gl=1,
                           mergeNamespacesOnClash=False, options="v=0;")
-                QtWidgets.QMessageBox.information(self, '成功', 'Reference Master 完成')
+                self.show_info('成功', 'Reference Master 完成')
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, '失败', str(e))
+                self.show_warning('失败', str(e))
         else:
-            QtWidgets.QMessageBox.information(self, '路径', mf)
+            self.show_info('路径', mf)
 
     # ================== 辅助方法 ==================
     def show_version_count(self, counts):
@@ -1395,7 +1410,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
 
     def take_snapshot(self):
         if not (self.pm and self.selected_asset or self.selected_subtype):
-            QtWidgets.QMessageBox.warning(self, '提示', '请先选择资产与子类型')
+            self.show_warning('提示', '请先选择资产与子类型')
             return
 
         if self.pm and self.selected_asset and self.selected_subtype:
@@ -1408,11 +1423,11 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                                                                 QtCore.Qt.KeepAspectRatio,
                                                                 QtCore.Qt.SmoothTransformation))
                     else:
-                        QtWidgets.QMessageBox.warning(self, '失败', '生成的预览图无效')
+                        self.show_warning('失败', '生成的预览图无效')
                 else:
-                    QtWidgets.QMessageBox.warning(self, '失败', '预览保存失败')
+                    self.show_warning('失败', '预览保存失败')
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, '失败', '截图过程中发生错误: {error}'.format(error=str(e)))
+                self.show_warning('失败', '截图过程中发生错误: {error}'.format(error=str(e)))
         elif self.pm and self.selected_asset and not self.selected_subtype:
             try:
                 path = self.pm.take_snapshot(self.current_asset_type, self.selected_asset)
@@ -1423,11 +1438,11 @@ class PYPenpipelineDialog(PyouPersistentWindow):
                                                                 QtCore.Qt.KeepAspectRatio,
                                                                 QtCore.Qt.SmoothTransformation))
                     else:
-                        QtWidgets.QMessageBox.warning(self, '失败', '生成的预览图无效')
+                        self.show_warning('失败', '生成的预览图无效')
                 else:
-                    QtWidgets.QMessageBox.warning(self, '失败', '预览保存失败')
+                    self.show_warning('失败', '预览保存失败')
             except Exception as e:
-                QtWidgets.QMessageBox.warning(self, '失败', '截图过程中发生错误: {error}'.format(error=str(e)))
+                self.show_warning('失败', '截图过程中发生错误: {error}'.format(error=str(e)))
 
     def clear_right(self):
         self.version_list.clear()
@@ -1447,12 +1462,7 @@ class PYPenpipelineDialog(PyouPersistentWindow):
             self.preview_label.clear()
             self.preview_label.setText('No Preview')
 
-    # def show(self):
-    #     super(PYPenpipelineDialog, self).show()
-    #     self.raise_()
-    #     self.activateWindow()
 
-# ------------------ 启动函数 ------------------
 def main():
     global py_Penpipeline
     try:
