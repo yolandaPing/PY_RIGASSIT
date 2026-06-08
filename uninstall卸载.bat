@@ -1,101 +1,67 @@
 @echo off
 chcp 65001 >nul
-setlocal enabledelayedexpansion
+setlocal
 
+title Uninstall PY_RIGASSIT
 
-REM Copyright (c) 2026 Yolanda Ping
-rem Get the "Documents" directory.
-FOR /F "tokens=2* delims= " %%A IN ('REG QUERY "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Personal"') DO SET Documents=%%B
+for /f "tokens=2*" %%A in (
+    'reg query "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v Personal'
+) do set "Documents=%%B"
 
-set INSTALL_DIR=%cd%
+set "versions=2017 2018 2019 2020 2021 2022 2023 2024 2025 2026"
 
-echo  ==========================Uninstall PY_RIGASSIT Tool=============================
-echo.  
-echo  Module uninstall for Autodesk Maya
-echo  Name..: PY_RIGASSIT
-echo  Author: Yolanda Ping
-echo  e-mail: YOLANDAPING1224@GMAIL.COM
-echo  Date..: 2024-09-08 : 15 :27
 echo.
-echo  This version supports Maya Version: 2017,2018,2019,2020,2022,2023,2024
-echo.
-echo  Copyright (c) 2025 Yolanda Ping
-echo  ==========================Uninstall PY_RIGASSIT Tool=============================
+echo ==========================================================
+echo                PY_RIGASSIT Uninstaller
+echo ==========================================================
 echo.
 
-rem List of Maya versions
-set "versions=2017 2018 2019 2020 2022 2023 2024 2025 2026 "
+set /p input=^>^>^> Confirm uninstall PY_RIGASSIT ? [y/n] :
 
-set /p input=" >>> 请确定卸载 PY_RIGASSIT Tool [" %cd% "] yes/no ?  [ y/n ] :  "
-set /p brt_input=" >>> 是否卸载 brSmoothWeights Tool [" %cd% "] yes/no ? [ y/n ] :  "
+if /i not "%input%"=="y" (
+    echo.
+    echo Cancelled.
+    pause
+    exit /b
+)
 
-if /i "%input%"=="y" (
+echo.
+echo Removing module files...
+echo.
 
-    if exist %Documents%\maya\modules\PY_RIGASSIT.mod del %Documents%\maya\modules\PY_RIGASSIT.mod
-    for %%V in (%versions%) do (
-                    if exist %Documents%\maya\%%V\modules\PY_RIGASSIT.mod del %Documents%\maya\%%V\modules\PY_RIGASSIT.mod
-                    if exist %Documents%\maya\%%V\zh_CN\modules\PY_RIGASSIT.mod del %Documents%\maya\%%V\zh_CN\modules\PY_RIGASSIT.mod
-                )
+if exist "%Documents%\maya\modules\PY_RIGASSIT.mod" (
+    del /f /q "%Documents%\maya\modules\PY_RIGASSIT.mod"
+)
 
-    if /i "%brt_input%"=="y" (if exist %Documents%\maya\modules del %Documents%\maya\modules\brSmoothWeights.mod)else (
-            echo.
-            echo  brSmoothWeights Tool 卸载取消.
-            )
+for %%V in (%versions%) do (
+    if exist "%Documents%\maya\%%V\modules\PY_RIGASSIT.mod" (
+        del /f /q "%Documents%\maya\%%V\modules\PY_RIGASSIT.mod"
+    )
+    if exist "%Documents%\maya\%%V\zh_CN\modules\PY_RIGASSIT.mod" (
+        del /f /q "%Documents%\maya\%%V\zh_CN\modules\PY_RIGASSIT.mod"
+    )
+    if exist "%Documents%\maya\%%V\prefs\shelves\shelf_PY_RIGASSIT.mel" (
+        del /f /q "%Documents%\maya\%%V\prefs\shelves\shelf_PY_RIGASSIT.mel"
+    )
+    if exist "%Documents%\maya\%%V\prefs\icons\PY_RIGASSIT*" (
+        del /f /q "%Documents%\maya\%%V\prefs\icons\PY_RIGASSIT*"
+    )
+    if exist "%Documents%\maya\%%V\prefs\PY_RIGASSIT*" (
+        del /f /q "%Documents%\maya\%%V\prefs\PY_RIGASSIT*"
+    )
+)
 
-    echo  PY_RIGASSIT Tool unInstalled successfully 卸载完成!
+echo.
+echo ==========================================================
+echo            PY_RIGASSIT Uninstall Complete
+echo ==========================================================
+echo.
 
-)else (
-            echo.
-            echo  PY_RIGASSIT Tool uninstall canceled 卸载取消.
-            )
+echo Done.
+echo Maya configs removed.
+echo Modules removed.
+echo Shelf removed.
+echo Icons removed.
 
+echo.
 pause
-=======
-@echo off
-
-rem Get the "Documents" directory.
-FOR /F "tokens=2* delims= " %%A IN ('REG QUERY "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Personal"') DO SET Documents=%%B
-
-set INSTALL_DIR=%cd%
-
-echo  ==========================Uninstall PY_RIGASSIT Tool=============================
-echo.  
-echo  Module uninstall for Autodesk Maya
-echo  Name..: PY_RIGASSIT
-echo  Author: Yolanda Ping
-echo  e-mail: YOLANDAPING1224@GMAIL.COM
-echo  Date..: 2024-09-08 : 15 :27
-echo.
-echo  This version supports Maya Version: 2017,2018,2019,2020,2022,2023,2024
-echo.
-echo  ==========================Uninstall PY_RIGASSIT Tool=============================
-echo.
-
-rem List of Maya versions
-set "versions=2017 2018 2019 2020 2022 2023 2024 "
-
-set /p input=" >>> Do you want to uninstall PY_RIGASSIT Tool [" %cd% "] yes/no ?  [ y/n ] :  "
-set /p brt_input=" >>> Do you want to uninstall brSmoothWeights Tool [" %cd% "] yes/no ? [ y/n ] :  "
-
-if /i "%input%"=="y" (
-
-    if exist %Documents%\maya\modules\PY_RIGASSIT.mod del %Documents%\maya\modules\PY_RIGASSIT.mod
-    for %%V in (%versions%) do (
-                    if exist %Documents%\maya\%%V\modules\PY_RIGASSIT.mod del %Documents%\maya\%%V\modules\PY_RIGASSIT.mod
-                    if exist %Documents%\maya\%%V\zh_CN\modules\PY_RIGASSIT.mod del %Documents%\maya\%%V\zh_CN\modules\PY_RIGASSIT.mod
-                )
-
-    if /i "%brt_input%"=="y" (if exist %Documents%\maya\modules del %Documents%\maya\modules\brSmoothWeights.mod)else (
-            echo.
-            echo  brSmoothWeights Tool uninstall canceled.
-            )
-
-    echo  PY_RIGASSIT Tool unInstalled successfully !
-
-)else (
-            echo.
-            echo  PY_RIGASSIT Tool uninstall canceled.
-            )
-
-pause
->>>>>>> 8215c5ba5fbffb8c5cc2357c9b7672c93ec3dee5

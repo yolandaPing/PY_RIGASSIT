@@ -15,8 +15,14 @@ set BRANCH=main
 
 echo.
 echo ========================================
-echo         PY_RIGASSIT Updater
+echo.  
+echo  Name..: PY_RIGASSIT Updater
+echo  Author: Yolanda Ping
+echo  E-mail: pyrigassit@gmail.com
+echo.
+echo  Copyright (c) 2026 Yolanda Ping
 echo ========================================
+echo.
 echo.
 
 :: Check Git
@@ -98,13 +104,13 @@ exit /b 1
 )
 
 echo.
-echo ========================================
-echo        Update Complete 
-echo ========================================
-echo.
-
 git log -1 --oneline
 
 echo.
+echo ========================================
+echo       Update completed successfully.
+echo ========================================
+echo.
+
 pause
 exit /b 0

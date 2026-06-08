@@ -2,6 +2,18 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
+title PY_RIGASSIT Updater
+
+:: ========================================
+:: Config
+:: ========================================
+
+set "REPO_URL=https://github.com/yolandaPing/PY_RIGASSIT_update"
+set "BRANCH=main"
+set "TARGET_DIR=%CD%"
+
+:: ========================================
+
 echo  ==========================Updata PY_RIGASSIT Tool=============================
 echo.  
 echo  Name..: PY_RIGASSIT
@@ -10,10 +22,6 @@ echo  E-mail: pyrigassit@gmali.com / yolandaping1224@gmail.com
 echo.
 echo  ==========================Updata PY_RIGASSIT Tool=============================
 echo.
-
-set "REPO_URL=https://github.com/yolandaPing/PY_RIGASSIT_update"
-set "BRANCH=main"
-set "TARGET_DIR=%CD%"
 
 echo Downloading...
 

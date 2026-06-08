@@ -2,8 +2,9 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
+title Installer PY_RIGASSIT
 
-REM Copyright (c) 2025 Yolanda Ping
+REM Copyright (c) 2026 Yolanda Ping
 
 rem Get the "Documents" directory.
 FOR /F "tokens=2* delims= " %%A IN ('REG QUERY "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v "Personal"') DO SET Documents=%%B
@@ -15,14 +16,14 @@ echo.
 echo  Module installer for Autodesk Maya
 echo  Name..: PY_RIGASSIT
 echo  Author: Yolanda Ping
-echo  e-mail: YOLANDAPING1224@GMAIL.COM
+echo  e-mail: pyrigassit@gmail.com
 echo  Date..: 2024-09-08 : 15 :27
 echo.
 echo  This version supports Maya Version: 2017,2018,2019,2020,2022,2023,2024,2025,2026
 echo.
-echo  RBF supports Maya Version: 2017,2018,2019,2020,2022,2023,2024,2025
+echo  RBF supports Maya Version: 2017,2018,2019,2020,2022,2023,2024,2025,2026
 echo.
-echo  Copyright (c) 2025 Yolanda Ping
+echo  Copyright (c) 2026 Yolanda Ping
 echo  ==========================Installer PY_RIGASSIT Tool=============================
 echo.
 
@@ -145,16 +146,6 @@ if /i "%input%"=="y" (
             echo  PY_RIGASSIT Tool installation canceled 取消.
             )
 
-
-rem For binary modules, create a module for each version, including a bunch of versions that don't
-rem exist yet.  This way, when users update for future versions, they won't always need to rerun
-rem install.bat.  This creates a bunch of noise in the module file, but that's not intended to be
-rem edited by hand.  This would be a lot nicer if Maya modules allowed substitutions in paths.
-rem
-rem These entries have a different module name py_RIGASSIT) than the entry above, since Maya will
-rem only load entries from the first matching entry.
-rem
-rem will only work on Windows, so there's no point including those here.
 
 endlocal
 pause
