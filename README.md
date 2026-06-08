@@ -75,7 +75,7 @@ Why Should I use this ?
 * PY_RIGASSIT 新用户可联系领取激活权限
 
 # 安装
-* 请确保你的maya已安装pymel ！！！安装和导入 PyMEL [Autodesk Maya PyMel]()
+* 请确保你的maya已安装pymel ！！！安装和导入 PyMEL指导： [Autodesk Maya PyMel](https://help.autodesk.com/view/MAYAUL/2025/ENU/?guid=GUID-2AA5EFCE-53B1-46A0-8E43-4CD0B2C72FB4)
 * 双击Install安装.bat 输入 y 安装工具，n 取消
 * uninstall卸载.bat 输入 y 卸载工具，n 取消
 * 支持maya2018-2026
@@ -86,7 +86,8 @@ Why Should I use this ?
 # 自动更新（有加速器开启加速！！！ maya需要全部关闭！！！）
 * 更新前建议运行 Clean_清理.bat
 * A.运行”Update更新.bat“ 在线自动更新；
-* B.运行”Update更新_Git.bat“ 在线自动更新(推荐，需要安装Git)；
+* B.运行”Update更新_Git.bat“ 在线自动更新(推荐，需要安装Git) [Git 下载地址](https://git-scm.com/download/win)；
+* ✔️ A, B 任选一种方式更新
 
 # 手动更新
 * 下载PY_RIGASSIT_update更新包 [PY_RIGASSIT_update](https://github.com/yolandaPing/PY_RIGASSIT_update.git)
