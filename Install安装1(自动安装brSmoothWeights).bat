@@ -35,10 +35,9 @@ rem Create the global modules directory if it doesn't exist.
 if not exist %Documents%\maya\modules mkdir %Documents%\maya\modules
 
 rem List of Maya versions
-set "versions=2017 2018 2019 2020 2022 2023 2024 2025 "
+set "versions=2017 2018 2019 2020 2022 2023 2024 2025 2026 "
 
-echo  是否安装PY_RIGASSI 在当前路径 [" %cd% "]  安装输入y / 取消输入n 
-set /p input= " >>> Whether to install PY_RIGASSIT Tool [" %cd% "]  yes/no ? [ y/n ] :"
+set /p input= " >>> Whether to install PY_RIGASSIT Tool [" %cd% "] ? [ y/n ] :"
 echo  ---------------------------------------------------------------------------------
 @REM set /p brt_input= " >>> Whether to install brSmoothWeights Tool [" %BRD_PATH% "] ? [ y/n ] :"
 
@@ -112,7 +111,7 @@ if /i "%input%"=="y" (
     echo PY_RIGASSIT MOD is set to: %OUTPUT%
 
     
-    if /i "%brt_input%"=="y" (
+    if /i "%input%"=="y" (
         (
             for %%V in (%versions%) do (
                 echo + MAYAVERSION:%%V brSmoothWeights  any %BRD_PATH%
@@ -141,6 +140,16 @@ if /i "%input%"=="y" (
             echo  PY_RIGASSIT Tool installation canceled.
             )
 
+
+rem For binary modules, create a module for each version, including a bunch of versions that don't
+rem exist yet.  This way, when users update for future versions, they won't always need to rerun
+rem install.bat.  This creates a bunch of noise in the module file, but that's not intended to be
+rem edited by hand.  This would be a lot nicer if Maya modules allowed substitutions in paths.
+rem
+rem These entries have a different module name py_RIGASSIT) than the entry above, since Maya will
+rem only load entries from the first matching entry.
+rem
+rem will only work on Windows, so there's no point including those here.
 
 endlocal
 pause
