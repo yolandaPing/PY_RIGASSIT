@@ -62,6 +62,7 @@ Why Should I use this ?
 * ✔️ DIR修型工具（maya自带节点）、
 * ✔️ blendShape Editor 、
 * ✔️ snake rigging
+<img width="1054" height="844" alt="e0c0f0c019259a73b2f8e20b157216e0" src="https://github.com/user-attachments/assets/26330c07-8865-4b3e-8488-d331fe1f65b9" />
 
 * 上百套功能，实用功能满足你所需，更多功能介绍及演示请转B站：https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0或B站搜索 我有一只猛犬；
 * 建议安装numpy， 可以使用到变形器转权重，极速版权重导出导入！！！
