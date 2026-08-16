@@ -50,6 +50,38 @@ def copy_to_clipboard(text, msg=None):
         print(msg or "Copied: {}".format(text))
 
 
+class PYAboutDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super(PYAboutDialog, self).__init__(parent)
+        self.setWindowTitle("About")
+        self.resize(200, 220)
+        layout = QtWidgets.QVBoxLayout(self)
+        text = QtWidgets.QTextEdit()
+        text.setReadOnly(True)
+        text.setText(
+            "PY_RIGASSIT\n\n"
+            "Supported Maya Versions:\n"
+            "2018 - 2026\n\n"
+            "Features:\n"
+            "- Joint\n"
+            "- IKFK\n"
+            "- Copy Weight/BlendShape/FFD/UV/SDK/Deform\n"
+            "- Copy Attribute\n"
+            "- Mirror Attribute/SDK/Deform Weight\n"
+            "- Editor BlendShape/SDK\n"
+            "- Dirver Pose system\n"
+            "- Openpipeline\n"
+            "- Rivet Follice Tool\n"
+            "- Combine SDK Driven\n"
+            "- Transfer uv shader Tool\n"
+            "- Animation Tool\n"
+            "- Hotbox Designer\n"
+            "- ......\n"
+            "Rebuilt for production pipeline."
+        )
+        layout.addWidget(text)
+
+
 class PYRiggingDialogManager(PyouPersistentWindow):
 
     WINDOW_NAME = "PYRiggingDialogManager"
@@ -135,7 +167,7 @@ class PYRiggingDialogManager(PyouPersistentWindow):
 
                 name = item_id or label
 
-                def _cb(*_, n=name, a=act):
+                def _cb(n=name, a=act, *args):
                     return_checkBox(n, a.isChecked())
 
                 act.triggered.connect(_cb)
@@ -150,67 +182,45 @@ class PYRiggingDialogManager(PyouPersistentWindow):
 
             return act
 
-
         # ---------------- ABOUT ----------------
         about = self.menu_bar.addMenu("About")
 
         add(about, "bilibili: 我有一只猛犬",
             callback=lambda: webbrowser.open("https://space.bilibili.com/3493142019967757"))
-
         add(about, "pyrigassit@gmail.com", callback=self._copy_email)
-
         sep = about.addAction("PY_RIGASSIT")
         sep.setEnabled(False)
-
         about.addSeparator()
-
-        add(about, "Update",
-            callback=lambda: webbrowser.open(self._info[-2] if self._info else ""))
-
-        add(about, u"Quark 夸克网盘",
-            callback=lambda: webbrowser.open(self._info[-1] if self._info else ""))
-
+        add(about, "Update", callback=lambda: webbrowser.open(self._info[-2] if self._info else ""))
+        add(about, u"Quark 夸克网盘", callback=lambda: webbrowser.open(self._info[-1] if self._info else ""))
+        add(about, "About", callback=self.show_about)
 
         # ---------------- CLEAR ----------------
         clear = self.menu_bar.addMenu("Clear")
-
         add(clear, "Clean NameSpace",
             callback=lambda: self.dispatcher.execute("Clean NameSpace"))
-
         add(clear, "Optimize Scene",
             callback=lambda: self.dispatcher.execute("Optimize Scene"))
-
         clear.addSeparator()
-
         add(clear, "Check Scene Name",
             callback=lambda: self.dispatcher.execute("Check Scene Name"), bold=True)
-
         add(clear, "Delete Unused Nodes",
             callback=lambda: self.dispatcher.execute("Delete Unused Nodes"), bold=True)
-
         add(clear, "Delete unknown Node",
             callback=lambda: self.dispatcher.execute("Delete unknown Node"), bold=True)
-
         add(clear, "Delete unUsedOrig",
             callback=lambda: self.dispatcher.execute("Delete unUsedOrig"), bold=True)
-
         clear.addSeparator()
-
         add(clear, "Delete unDisplayPoint",
             callback=lambda: self.dispatcher.execute("Delete unDisplayPoint"))
-
         add(clear, "Delete unUsedPlug",
             callback=lambda: self.dispatcher.execute("Delete unUsedPlug"))
-
         add(clear, "Delete unUsedDagPose",
             callback=lambda: self.dispatcher.execute("Delete unUsedDagPose"))
-
         add(clear, "UnLockNode selected",
             callback=lambda: self.dispatcher.execute("UnLockNode selected"))
-
         add(clear, "UnLockNode Scene",
             callback=lambda: self.dispatcher.execute("UnLockNode Scene"), bold=True)
-
         add(clear, "UnLock initialShading",
             callback=lambda: self.dispatcher.execute("UnLock initialShading"), bold=True)
 
@@ -221,28 +231,26 @@ class PYRiggingDialogManager(PyouPersistentWindow):
             callback=lambda: self.dispatcher.execute("Maya Script Editor"))
         add(tool, "CharcoalEditor2",
             callback=lambda: self.dispatcher.execute("CharcoalEditor2"))
-
+        tool.addAction("Other").setEnabled(False)
+        add(tool, "Curve Snape",
+            callback=lambda: self.dispatcher.execute("Curve Snape"))
+        add(tool, "Compare Groups",
+            callback=lambda: self.dispatcher.execute("Compare Groups"))
+        add(tool, "BlendShape Exp/Imp",
+            callback=lambda: self.dispatcher.execute("BlendShape Exp/Imp"))
         # ---------------- OPTIONS ----------------
         opt = self.menu_bar.addMenu("Options")
-
         opt.addAction("Convenient").setEnabled(False)
-
         add(opt, "Use shelfButton New",
             checkable=True, checked=ud.shelfButton_New)
-
         add(opt, "Auto import Hotkey",
             checkable=True, checked=ud.hotkey)
-
         add(opt, "Auto add sec/pri grp",
             checkable=True, checked=ud.Grp_prisec)
-
         opt.addSeparator()
-
         opt.addAction("Window Display").setEnabled(False)
-
         add(opt, "Dock",
             callback=self.to_dock_mode)
-
         add(opt, "Reload Theme",
             callback=self.reload_theme)
 
@@ -379,9 +387,25 @@ class PYRiggingDialogManager(PyouPersistentWindow):
             (" delete orig node ", lambda: self.dispatcher.execute("Delete Orig Nodes")),
             (" create joint ", lambda: self.dispatcher.execute("Create Joints")),
             (" joint add shape ", lambda: self.dispatcher.execute("Joints Add Shape")),
+            (" curve create joints ", lambda: self.dispatcher.execute("Curve Create Joint")),
 
         ], self)
 
+        self.mm_shift= PYMarkingMenuLite([
+            (" OLD PY_RIGASSIT", lambda: self.dispatcher.execute("OLD PY_RIGASSIT")),
+            (" Rename", lambda: self.dispatcher.execute("Rename")),
+            (" Joint Orient ", lambda: self.dispatcher.execute("Joint Orient")),
+            (" InsertJoints ", lambda: self.dispatcher.execute("InsertJoints")),
+            (" IKFK Rigging ", lambda: self.dispatcher.execute("IKFK Rigging")),
+            (" Follow World ", lambda: self.dispatcher.execute("Follow World")),
+            (" Attribute Edit ", lambda: self.dispatcher.execute("Attribute Edit")),
+            (" Convert Drivenkeys ", lambda: self.dispatcher.execute("Convert Drivenkeys")),
+
+        ], self)
+
+    def show_about(self):
+        dlg = PYAboutDialog(self)
+        dlg.show()
 
     def reload_theme(self):
         try:
@@ -389,23 +413,31 @@ class PYRiggingDialogManager(PyouPersistentWindow):
         except:
             pass
 
-
     def to_dock_mode(self):
 
         try:
+
             from py_rigAssit.dialogs.DockWindowBase import DockWindowBase
 
+            # ---------------------------------
+            dialog_data = self.dialog_data
+            title = self.title
+            widget_cls = self.__class__
+
+            # ---------------------------------
             self.close()
 
+            # ---------------------------------
             QtCore.QTimer.singleShot(
                 0,
                 lambda: DockWindowBase.safe_dock(
-                    lambda: self.__class__(self.dialog_data),
-                    self.title
+                    lambda: widget_cls(dialog_data),
+                    title
                 )
             )
 
         except Exception as e:
+
             print("Dock Failed:", e)
 
     def mousePressEvent(self, event):
@@ -416,6 +448,8 @@ class PYRiggingDialogManager(PyouPersistentWindow):
 
             if event.modifiers() & QtCore.Qt.ControlModifier:
                 self.mm_ctrl.start(global_pos)
+            elif event.modifiers() & QtCore.Qt.ShiftModifier:
+                self.mm_shift.start(global_pos)
             else:
                 self.mm_normal.start(global_pos)
 

@@ -16,7 +16,7 @@ from py_rigAssit.common.command_dispatcher import CommandDispatcher
 import py_rigAssit.common.img_commands
 import maya.cmds as mc
 import maya.mel as mel
-import maya.OpenMaya as om
+
 
 PY_WIDGEAT = Widgets()
 
@@ -129,7 +129,7 @@ class PYScriptManagerCore(object):
         name = self.clean_name(name)
 
         if not name:
-            om.MGlobal.displayError("Invalid Name")
+            mayaPrint.error("Invalid Name")
             return
 
         path = os.path.join(
@@ -142,34 +142,45 @@ class PYScriptManagerCore(object):
         except:
             open(path, "w").write(content)
 
-    def run_script(self, name):
+    def run_script(self, full_path, script_type):
         """原运行方法，保留兼容"""
-        path = os.path.join(
-            self.current_dir(),
-            name + self.current_ext()
-        )
-
-        if not os.path.exists(path):
-            om.MGlobal.displayError("Script not found")
-            return
-
-        self.run_script_file(path, self.script_type)
+        # path = os.path.join(
+        #     self.current_dir(),
+        #     name + self.current_ext()
+        # )
+        #
+        # if not os.path.exists(path):
+        #     mayaPrint.error("Script not found")
+        #     return
+        mc.undoInfo(openChunk=True)
+        try:
+            self.run_script_file(full_path, script_type)
+        finally:
+            mc.undoInfo(closeChunk=True)
 
     def run_script_file(self, full_path, script_type):
         """通用脚本执行方法，根据类型执行 mel 或 python 脚本"""
         if not os.path.exists(full_path):
-            om.MGlobal.displayError("Script not found: {}".format(full_path))
+            mayaPrint.error("Script not found: {}".format(full_path))
             return
 
         if script_type == "mel":
             mel.eval('source "{}";'.format(full_path.replace("\\", "/")))
         else:  # python
             try:
-                code = codecs.open(full_path, "r", "utf-8").read()
+                with open(full_path, "r", encoding="utf-8") as f:
+                    code = f.read()
             except:
-                code = open(full_path, "r").read()
-
+                with open(full_path, "r") as f:
+                    code = f.read()
             exec(compile(code, full_path, "exec"), {})
+
+            # try:
+            #     code = codecs.open(full_path, "r", "utf-8").read()
+            # except:
+            #     code = open(full_path, "r").read()
+            #
+            # exec(compile(code, full_path, "exec"), {})
 
     def open_folder(self):
         path = self.current_dir()
@@ -391,10 +402,6 @@ class PYScriptButtonsPanel(object):
         if not scripts_info:
             return
 
-        start = (0.25, 0.35, 0.55)
-        end = (0.55, 0.65, 0.85)
-        count = max(len(scripts_info) - 1, 1)
-
         row = 0
         col = 0
         max_col = 4
@@ -408,19 +415,11 @@ class PYScriptButtonsPanel(object):
             else:
                 display, stype, path = info
 
-            t = 1.0 - float(i) / count
-            color = (
-                start[0] + (end[0] - start[0]) * t,
-                start[1] + (end[1] - start[1]) * t,
-                start[2] + (end[2] - start[2]) * t
-            )
-            r = int(color[0] * 255)
-            g = int(color[1] * 255)
-            b = int(color[2] * 255)
             btn = QtWidgets.QPushButton(display)
             btn.setFixedHeight(28)
             btn.setProperty("cld_custom", True)
-            btn.clicked.connect(partial(self.core.run_script_file, path, stype))
+            # btn.clicked.connect(partial(self.core.run_script_file, path, stype))
+            btn.clicked.connect(partial(self.core.run_script, path, stype))
             self.layout.addWidget(btn, row, col)
             col += 1
             if col >= max_col:
@@ -451,6 +450,7 @@ class PYCustomLayout(QtWidgets.QWidget):
 
         cld_widget = QtWidgets.QWidget()
         scroll_layout = QtWidgets.QVBoxLayout(cld_widget)
+        scroll_layout.setContentsMargins(6, 0, 6, 0)
         scroll_layout.setSpacing(6)
 
         scroll.setWidget(cld_widget)
@@ -467,16 +467,18 @@ class PYCustomLayout(QtWidgets.QWidget):
 
         page = QtWidgets.QWidget()
         lay = QtWidgets.QVBoxLayout(page)
-        lay.setSpacing(6)
-        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setContentsMargins(0, 0, 4, 0)
+        lay.setSpacing(4)
 
         sec1 = PY_WIDGEAT.create_section("Artist:")
+        sec1.setContentsMargins(0, 0, 4, 0)
         grid1 = GridButtons("artist_tool", 3)
         grid1.clicked.connect(self.run_action)
         sec1.addWidget(grid1)
 
         # Custom 区域
         sec2 = PY_WIDGEAT.create_section("Custom:")
+        sec2.setContentsMargins(0, 0, 4, 0)
         sec2.addWidget(PY_WIDGEAT.create_text(u"> 下面是用户自定义脚本管理 <"))
         wrapper = QtWidgets.QVBoxLayout()
         self.core = PYScriptManagerCore()
@@ -490,7 +492,7 @@ class PYCustomLayout(QtWidgets.QWidget):
         wrapper.addLayout(sc_bth_layout)
         filter_group = QtWidgets.QWidget()
         filter_layout = QtWidgets.QHBoxLayout(filter_group)
-        filter_layout.setContentsMargins(0, 0, 0, 0)
+        filter_layout.setContentsMargins(4, 0, 4, 0)
 
         self.filter_buttons = QtWidgets.QButtonGroup()
         self.radio_mel = QtWidgets.QRadioButton(" MEL ")
@@ -507,7 +509,8 @@ class PYCustomLayout(QtWidgets.QWidget):
         wrapper.addWidget(filter_group)
         PY_WIDGEAT.separator(wrapper, True)
         self.grid_layout = QtWidgets.QGridLayout()
-        self.grid_layout.setSpacing(4)
+        self.grid_layout.setContentsMargins(0, 0, 4, 0)
+        self.grid_layout.setSpacing(2)
         wrapper.addLayout(self.grid_layout)
         sec2.addLayout(wrapper)
         self.panel = PYScriptButtonsPanel(self.grid_layout, self.core)
@@ -636,7 +639,7 @@ class PYCustomDiadlg(PyouPersistentWindow):
 
         widget = PYCustomLayout(parent=self)
         scroll_layout.addWidget(widget.init_ui())
-        # main.addWidget(widget.init_ui())
+
 
 def main():
 

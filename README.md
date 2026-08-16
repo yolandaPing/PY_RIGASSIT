@@ -17,7 +17,7 @@ Why Should I use this ?
 
 ============================================================
 
-# 当前版本 0.6.1.1
+# 当前版本 0.6.3.3
 
 <img width="2486" height="1139" alt="新版ui" src="https://github.com/user-attachments/assets/4b715585-ae7b-4ec8-a809-539a5acbc6d7" />
 <img width="2551" height="1332" alt="第六版升级" src="https://github.com/user-attachments/assets/e14d61bf-b37a-417e-a6ac-174921d7e1d7" />
@@ -42,7 +42,7 @@ Why Should I use this ?
 * ✔批量拷贝sdk、和导出sdk数据、
 * ✔批量镜像sdk工具
 * ✔变形器权重批量拷贝工具
-* ✔拆分权重工具、
+* ✔拆分权重工具(曲线拆分， soft拆分)、
 * ✔mel转python工具、
 * ✔脚本编辑器着色工具、
 * ✔maya2024或以上版本支持一个模型上多个蒙皮节点拷贝权重，
@@ -51,6 +51,7 @@ Why Should I use this ?
 * ✔导出动画数据工具 ，
 * ✔导入模型材质，
 * ✔导出模型数据工具,
+* ✔Recorder Node,
 * ✔️ hotBox designer （热盒大师）、
 * ✔支持用户加入自己工具和脚本 等等
 
@@ -61,7 +62,9 @@ Why Should I use this ?
 * ✔️ RBF修型工具（第三方节点）、
 * ✔️ DIR修型工具（maya自带节点）、
 * ✔️ blendShape Editor 、
+* ✔️ blendShape target导出导入 、
 * ✔️ snake rigging
+<img width="1054" height="844" alt="e0c0f0c019259a73b2f8e20b157216e0" src="https://github.com/user-attachments/assets/479d6232-cf17-4acc-b94a-df2b1afac5a6" />
 
 * 上百套功能，实用功能满足你所需，更多功能介绍及演示请转B站：https://space.bilibili.com/3493142019967757?spm_id_from=333.1007.0.0或B站搜索 我有一只猛犬；
 * 建议安装numpy， 可以使用到变形器转权重，极速版权重导出导入！！！

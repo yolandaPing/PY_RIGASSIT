@@ -10,8 +10,8 @@ from py_rigAssit import QtWidgets, QtCore, QtGui, Widgets, PyouPersistentWindow
 from selectOrRemove import SelectOrremoveObj
 from CopyEdit.copy_blendShape_info import BlendShapeInfo
 import CopyEdit.copy_skinCluster_info as copy_skinCluster_info
-import CopyEdit.copy_FFD_UV as copy_FFD_UV
-from py_rigAssit.dialogs import decorator
+
+# from py_rigAssit.dialogs import decorator
 from py_rigAssit.common.command_dispatcher import CommandDispatcher
 import py_rigAssit.common.img_commands
 from py_rigAssit.dialogs import mayaPrint
@@ -23,7 +23,7 @@ _widgest = Widgets()
 _bsInfo = BlendShapeInfo()
 
 
-class PYCopyToolsDialog(PyouPersistentWindow):
+class PYCopyToolsLayout(QtWidgets.QWidget):
 
     WINDOW_TITLE = "Batch Copys "
     TimeStamp = "2022-2026"
@@ -32,23 +32,19 @@ class PYCopyToolsDialog(PyouPersistentWindow):
                  u"在当前的skinNode基础上额外添加新的skinNode", u"将多个模型skin节点拷贝给新模型")
 
     def __init__(self, parent=None):
-        super(PYCopyToolsDialog, self).__init__("PYCopyToolsDialog", "PYCopyToolsDialog", parent)
-        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
-        self.setWindowTitle(self.WINDOW_TITLE)
-        self.setObjectName('pyCopyToolsDialog')
-        self.setWindowFlags(self.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint)
+        super(PYCopyToolsLayout, self).__init__(parent)
+
         if self.mayaMajorVersion < 2024:
             self.skin_radio_en = False
         else:
             self.skin_radio_en = True
 
-        self.init_ui(True)
-        self.loadWindowSettings()
-
     def init_ui(self, copyright=False):
-        main_layout = QtWidgets.QVBoxLayout(self)
+        container_main = QtWidgets.QWidget()
+        container_main.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        main_layout = QtWidgets.QVBoxLayout(container_main)
         main_layout.setSpacing(4)
-        main_layout.setContentsMargins(2, 2, 2, 2)
+        main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(_widgest.create_title("Batch Copy Tools", 15, ""))
 
         self.scroll_area = QtWidgets.QScrollArea()
@@ -74,7 +70,6 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         _widgest.separator(bottom_layout)
         self.create_type_widgets(bottom_layout)
         # bottom_layout.addStretch()
-
         v_splitter.addWidget(top_frame)
         v_splitter.addWidget(bottom_frame)
         v_splitter.setStretchFactor(0, 1)
@@ -82,20 +77,16 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         v_splitter.setSizes([3, 1])
 
         scroll_layout.addWidget(v_splitter)
-        if copyright:
-            _widgest.create_copyrightText(main_layout, self.TimeStamp)
+
         self.create_connections()
-        return main_layout
+        return container_main
 
     def source_widgets(self, frame):
-
-        # layout
         self.main_layout_source = QtWidgets.QVBoxLayout(frame)
+        self.main_layout_source.setContentsMargins(8, 0, 4, 4)
         self.main_layout_source.setSpacing(0)
 
         btn_layout_source = QtWidgets.QHBoxLayout()
-
-        # widgets
         source_label = QtWidgets.QLabel("source:")
         source_label.setAlignment(QtCore.Qt.AlignCenter)
 
@@ -108,7 +99,6 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         self.remove_source_btn = QtWidgets.QPushButton("remove")
         self.remove_source_btn.setProperty("danger", True)
 
-        # combine widgets layout
         self.main_layout_source.addWidget(source_label)
         self.main_layout_source.addWidget(self.source_list)
         self.main_layout_source.addLayout(btn_layout_source)
@@ -116,17 +106,12 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         btn_layout_source.addWidget(self.remove_source_btn)
 
     def target_widgets(self, frame):
-
-        # layout
         self.main_layout_target = QtWidgets.QVBoxLayout(frame)
+        self.main_layout_target .setContentsMargins(4, 0, 8, 4)
         self.main_layout_target.setSpacing(0)
-
         btn_layout_target = QtWidgets.QHBoxLayout()
-
-        # widgets
         target_label = QtWidgets.QLabel("target:")
         target_label.setAlignment(QtCore.Qt.AlignCenter)
-
         self.target_list = QtWidgets.QListWidget()
         self.target_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
 
@@ -135,7 +120,6 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         self.remove_target_btn = QtWidgets.QPushButton("remove")
         self.remove_target_btn.setProperty("danger", True)
 
-        # combine widgets layout
         self.main_layout_target.addWidget(target_label)
         self.main_layout_target.addWidget(self.target_list)
         self.main_layout_target.addLayout(btn_layout_target)
@@ -143,19 +127,14 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         btn_layout_target.addWidget(self.remove_target_btn)
 
     def create_textScrollList_lay(self, parent_layout):
-
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
-        splitter.setHandleWidth(3)
+        splitter.setHandleWidth(1)
         splitter.setChildrenCollapsible(True)
-
         frame1 = QtWidgets.QFrame()
         frame2 = QtWidgets.QFrame()
-
         splitter.addWidget(frame1)
         splitter.addWidget(frame2)
-
         splitter.setSizes([100, 100])
-
         self.source_widgets(frame1)
         self.target_widgets(frame2)
 
@@ -174,9 +153,9 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         self.copy_block = _widgest.create_radiogroup(
             "Copy Mode",
             [
-                ("one > one/multis", 1, self.txts[1]),
+                ("one/multis", 1, self.txts[1]),
                 ("skin grp name", 2, self.txts[2]),
-                ("skin grp Combine", 3, self.txts[3]),
+                ("skin grp com", 3, self.txts[3]),
             ],
             default_id=1
         )
@@ -202,10 +181,16 @@ class PYCopyToolsDialog(PyouPersistentWindow):
             ],
             default_id=1
         )
-
-        self.clean_invild_cbx = QtWidgets.QCheckBox(u'Cleaning invalid targets 拷贝blendShape清理无效的target')
+        bs_op_layout = QtWidgets.QHBoxLayout()
+        self.clean_invild_cbx = QtWidgets.QCheckBox(u'Cleaning targets 清理无效的target')
         self.clean_invild_cbx.setChecked(True)
         self.clean_invild_cbx.setEnabled(False)
+        self.cvWarp_cbx = QtWidgets.QCheckBox(u'cvWarp')
+        self.cvWarp_cbx.setChecked(False)
+        self.cvWarp_cbx.setEnabled(False)
+
+        bs_op_layout.addWidget(self.clean_invild_cbx)
+        bs_op_layout.addWidget(self.cvWarp_cbx)
 
         btn_layout = QtWidgets.QHBoxLayout()
         btn_layout.setSpacing(2)
@@ -226,7 +211,8 @@ class PYCopyToolsDialog(PyouPersistentWindow):
         _widgest.separator(layout)
         layout.addWidget(self.skin_block)
         layout.addWidget(_widgest.create_text(u'>> Please select the under type of copy first !!!'))
-        layout.addWidget(self.clean_invild_cbx)
+        # layout.addWidget(self.clean_invild_cbx)
+        layout.addLayout(bs_op_layout)
         layout.addWidget(self.type_block)
         layout.addLayout(btn_layout)
         frame_layout.addWidget(group)
@@ -348,57 +334,127 @@ class PYCopyToolsDialog(PyouPersistentWindow):
     # @decorator.undo
     def copy_skin_default(self):
         oldMod, newMod = self._get_src_tgt()
-        for src, tgt in self._pair_iter(oldMod, newMod):
-            cmds.select(src, tgt, r=1)
-            copy_skinCluster_info.copy_skin_type(if_add=False)
-            mayaPrint.log(" {} >>> {} .".format(src, tgt))
+        cmds.undoInfo(openChunk=True)
+        try: 
+            for src, tgt in self._pair_iter(oldMod, newMod):
+                copy_skinCluster_info.copy_skin_type([src, tgt], if_add=False)
+                mayaPrint.log(" {} >>> {} .".format(src, tgt))
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     # @decorator.undo
     def copy_skin_add_node(self):
         oldMod, newMod = self._get_src_tgt()
-        for src, tgt in self._pair_iter(oldMod, newMod):
-            cmds.select(src, tgt)
-            copy_skinCluster_info.copy_skin_type(if_add=True)
-            mayaPrint.log(" {} >>> {} .".format(src, tgt))
+        cmds.undoInfo(openChunk=True)
+        try: 
+            for src, tgt in self._pair_iter(oldMod, newMod):
+                copy_skinCluster_info.copy_skin_type([src, tgt], if_add=True)
+                mayaPrint.log(" {} >>> {} .".format(src, tgt))
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     # @decorator.undo
     def copy_skin_multi_to_one(self):
         oldMod, newMod = self._get_src_tgt()
-        copy_skinCluster_info.copy_multi_mesh_skins_to_one(oldMod, newMod)
-        mayaPrint.log(" copy Successfully.")
+        cmds.undoInfo(openChunk=True)
+        try: 
+            copy_skinCluster_info.copy_multi_mesh_skins_to_one(oldMod, newMod)
+            mayaPrint.log(" copy Successfully.")
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     # @decorator.undo
     def copy_blendshape(self):
         clean = self.clean_invild_cbx.isChecked()
         oldMod, newMod = self._get_src_tgt()
-        for src, tgt in self._pair_iter(oldMod, newMod):
-            _bsInfo.apply_copy_blendShape_Drefrom(Source=src, Object=tgt)
-            if clean:
-                cmds.select(tgt, r=1)
-                _bsInfo.CleanUpBS()
-                cmds.select(cl=True)
+        cmds.undoInfo(openChunk=True)
+        try: 
+            for src, tgt in self._pair_iter(oldMod, newMod):
+                _bsInfo.apply_copy_blendShape_Drefrom(Source=src, Object=tgt)
+                if clean:
+                    _bsInfo.CleanUpBS([tgt])
 
-            mayaPrint.log("copy blendShape: {} >>> {} .".format(src, tgt))
+                mayaPrint.log("copy blendShape: {} >>> {} .".format(src, tgt))
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     # @decorator.undo
     def copy_uv(self):
+        import CopyEdit.copy_FFD_UV as copy_FFD_UV
         oldMod, newMod = self._get_src_tgt()
-        for src, tgt in self._pair_iter(oldMod, newMod):
-            copy_FFD_UV.transferUV(src, tgt)
-            mayaPrint.log("transferUV: {} >>> {} .".format(src, tgt))
+        cmds.undoInfo(openChunk=True)
+        try: 
+            for src, tgt in self._pair_iter(oldMod, newMod):
+                copy_FFD_UV.transferUV(src, tgt)
+                mayaPrint.log("transferUV: {} >>> {} .".format(src, tgt))
+        finally:
+            cmds.undoInfo(closeChunk=True)
+
+    def copy_ffd(self):
+        import CopyEdit.copy_FFD_UV as copy_FFD_UV
+        oldMod, newMod = self._get_src_tgt()
+        cmds.undoInfo(openChunk=True)
+        try:   
+            for src, tgt in self._pair_iter(oldMod, newMod):
+                copy_FFD_UV.ADDFFD(src, tgt)
+                mayaPrint.log("transferFFD: {} >>> {} .".format(src, tgt))
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
     # @decorator.undo
     def grp_to_copy(self, Type):
         oldMod, newMod = self._get_src_tgt()
+        cmds.undoInfo(openChunk=True)
+        try:    
+            for src, tgt in self._pair_iter(oldMod, newMod):
+                if Type == 2:
+                    copy_skinCluster_info.grp_object_name_copy(src, tgt)
+                elif Type == 3:
+                    copy_skinCluster_info.grp_combine_copy_skin(src, tgt)
 
-        for src, tgt in self._pair_iter(oldMod, newMod):
-            if Type == 2:
-                copy_skinCluster_info.grp_object_name_copy(src, tgt)
-            elif Type == 3:
-                copy_skinCluster_info.grp_combine_copy_skin(src, tgt)
+            cmds.select(cl=1)
+            mayaPrint.log(' group object copy Successfully.')
+        finally:
+            cmds.undoInfo(closeChunk=True)
 
-        cmds.select(cl=1)
-        mayaPrint.log(' group object copy Successfully.')
+
+class PYCopyToolsDialog(PyouPersistentWindow):
+    WINDOW_TITLE = "Batch Copys "
+    TimeStamp = "2022-2026"
+
+    def __init__(self, parent=None):
+        super(PYCopyToolsDialog, self).__init__("PYCopyToolsDialog", "PYCopyToolsDialog", parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
+        self.setWindowTitle(self.WINDOW_TITLE)
+        self.setObjectName('pyCopyToolsDialog')
+        self.setWindowFlags(self.windowFlags() ^ QtCore.Qt.WindowContextHelpButtonHint)
+
+        self._build_ui()
+        self.loadWindowSettings()
+
+
+    def _build_ui(self):
+        main = QtWidgets.QVBoxLayout(self)
+        main.setContentsMargins(4, 4, 4, 4)
+        main.setSpacing(4)
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setContentsMargins(0, 0, 0, 0)
+
+        cld_widget = QtWidgets.QWidget()
+        scroll_layout = QtWidgets.QVBoxLayout(cld_widget)
+        scroll_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_layout.setSpacing(4)
+
+        scroll.setWidget(cld_widget)
+        main.addWidget(scroll)
+
+        self.widget = PYCopyToolsLayout(parent=self)
+
+        scroll_layout.addWidget(self.widget.init_ui())
+
+        _widgest.create_copyrightText(main, self.TimeStamp)
 
 
 def main():

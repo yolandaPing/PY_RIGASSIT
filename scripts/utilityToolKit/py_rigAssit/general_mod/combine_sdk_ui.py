@@ -6,13 +6,12 @@
 # .Date....: 2025/11/15 12:03
 # .Finish time:
 from py_rigAssit import QtWidgets, QtCore, QtGui, QAction, Widgets, PyouPersistentWindow
-from ConstrainEdit.setDefaultsAttr import SetDirveKeyTool
+# from ConstrainEdit.setDefaultsAttr import SetDirveKeyTool
 from AttrNameUtils import PyAttrUtils
 import HelpImageUI as Help
 
 import maya.cmds as mc, maya.OpenMaya as om
 
-_SDK = SetDirveKeyTool()
 _ATTR = PyAttrUtils()
 PY_WIDGEAT = Widgets()
 
@@ -20,14 +19,13 @@ PY_WIDGEAT = Widgets()
 class PYCombine_SDK_UI(PyouPersistentWindow):
     web = "https://www.bilibili.com/video/BV1qHmqBSEbk/?share_source=copy_web&vd_source=7b50d73ef3e3d9c8d5f26b106034eb71"
 
-
     def __init__(self, parent=PY_WIDGEAT.maya_main_window()):
         super(PYCombine_SDK_UI, self).__init__("PYCombine_SDK_UI", "PYCombine_SDK_UI", parent)
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
 
         self.WINDOW_NAME = 'combine SDK Tool'
         self.windowT = 'Combine_SDK_ToolWindow'
-        self.timeStamp = ' 22024-2025'
+        self.timeStamp = ' 22024-2026'
 
         self.driverTextfilePath = ''
         self.drn_layout_bth = 0
@@ -260,6 +258,8 @@ class PYCombine_SDK_UI(PyouPersistentWindow):
             return False
 
     def apply_combine_sdk(self):
+        from ConstrainEdit.Multifunctional_Drive import MultifunctionalDrive
+        _mult_drive = MultifunctionalDrive()
         # type_value = 1 if self.average_radio.isChecked() else 2
         type_value = 2
         if self.average_radio.isChecked():
@@ -293,11 +293,11 @@ class PYCombine_SDK_UI(PyouPersistentWindow):
         data_dict = {driver_data_tuple: driven_data}
         print(driver_data_tuple)
         if type_value == 1:
-            _SDK.createCombineDirve(data_dict, True)
+            _mult_drive.createCombineDirve(data_dict, True)
         elif type_value == 2:
-            _SDK.createCombineDirve(data_dict, False)
+            _mult_drive.createCombineDirve(data_dict, False)
         else:
-            _SDK.combine_driven_clamp(data_dict)
+            _mult_drive.combine_driven_clamp(data_dict)
 
         om.MGlobal.displayInfo("succeed!")
 

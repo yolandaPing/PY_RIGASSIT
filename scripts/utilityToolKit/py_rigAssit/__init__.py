@@ -8,14 +8,17 @@
 
 from ui_framework.core import qtCompat
 from ui_framework.widgets.widgets import Widgets, PyouPersistentWindow
+from ui_framework.widgets.button import GridButtons
 
 QtWidgets = qtCompat.QtWidgets
 QtCore = qtCompat.QtCore
 QtGui = qtCompat.QtGui
 wrapInstance = qtCompat.wrapInstance
 QAction = qtCompat.QAction
+Signal = qtCompat.Signal
+Qt = qtCompat.Qt
 
 __all__ = [
-    "QtWidgets", "QtCore", "QtGui", "wrapInstance", "QAction",
+    "QtWidgets", "Signal", "Qt", "QtCore", "QtGui", "wrapInstance", "QAction",
     "Widgets", "PyouPersistentWindow", "GridButtons"
 ]

@@ -14,16 +14,16 @@ def _reload(mod):
 def launch():
 
     from py_rigAssit.dialogs.joint_mod_layout import PYJointEditLayout
-    from py_rigAssit.dialogs.batch_copys_dlg import PYCopyToolsDialog
-    from py_rigAssit.dialogs.controller_editor_dlg import PYControllerEditorDialog
-    from py_rigAssit.dialogs.optional_driver_dlg import PYOptionalDriveDialog
+    from py_rigAssit.dialogs.batch_copys_dlg import PYCopyToolsLayout
+    from py_rigAssit.dialogs.controller_editor_dlg import PYControllerEditorLayout
+    from py_rigAssit.dialogs.optional_driver_dlg import PYOptionalDriveLayout
     from py_rigAssit.dialogs.general_mod import PYGeneralLayout
     from py_rigAssit.dialogs.custom_mod import PYCustomLayout
 
-    copy_instance = PYCopyToolsDialog()
+    copy_instance = PYCopyToolsLayout()
     joint_instance = PYJointEditLayout()
-    ctrl_instance = PYControllerEditorDialog()
-    drive_instance = PYOptionalDriveDialog()
+    ctrl_instance = PYControllerEditorLayout()
+    drive_instance = PYOptionalDriveLayout()
     general_instance = PYGeneralLayout()
     custom_instance = PYCustomLayout()
 

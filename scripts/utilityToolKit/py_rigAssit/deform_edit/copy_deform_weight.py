@@ -5,33 +5,33 @@
 # .@Email : yolandaping1224@gmail.com
 # .Date....: 2025/8/24 2:01
 # .Finish time:
+import os
+
 from py_rigAssit import QtWidgets, QtCore, QtGui, Widgets, PyouPersistentWindow
 from selectOrRemove import SelectOrremoveObj
 from GeneralTools.deform_weight_edit import DeformersWeightsEditor
+import mayaPrint as mayaPrint
 import HelpImageUI as Help
-import maya.cmds as cmds, maya.mel as mel, maya.OpenMaya as om, pymel.core as pm
-import os
+
+import pymel.core as pm
+
 
 _widgest = Widgets()
 _obj = SelectOrremoveObj()
 
 
 class DeformersWeightsEditorWidget(QtWidgets.QWidget):
-    """将原来的DeformersWeightsEditor转换为PySide2版本的Widget"""
 
     def __init__(self, parent=None):
         super(DeformersWeightsEditorWidget, self).__init__(parent)
-
-        self.WINDOW_NAME = 'Deformers Weights Editor'
-        self.timeStamp = ' 2024-2026'
         self._color_green = [0, 0.8, 0.8]
 
         self.input_mesh = []
         self.working_dir = pm.workspace(query=True, directory=True)
         if int(pm.about(version=True)) < 2018:
-            self.valid_deformers = ['blendShape', 'cluster', 'nonLinear', 'shrinkWrap', 'wire']
+            self.valid_deformers = ['blendShape', 'cluster', 'nonLinear', 'shrinkWrap', 'wire', 'deltaMush']
         else:
-            self.valid_deformers = ['blendShape', 'cluster', 'ffd', 'nonLinear', 'shrinkWrap', 'wire']
+            self.valid_deformers = ['blendShape', 'cluster', 'ffd', 'nonLinear', 'shrinkWrap', 'wire', 'deltaMush']
         self.symmetry_axis = {1: 0, 2: 1, 3: 2}
         self.copy_source_info = []
         self.copy_target_info = []
@@ -57,14 +57,13 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
 
 
     def create_deform_section(self, parent_layout):
-        # 使用分割器来创建左右面板
+
         splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
 
-        # 左侧面板 - 网格和变形器
         left_widget = QtWidgets.QWidget()
         left_layout = QtWidgets.QVBoxLayout(left_widget)
+        left_layout.setContentsMargins(0, 0, 4, 0)
 
-        # 网格部分
         mesh_group = QtWidgets.QGroupBox("Mesh:")
         mesh_layout = QtWidgets.QVBoxLayout(mesh_group)
 
@@ -78,10 +77,8 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         load_mesh_btn.clicked.connect(lambda: self.load_target(self.mesh_list, True))
 
         mesh_layout.addWidget(load_mesh_btn)
-
         left_layout.addWidget(mesh_group)
 
-        # 变形器部分
         deformers_group = QtWidgets.QGroupBox("Deform:")
         deformers_layout = QtWidgets.QVBoxLayout(deformers_group)
 
@@ -91,19 +88,14 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
 
         left_layout.addWidget(deformers_group)
 
-        # 右侧面板 - 操作
         right_widget = QtWidgets.QWidget()
         right_layout = QtWidgets.QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(4, 0, 0, 0)
 
-        # 导入/导出部分
         self.create_import_export_section(right_layout)
-
-        # 镜像部分
         self.create_mirror_section(right_layout)
-
-        # 复制部分
         self.create_copy_section(right_layout)
-
+        splitter.setHandleWidth(1)
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
         splitter.setSizes([200, 400])
@@ -114,7 +106,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         group = QtWidgets.QGroupBox("Weights Import/Export 导入/导出权重")
         layout = QtWidgets.QVBoxLayout(group)
 
-        # 路径选择
         path_layout = QtWidgets.QHBoxLayout()
         path_layout.addWidget(QtWidgets.QLabel("Path:"))
 
@@ -128,10 +119,8 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
 
         layout.addLayout(path_layout)
 
-        # 加载参数
         layout.addWidget(QtWidgets.QLabel("Load Parameters:"))
 
-        # 算法选择
         algorithm_layout = QtWidgets.QHBoxLayout()
         algorithm_layout.addWidget(QtWidgets.QLabel("ALGORITHM:"))
 
@@ -161,7 +150,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
 
         layout.addLayout(tolerance_layout)
 
-        # 按钮
         buttons_layout = QtWidgets.QHBoxLayout()
 
         self.save_btn = QtWidgets.QPushButton("Export")
@@ -176,13 +164,11 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
 
         parent_layout.addWidget(group)
 
-    # 在创建按钮组时指定 ID
     def create_mirror_section(self, parent_layout):
         group = QtWidgets.QGroupBox("Weights Mirror 镜像权重")
         layout = QtWidgets.QVBoxLayout(group)
         layout.setContentsMargins(5, 10, 5, 10)
 
-        # 对称平面
         plane_layout = QtWidgets.QHBoxLayout()
         plane_layout.addWidget(QtWidgets.QLabel("Symmetry:"))
 
@@ -192,7 +178,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         self.xy_radio = QtWidgets.QRadioButton("XY")
         self.yz_radio.setChecked(True)
 
-        # 为每个按钮指定 ID
         self.plane_group.addButton(self.yz_radio, 1)  # ID = 1
         self.plane_group.addButton(self.xz_radio, 2)  # ID = 2
         self.plane_group.addButton(self.xy_radio, 3)  # ID = 3
@@ -202,7 +187,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         plane_layout.addWidget(self.xy_radio)
         layout.addLayout(plane_layout)
 
-        # 方向
         direction_layout = QtWidgets.QHBoxLayout()
         direction_layout.addWidget(QtWidgets.QLabel("Direction:"))
 
@@ -211,7 +195,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         self.negative_radio = QtWidgets.QRadioButton("- > + ")
         self.positive_radio.setChecked(True)
 
-        # 为每个按钮指定 ID
         self.direction_group.addButton(self.positive_radio, 1)  # ID = 1
         self.direction_group.addButton(self.negative_radio, 2)  # ID = 2
 
@@ -219,7 +202,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         direction_layout.addWidget(self.negative_radio)
         layout.addLayout(direction_layout)
 
-        # 按钮
         buttons_layout = QtWidgets.QHBoxLayout()
 
         self.mirror_btn = QtWidgets.QPushButton("Mirror 镜像")
@@ -238,7 +220,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         group = QtWidgets.QGroupBox("Weights Copy 拷贝权重")
         layout = QtWidgets.QVBoxLayout(group)
 
-        # 源
         source_layout = QtWidgets.QHBoxLayout()
         self.source_btn = QtWidgets.QPushButton("Source")
         self.source_btn.clicked.connect(self.copy_source)
@@ -248,7 +229,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         source_layout.addWidget(self.source_label)
         layout.addLayout(source_layout)
 
-        # 目标
         target_layout = QtWidgets.QHBoxLayout()
         self.target_btn = QtWidgets.QPushButton("Target")
         self.target_btn.clicked.connect(self.copy_target)
@@ -258,30 +238,26 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         target_layout.addWidget(self.target_label)
         layout.addLayout(target_layout)
 
-        # 复制按钮
         self.copy_btn = QtWidgets.QPushButton("Copy")
         self.copy_btn.clicked.connect(self.copy_weights)
         layout.addWidget(self.copy_btn)
 
         parent_layout.addWidget(group)
 
-    # 以下是占位方法，需要根据原始代码实现具体功能
     def on_mesh_selected(self):
         selected_items = self.mesh_list.selectedItems()
         if selected_items:
             mesh_name = selected_items[0].text()
-            cmds.select(mesh_name, replace=True)
+            pm.select(mesh_name, replace=True)
             self.mesh_button_command()
 
     def load_target(self, list_widget, clear=True):
-
         if clear:
             list_widget.clear()
-
-        sel = cmds.ls(sl=True) or []
+        sel = pm.ls(sl=True) or []
         if sel:
+            sel = [obj.name() for obj in sel]
             list_widget.addItems(sel)
-
 
     def dir_button_command(self):
         current_dir = self.path_edit.text() or self.working_dir
@@ -312,7 +288,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
             print('Tolerance must be of type "float". Only positive, non-zero values are allowed.')
 
     def mesh_button_command(self):
-        # 从原始代码实现
         self.input_mesh = []
         self.input_transform_name = None
         selection = pm.ls(selection=True)
@@ -328,9 +303,7 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         print('Select a valid mesh')
 
     def deformers_scroll_list(self):
-        # 从原始代码实现
         self.deformers_list.clear()
-
         if 'findDeformers' in dir(pm):
             deformers_list = self.get_deformers()
         else:
@@ -341,10 +314,9 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
                 list_entry = d_item['Type'] + ' - ' + d_item['Name']
                 self.deformers_list.addItem(list_entry)
         else:
-            om.MGlobal.displayWarning('No valid deformer affects the selected mesh')
+            mayaPrint.warning('No valid deformer affects the selected mesh')
 
     def get_deformers(self):
-        # 从原始代码实现
         deformers_list = []
         deformer_names = pm.findDeformers(self.input_mesh)
         if deformer_names:
@@ -352,17 +324,14 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
                 d_type = pm.objectType(d_name)
                 if d_type in self.valid_deformers:
                     deformers_list.append({'Name': d_name, 'Type': d_type})
-
             if deformers_list:
                 def custom_sort(list_element):
                     return list_element['Type'] + list_element['Name']
-
                 deformers_list.sort(key=custom_sort)
                 return deformers_list
         return None
 
     def get_deformers_legacy(self):
-        # 从原始代码实现
         deformers_list = []
         deformer_sets = pm.listSets(type=2, object=self.input_mesh)
         deformer_names = [deformer_sets[index].getAttr('usedBy[0]') for index in range(0, len(deformer_sets))]
@@ -370,7 +339,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
             d_type = pm.objectType(d_name)
             if d_type in self.valid_deformers:
                 deformers_list.append({'Name': d_name, 'Type': d_type})
-
         if deformers_list:
             def custom_sort(list_element):
                 return list_element['Type'] + list_element['Name']
@@ -380,7 +348,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         return None
 
     def get_target_shape(self, target):
-        # 从原始代码实现
         target_shape = None
         if pm.objExists(target):
             sel_list = pm.ls(target)
@@ -392,7 +359,6 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         return target_shape
 
     def is_a_mesh(self, target_shape):
-        # 从原始代码实现
         return_value = False
         target_type = pm.objectType(target_shape)
         if target_type == 'mesh':
@@ -419,33 +385,24 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         return self.plane_group.checkedId()
 
 
-    def save_weights(self):
-        # 从原始代码实现
+    def save_weights(self, *args):
         current_dir = self.path_edit.text()
         deformers_list_entry = _obj.get_list_widget_seleted(self.deformers_list)
-
         try:
             if self.input_transform_name:
                 vtxs = pm.select("{}.vtx[0:]".format(self.input_transform_name), r=1)
         except:
-            om.MGlobal.displayError(u"Check whether mesh is loaded.检查是否正确载入mesh.")
+            mayaPrint.error(u"Check whether mesh is loaded.检查是否正确载入mesh.")
             return
-
         if not self.input_mesh:
             raise ValueError('Select a valid mesh')
 
         deform_edit = DeformersWeightsEditor(self.input_mesh, self.input_transform_name, deformers_list_entry, path=current_dir)
-
-        cmds.undoInfo(openChunk=True)
-        try:
-            deform_edit.save_weights()
-        finally:
-            cmds.undoInfo(closeChunk=True)
+        deform_edit.save_weights()
 
         return
 
-    def load_weights(self):
-        # 从原始代码实现
+    def load_weights(self, *args):
         current_dir = self.path_edit.text()
         deformers_list_entry = _obj.get_list_widget_seleted(self.deformers_list)
         loadTolerance = self.get_algorithm_selection_by_id()
@@ -453,7 +410,7 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
             if self.input_transform_name:
                 vtxs = pm.select("{}.vtx[0:]".format(self.input_transform_name), r=1)
         except:
-            om.MGlobal.displayError(u"Check whether mesh is loaded.检查是否正确载入mesh.")
+            mayaPrint.error(u"Check whether mesh is loaded.检查是否正确载入mesh.")
             return
 
         if not self.input_mesh:
@@ -462,45 +419,43 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         deform_edit = DeformersWeightsEditor(self.input_mesh, self.input_transform_name, deformers_list_entry,
                                              path=current_dir, loadTolerance=loadTolerance)
 
-        cmds.undoInfo(openChunk=True)
+        pm.undoInfo(openChunk=True)
         try:
             deform_edit.load_weights()
         finally:
-            cmds.undoInfo(closeChunk=True)
+            pm.undoInfo(closeChunk=True)
 
         return
 
-    def mirror_weights(self):
-
+    def mirror_weights(self, *args):
         deformers_list_entry = _obj.get_list_widget_seleted(self.deformers_list)
         arix = self.symmetry_axis[self.get_plane_selection_by_id()]
         direction = self.get_direction_selection_by_id()
         deform_edit = DeformersWeightsEditor(self.input_mesh, self.input_transform_name, deformers_list_entry, None, None, arix, direction)
 
-        cmds.undoInfo(openChunk=True)
+        pm.undoInfo(openChunk=True)
         try:
             deform_edit.mirror_weights()
         finally:
-            cmds.undoInfo(closeChunk=True)
+            pm.undoInfo(closeChunk=True)
 
         return
 
-    def flip_weights(self):
+    def flip_weights(self, *args):
         deformers_list_entry = _obj.get_list_widget_seleted(self.deformers_list)
         arix = self.symmetry_axis[self.get_plane_selection_by_id()]
         direction = self.get_direction_selection_by_id()
         deform_edit = DeformersWeightsEditor(self.input_mesh, self.input_transform_name, deformers_list_entry, None, None, arix,
                                              direction)
-        cmds.undoInfo(openChunk=True)
+        pm.undoInfo(openChunk=True)
         try:
             deform_edit.flip_weights()
         finally:
-            cmds.undoInfo(closeChunk=True)
+            pm.undoInfo(closeChunk=True)
 
         return
 
-    def copy_source(self):
-        # 从原始代码实现
+    def copy_source(self, *args):
         if not self.input_mesh:
             raise ValueError('Select a valid mesh')
 
@@ -516,8 +471,7 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         self.source_label.setText(user_message)
         self.copy_source_info = [self.input_mesh, (deformer_type, selected_deformer)]
 
-    def copy_target(self):
-        # 从原始代码实现
+    def copy_target(self, *args):
         if not self.input_mesh:
             raise ValueError('Select a valid mesh')
 
@@ -533,16 +487,10 @@ class DeformersWeightsEditorWidget(QtWidgets.QWidget):
         self.target_label.setText(user_message)
         self.copy_target_info = [self.input_mesh, (deformer_type, selected_deformer)]
 
-    def copy_weights(self):
-
-        deformers_list_entry = _obj.get_list_widget_seleted(self.deformers_list)
-        # self.copy_source()
-        # self.copy_target()
-
+    def copy_weights(self, *args):
+        print([self.copy_source_info, self.copy_target_info])
         deform_edit = DeformersWeightsEditor(self.input_mesh, self.input_transform_name, copyweightInfo=[self.copy_source_info, self.copy_target_info])
         deform_edit.copy_weights()
-        # print("copy weight: {}: {} : {} {}".format(self.input_mesh, self.input_transform_name, deformers_list_entry, [self.copy_source_info, self.copy_target_info]))
-
 
 
 class CopyDeformWeightUI(PyouPersistentWindow):
@@ -552,7 +500,7 @@ class CopyDeformWeightUI(PyouPersistentWindow):
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose, True)
 
         self.WINDOW_NAME = 'Edit Deform Weight '
-        self.timeStamp = "2024-2025"
+        self.timeStamp = "2024-2026"
         self.name = "None"
         self._text_font = "font: bold 12px"
 
@@ -565,11 +513,10 @@ class CopyDeformWeightUI(PyouPersistentWindow):
 
     def init_ui(self):
         main_layout = QtWidgets.QVBoxLayout(self)
-        # main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.addWidget(_widgest.create_title(self.WINDOW_NAME, 15, 30))
         layout = QtWidgets.QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        # 创建选项卡main部件
+
         self.main_tab_widget = QtWidgets.QTabWidget()
         layout.addWidget(self.main_tab_widget)
         self.main_tab_widget.setContentsMargins(0, 0, 0, 0)
@@ -579,41 +526,23 @@ class CopyDeformWeightUI(PyouPersistentWindow):
         self.scroll_layout(copy_tab_layout)
         self.main_tab_widget.addTab(copy_tab, 'Copy')
 
-        # 修改Edit标签页，直接嵌入权重编辑器
         edit_tab = QtWidgets.QWidget()
         edit_tab_layout = QtWidgets.QVBoxLayout(edit_tab)
 
-        # 创建权重编辑器实例并添加到Edit标签页
         self.deform_editor = DeformersWeightsEditorWidget()
         edit_tab_layout.addWidget(self.deform_editor)
         edit_tab_layout.setContentsMargins(0, 0, 0, 0)
         edit_tab_layout.setSpacing(0)
         self.main_tab_widget.addTab(edit_tab, 'Edit')
 
-        type_layout = QtWidgets.QHBoxLayout()
-        QLabel2 = QtWidgets.QLabel("> type: ")
-        type_layout.addWidget(QLabel2)
-        QLabel2.setStyleSheet("font: bold 14px;")
-
-        self.type_group = QtWidgets.QButtonGroup()
-        self.not_deform_radio = QtWidgets.QRadioButton("not node")
-        self.not_deform_radio.setStyleSheet("font: bold 14px;")
-        self.not_deform_radio.setToolTip(u"<span style='color:black; '>target对象没有可指定的变形节点</span>")
-        self.not_deform_radio.setChecked(True)
-
-        self.assign_deform_radio = QtWidgets.QRadioButton("assign node")
-        self.assign_deform_radio.setStyleSheet("font: bold 14px; ")
-        self.assign_deform_radio.setToolTip(u"<span style='color:black; '>target有可指定的节点</span>")
-
-        type_layout.addWidget(self.not_deform_radio)
-        type_layout.addWidget(self.assign_deform_radio)
-
-        self.type_group.addButton(self.not_deform_radio, 1)
-        self.type_group.addButton(self.assign_deform_radio, 2)
-
-        text = _widgest.create_text(
-            u"支持一对一/一对多; 支持不同节点权重相互拷贝['blendShape', 'cluster', 'ffd', 'nonLinear', 'shrinkWrap', 'wire']\n使用: 载入source deform node; target 对象如果没有变形节点，就直接载入模型，如果有选择节点载入\n",
-            12)
+        self.type_group = _widgest.create_radiogroup(
+            "copy type",
+            [
+                ("not node", 1, u"target对象没有可指定的变形节点"),
+                ("assign node", 2, u"target有可指定的节点"),
+            ],
+            default_id=1
+        )
 
         btn_layout = QtWidgets.QHBoxLayout()
         btn_layout.setSpacing(2)
@@ -628,9 +557,10 @@ class CopyDeformWeightUI(PyouPersistentWindow):
 
         btn_layout.addWidget(self.apply_btn)
         btn_layout.addWidget(self.help_btn)
-        copy_tab_layout.addLayout(type_layout)
+        copy_tab_layout.addWidget(self.type_group )
 
-        copy_tab_layout.addWidget(text)
+        copy_tab_layout.addWidget(_widgest.create_text(
+            u"支持一对一/一对多; 支持不同节点权重相互拷贝['blendShape', 'cluster', 'ffd', 'nonLinear', 'shrinkWrap', 'wire', 'deltaMush']\n使用: 载入source deform node; target 对象如果没有变形节点，就直接载入模型，如果有选择节点载入\n"))
         copy_tab_layout.addLayout(btn_layout)
         main_layout.addLayout(layout)
         _widgest.create_copyrightText(main_layout, self.timeStamp)
@@ -647,18 +577,14 @@ class CopyDeformWeightUI(PyouPersistentWindow):
         source_deform_layout.addWidget(source_label)
 
         self.source_deform_scroll_list = QtWidgets.QListWidget(self)
-        # self.source_deform_scroll_list.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.source_deform_scroll_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        # self.source_deform_scroll_list.setStyleSheet("background-color: black;")
         source_deform_layout.addWidget(self.source_deform_scroll_list)
 
         target_deform_layout = QtWidgets.QVBoxLayout()
         target_deform_layout.addWidget(target_label)
 
         self.target_deform_scroll_list = QtWidgets.QListWidget(self)
-        # self.target_deform_scroll_list.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.target_deform_scroll_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        # self.target_deform_scroll_list.setStyleSheet("background-color: black;")
         target_deform_layout.addWidget(self.target_deform_scroll_list)
 
         scr_btn_lay = QtWidgets.QHBoxLayout()
@@ -688,10 +614,7 @@ class CopyDeformWeightUI(PyouPersistentWindow):
         self.cls_layout.addLayout(source_deform_layout)
         self.cls_layout.addLayout(target_deform_layout)
 
-        # _widgest.separator(layout, False)
         layout.addLayout(self.cls_layout)
-
-        # parent.addLayout(layout, 0, 0)
         parent.addLayout(layout)
 
     def create_connections(self):
@@ -706,11 +629,9 @@ class CopyDeformWeightUI(PyouPersistentWindow):
 
         self.apply_btn.clicked.connect(self.apply)
         self.help_btn.clicked.connect(lambda: Help.HelpImage("", "copy_deform_weight_tool"))
-        # 移除原来的按钮连接，因为现在直接嵌入UI了
 
     def load_items(self, list_widget, clear=True, tar_type=False):
         '''
-
         :param list_widget: QtWidgets.QListWidget()
         :param clear:
         :return:
@@ -718,15 +639,16 @@ class CopyDeformWeightUI(PyouPersistentWindow):
         if clear:
             list_widget.clear()
 
-        sel = cmds.ls(sl=True) or []
+        sel = pm.ls(sl=True) or []
         if sel:
+            sel = [obj.name() for obj in sel]
             if tar_type:
                 if self.type_group.checkedId() == 1:
                     list_widget.addItems(sel)
 
                 else:
                     if len(sel) < 2:
-                        om.MGlobal.displayWarning(u"Check if the deformation node is selected")
+                        mayaPrint.warning(u"Check if the deformation node is selected")
                         return
 
                     input_info = "{}.{}".format(sel[1], sel[0])
@@ -734,73 +656,99 @@ class CopyDeformWeightUI(PyouPersistentWindow):
 
             else:
                 if len(sel) < 2:
-                    om.MGlobal.displayWarning(u"Check if the deformation node is selected")
+                    mayaPrint.warning(u"Check if the deformation node is selected")
                     return
 
                 input_info = "{}.{}".format(sel[1], sel[0])
                 list_widget.addItems([input_info])
 
-    def apply(self):
-        cmds.undoInfo(openChunk=True)
+    def apply(self, *args):
         deform_edit = DeformersWeightsEditor()
-
+        pm.undoInfo(openChunk=True)
         try:
-            sources = list(_obj.get_list_widget_items(self.source_deform_scroll_list))
-            target = list(_obj.get_list_widget_items(self.target_deform_scroll_list))
 
-            scr_names = {}
+            sources = list(
+                _obj.get_list_widget_items(
+                    self.source_deform_scroll_list
+                )
+            )
 
-            for scr in sources:
-                if "." in scr:
-                    scr_names[scr.split('.')[0]] = scr.split('.')[-1]
-                else:
-                    om.MGlobal.displayError("Please load the source deformation node.")
+            targets = list(
+                _obj.get_list_widget_items(
+                    self.target_deform_scroll_list
+                )
+            )
+
+            source_data = []
+
+            for item in sources:
+
+                if "." not in item:
+                    mayaPrint.error(
+                        "Please load the source deformation node."
+                    )
                     return
 
-            tar_names = {}
+                source_data.append(
+                    tuple(item.split(".", 1))
+                )
 
-            for tar in target:
-                if "." in tar:
-                    tar_names[tar.split('.')[0]] = tar.split('.')[-1]
-                else:
-                    deform = None
-                    tar_names[tar.split('.')[0]] = deform
+            target_data = [
+                tuple(item.split(".", 1))
+                if "." in item
+                else (item, None)
+                for item in targets
+            ]
 
-            if len(scr_names) == len(tar_names):
-                for (scr, scr_def), (tar, tar_def) in zip(scr_names.items(), tar_names.items()):
+            if len(source_data) == len(target_data):
 
-                    deform_edit.copy_deform_node_weight(scr, scr_def, tar, tar_def)
-                    if tar_def == None:
-                        copy_node = scr_def
-                    else:
-                        copy_node = tar_def
+                pairs = zip(
+                    source_data,
+                    target_data
+                )
 
-                    print("{}.{} > {}.{}".format(scr, scr_def, tar, copy_node))
+            elif len(source_data) == 1:
 
-            elif len(scr_names) == 1:
-                for scr in scr_names:
-                    scr_def = scr_names[scr]
+                pairs = [
+                    (
+                        source_data[0],
+                        tar
+                    )
+                    for tar in target_data
+                ]
 
-                    for tar, tar_def in tar_names.items():
-
-                        # deform_edit.copy_deforms_weight(scr, scr_def, tar, tar_def)
-                        deform_edit.copy_deform_node_weight(scr, scr_def, tar, tar_def)
-                        if tar_def == None:
-                            copy_node = scr_def
-                        else:
-                            copy_node = tar_def
-
-                        print("{}.{} > {}.{}".format(scr, scr_def, tar, copy_node))
             else:
-                om.MGlobal.displayWarning(u"Only supports one-to-one and one-to-many.")
 
-            om.MGlobal.displayInfo("copy completed.")
+                mayaPrint.warning(
+                    u"Only supports one-to-one and one-to-many."
+                )
+                return
+
+            for (scr, scr_def), (tar, tar_def) in pairs:
+                deform_edit.copy_deform_node_weight(
+                    scr,
+                    scr_def,
+                    tar,
+                    tar_def
+                )
+
+                print(
+                    "{}.{} -> {}.{}".format(
+                        scr,
+                        scr_def,
+                        tar,
+                        tar_def or scr_def
+                    )
+                )
+
+            mayaPrint.log(
+                "Copy completed."
+            )
 
         finally:
-            cmds.undoInfo(closeChunk=True)
-
-        return
-
+            if pm.objExists("def_temp_grp"):
+                pm.delete("def_temp_grp")
+            pm.undoInfo(closeChunk=True)
 
 def main():
     global pyDeform_editor

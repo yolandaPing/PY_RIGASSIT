@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <shelfLayout>
     <button>
-        <label>About PY_RIGASSIT </label>
+        <label>About PY_RIGASSIT</label>
         <icon>/PY_RIGASSIT.png</icon>
         <type>python</type>
         <command><![CDATA[

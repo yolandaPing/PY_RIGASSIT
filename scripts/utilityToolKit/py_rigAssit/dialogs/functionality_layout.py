@@ -10,18 +10,28 @@ from py_rigAssit import QtWidgets, QtCore, QtGui, Widgets
 from py_rigAssit.dialogs import base_dir, decorator, mayaPrint
 from py_rigAssit.common.loader import SelectionLoader
 from JointEdit.ForwardReverseFKTool import ForwardReverseFKTool
-from JointEdit.DynamicCoexist import DynamicCoexistRig
-import JointEdit.variable_FK as variable_FK
-from JointEdit.JointEditFun import EditJnt
+from py_rigAssit.dialogs.rivet_follice_dlg import PYRivetFolliceLayout
 from py_rigAssit.common.command_dispatcher import CommandDispatcher
+from ConstrainEdit.spring_rigging import postSpring
+from Utils.undo import undo
+import JointEdit.variable_FK as variable_FK
 import py_rigAssit.common.commands
 import py_rigAssit.common.img_commands
 import maya.cmds as mc, maya.mel as mel
 
 _widgest = Widgets()
 reverse_fk = ForwardReverseFKTool()
-Dyn = DynamicCoexistRig()
-EditJnt = EditJnt()
+
+
+def _ADD_MAYA_PLUG_IN_PATH():
+    import os
+    ToolPath = os.path.dirname(base_dir)
+    plug_in_base = r"{}\plug-ins".format(ToolPath)
+    # 添加到 MAYA_PLUG_IN_PATH 环境变量（如果还没加过）
+    if os.path.exists(plug_in_base):
+        old_paths = os.environ.get("MAYA_PLUG_IN_PATH", "")
+        if plug_in_base not in old_paths:
+            os.environ["MAYA_PLUG_IN_PATH"] = plug_in_base + os.pathsep + old_paths
 
 
 class PYFunctionalityLayout(QtWidgets.QDialog):
@@ -36,7 +46,7 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
 
     def __init__(self, parent=None):
         super(PYFunctionalityLayout, self).__init__(parent)
-
+        _ADD_MAYA_PLUG_IN_PATH()
 
     def init_ui(self):
         self.dispatcher = CommandDispatcher()
@@ -48,6 +58,7 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
 
         rivet_frame = self.rivet_layout()
         ribbon_frame = self.ribbon_animation_layout()
+        spring_frame = self.fk_chain_spring_rig_layout()
         ikspline_frame = self.ikspline_rigging_layout()
         bidirectional_frame = self.bidirectional_fk_layout()
         dynamic_frame = self.dynamic_rig_layout()
@@ -55,6 +66,7 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         variable_frame = self.variable_fk_layout()
         main.addWidget(rivet_frame)
         main.addWidget(ribbon_frame)
+        main.addWidget(spring_frame)
         main.addWidget(ikspline_frame)
         main.addWidget(bidirectional_frame)
         main.addWidget(dynamic_frame)
@@ -99,7 +111,7 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         frame = _widgest.create_collapsible_frame("Dynamic Coexist Rig ")
         group = QtWidgets.QGroupBox(u"Dynamic:")
         main_layout = QtWidgets.QVBoxLayout(group)
-        layout, self.dyn_attr_filed, self.dyn_attr_btn = _widgest.create_QLineEdit_row("Attribute Ctrl:" , label_width=78)
+        layout, self.dyn_attr_filed, self.dyn_attr_btn = _widgest.create_QLineEdit_row("Attribute Ctrl:", label_width=78)
         self.dny_type_block = _widgest.create_radiogroup(
             "Type:",
             [
@@ -183,9 +195,11 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         frame = _widgest.create_collapsible_frame(" IK Spline Rigging")
         frame.setObjectName("IKSplineCollapsibleFrame")
         main_layout = QtWidgets.QVBoxLayout()
+        main_layout.setContentsMargins(2, 0, 2, 0)
         group = QtWidgets.QGroupBox(u"Ikspline Rigging Set:")
         layout = QtWidgets.QVBoxLayout(group)
-
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
         scale_layout, self.ik_global_scale_filed, self.ik_global_scale_btn = _widgest.create_QLineEdit_row(
             "Global scale:")
         attr_layout, self.ik_add_attr_filed, self.ik_add_attr_btn = _widgest.create_QLineEdit_row("Attrbute ctrl:", label_width=75)
@@ -270,7 +284,6 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         )
         ikfk_select_main_layout.addLayout(ikfk_count_layout)
         ikfk_select_main_layout.addWidget(self.ikfk_type_block)
-        # =====================================================
 
         layout2.addWidget(self.add_strech_widget)
         layout2.addWidget(self.ikfk_switch_widget)
@@ -294,19 +307,20 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         frame = _widgest.create_collapsible_frame(" Variable FK")
         group = QtWidgets.QGroupBox(u"滑动的fk:")
         main_layout = QtWidgets.QVBoxLayout(group)
-        layout, self.variable_name_field = _widgest.create_QLineEdit_grp("Prefix:")
+        layout, self.variable_name_field = _widgest.create_QLineEdit_grp("Prefix name:")
         count_layout = QtWidgets.QHBoxLayout()
         self.variable_count = QtWidgets.QSpinBox()
         self.variable_count.setRange(4, 100)
         self.variable_count.setValue(5)
-        self.variable_count.setMinimumWidth(60)
+        self.variable_count.setMinimumWidth(30)
+
+        count_layout.addLayout(layout)
         count_layout.addWidget(QtWidgets.QLabel("Ctrl count:"))
         count_layout.addWidget(self.variable_count)
         count_layout.addStretch()
 
         btn_layout, self.variable_rigging_btn, self.variable_help_btn = _widgest.create_Qbuttons(" Apply")
 
-        main_layout.addLayout(layout)
         main_layout.addLayout(count_layout)
         main_layout.addWidget(_widgest.create_text("Generate joints based on the number of curve points.根据曲线点数生成关节"))
         main_layout.addWidget(_widgest.create_text("Select curve to Apply 选择曲线运行"))
@@ -315,69 +329,39 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         return frame
 
     def rivet_layout(self):
-        frame = _widgest.create_collapsible_frame(" Follicle/Rivet")
-        group = QtWidgets.QGroupBox(u"Follicle/Rivet:")
-        main_layout = QtWidgets.QVBoxLayout(group)
-
-        self.rivet_rig_wtg = _widgest.create_section("Rig Type:")
-        self.rivet_rig_block = _widgest.create_radiogroup(
-            "",
-            [
-                ("Parent", 1, None),
-                ("Contrain", 2, u"约束"),
-            ],
-            default_id=1
-        )
-        self.rivet_constrain_block = _widgest.create_radiogroup(
-            "Constrain",
-            [
-                ("parentConstrain", 1, u"父约束"),
-                ("pointCons", 2, u"点约束"),
-                ("orientCons", 3, u"方向约束"),
-            ],
-            default_id=1,
-            enabled_map={1: False, 2: False, 3: False}
-        )
-
-        self.rivet_cons_block = _widgest.create_radiogroup(
-            "Type:",
-            [
-                ("Follicle", 1, u"毛囊"),
-                ("Matrix", 2, u"locator"),
-                ("Constrain", 3, u"获取最近的权重关节创建约束"),
-            ],
-            default_id=1
-        )
-        self.rivet_hint = _widgest.create_text("select objects and then Surface/Mesh\n选择需要钉的对象+Surface/Mesh")
-        btn_layout, self.rivet_apple_btn, self.rivet_help_btn = _widgest.create_Qbuttons(" Apply ")
-
-        main_layout.addWidget(self.rivet_hint)
-        self.rivet_rig_wtg.addWidget(self.rivet_rig_block)
-        self.rivet_rig_wtg.addWidget(self.rivet_constrain_block)
-        main_layout.addWidget(self.rivet_rig_wtg)
-        main_layout.addWidget(self.rivet_cons_block)
-
-        main_layout.addLayout(btn_layout)
-        self.rivet_rig_block.idClicked.connect(self._rivet_rig_toggled)
-        self.rivet_cons_block.idClicked.connect(self._rivet_cons_toggled)
-        frame.addWidget(group)
+        frame = _widgest.create_collapsible_frame(" Follicle/Rivet/UVPin")
+        rivet_lay = PYRivetFolliceLayout(parent=self)
+        rivet_group = rivet_lay.init_ui()
+        frame.addWidget(rivet_group)
         return frame
 
     def ribbon_animation_layout(self):
-        frame = _widgest.create_collapsible_frame(" Ribbon Animation Rigging")
+        frame = _widgest.create_collapsible_frame(" Ribbon(Surface) Animation Rigging")
         group = QtWidgets.QGroupBox(u"Ribbon Animation:")
         main_layout = QtWidgets.QVBoxLayout(group)
-        name_count_layout = QtWidgets.QHBoxLayout()
-        block_layout = QtWidgets.QHBoxLayout()
+        name_count_layout = QtWidgets.QVBoxLayout()
+        layout = QtWidgets.QHBoxLayout()
 
         ribbon_name_layout, self.ribbon_name_filed = _widgest.create_QLineEdit_grp("Name:", "")
         self.ribbon_joint_filed = QtWidgets.QSpinBox()
         self.ribbon_joint_filed.setValue(7)
-        self.ribbon_joint_filed.setFixedWidth(40)
-        ribbon_joint_layout = QtWidgets.QFormLayout()
+        self.ribbon_joint_filed.setFixedWidth(35)
 
-        label = _widgest.create_bold_label('counts : ')
-        ribbon_joint_layout.addRow(label, self.ribbon_joint_filed)
+        ribbon_joint_layout = QtWidgets.QFormLayout()
+        direction_layout = QtWidgets.QFormLayout()
+        ribbon_joint_layout.addRow(_widgest.create_text('counts : '), self.ribbon_joint_filed)
+        self.ribbon_direction_block = _widgest.create_radiogroup(
+            "",
+            [
+                ("U", 1, None),
+                ("V", 2, None),
+            ],
+            default_id=1
+        )
+        direction_layout.addRow(_widgest.create_text('Direction : '), self.ribbon_direction_block)
+        show_direction_btn = QtWidgets.QPushButton("help")
+        show_direction_btn.setFixedHeight(25)
+        show_direction_btn.clicked.connect(self.showSurfaceUV)
 
         self.ribbon_rig_block = _widgest.create_radiogroup(
             "Rig Type:",
@@ -389,26 +373,16 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
             default_id=1
         )
 
-        self.ribbon_direction_block = _widgest.create_radiogroup(
-            "Direction:",
-            [
-                ("U", 1, None),
-                ("V", 2, None),
-            ],
-            default_id=1
-        )
-
         self.ribbon_animation_block = _widgest.create_radiogroup(
             "Animation",
             [
-                ("none", 1, u""),
-                ("Slide", 2, u"滑动"),
-                ("Spread", 3, u""),
-                ("Slide+Spread", 4, u""),
-                ("Tract", 5, u""),
+                ("No", 1, u""),
+                ("Slide", 2, u"滑动(生长动画)"),
+                ("Spread", 3, u"逐个运动"),
+                ("Both", 4, u"Slide+Spread"),
+                ("Tract", 5, u"圆环运动（履带绑定, 确保loft是有效的）"),
             ],
-            default_id=1,
-            enabled_map={5: False}
+            default_id=1
         )
 
         apply_layout = QtWidgets.QHBoxLayout()
@@ -417,28 +391,28 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         self.type_menu.addItem('Follicle', 2)
         self.type_menu.setFixedWidth(80)
         self.type_menu.setFixedHeight(28)
-        self.type_menu.setCurrentIndex(1)
+        # self.type_menu.setCurrentIndex(1)
         self.type_menu.currentIndexChanged.connect(self._on_type_toggled)
         type_menu_layout = QtWidgets.QFormLayout()
         type_menu_layout.addRow('Type:', self.type_menu)
 
         self.ribbon_hint = _widgest.create_text("Ribbon Animation Rigging")
 
-        frame_button = _widgest.create_collapsible_frame("Comtroller ?")
+        frame_button = _widgest.create_collapsible_frame("Controller ?")
         CTRL_layout = QtWidgets.QVBoxLayout()
         CTRL_type_layout = QtWidgets.QHBoxLayout()
         CTRL_layout.addWidget(_widgest.create_text("如需要更高级IKFK绑定前往Joint>Rigging>IKFK System"))
 
         self.ribbon_ctrl_filed = QtWidgets.QSpinBox()
         self.ribbon_ctrl_filed.setValue(3)
-        self.ribbon_ctrl_filed.setFixedWidth(40)
+        self.ribbon_ctrl_filed.setFixedWidth(30)
         ribbon_ctrl_layout = QtWidgets.QFormLayout()
         label = _widgest.create_bold_label('counts : ')
         ribbon_ctrl_layout.addRow(label, self.ribbon_ctrl_filed)
 
         self.ribbon_ctrl_block = _widgest.create_radiogroup(
-            "Ctrl Type:",
-            [("None", 1, None),
+            "",
+            [("No", 1, None),
                 ("IK", 2, None),
                 ("FK", 3, None),
                 ("IKFK", 4, None),
@@ -453,18 +427,17 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
 
         btn_layout, self.ribbon_apple_btn, self.ribbon_help_btn = _widgest.create_Qbuttons(" Apply ")
 
-        name_count_layout.addLayout(ribbon_name_layout, 3)
-        name_count_layout.addLayout(ribbon_joint_layout, 1)
+        name_count_layout.addLayout(ribbon_name_layout)
+        layout.addLayout(ribbon_joint_layout)
+        layout.addLayout(direction_layout, 1)
+        layout.addWidget(show_direction_btn)
+        name_count_layout.addLayout(layout)
 
         main_layout.addWidget(self.ribbon_hint)
         main_layout.addWidget(_widgest.create_text("写入需要创建关节的名字，和数量"))
         main_layout.addLayout(name_count_layout)
 
-        block_layout.addWidget(self.ribbon_rig_block, 2)
-        block_layout.addWidget(self.ribbon_direction_block, 1)
-
-        main_layout.addLayout(block_layout)
-
+        main_layout.addWidget(self.ribbon_rig_block)
         main_layout.addWidget(self.ribbon_animation_block)
         main_layout.addWidget(frame_button)
         apply_layout.addLayout(type_menu_layout)
@@ -474,19 +447,36 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
 
         return frame
 
-    def _QLineEdit_row(self, label_text, default_text="", label_width=80):
-        layout = QtWidgets.QHBoxLayout()
+    def fk_chain_spring_rig_layout(self):
+        frame = _widgest.create_collapsible_frame(" FK Chain Spring Rig")
+        sec = _widgest.create_section("mGear Spring:")
+        main_layout = QtWidgets.QVBoxLayout()
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(6)
+        name_layout, self.spring_attr_field, self.spring_attr_btn = _widgest.create_QLineEdit_row("Mian:",label_width=78)
+        self.spring_distance = _widgest.create_floatSlider(u"偏移距离:")
+        self.spring_distance.setRange(0.01, 100.0)
+        self.spring_distance.setValue(5.00)
+        self.spring_invert_direction = _widgest.add_checkbox('Invert X direction to -X')
+        btn_layout, self.spring_apply_btn, help_btn = _widgest.create_Qbuttons(" Apply ")
+        bk_btn_layout, self.spring_baker_apply_btn, baker_help_btn = _widgest.create_Qbuttons(" Baker ")
 
-        label = QtWidgets.QLabel(label_text)
-        label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        label.setFixedWidth(label_width)
-        line_edit = QtWidgets.QLineEdit(default_text)
-        line_edit.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        # line_edit.setMinimumWidth(120)
-        layout.addWidget(label)
-        layout.addWidget(line_edit)
-        # layout.addStretch()
-        return layout, line_edit
+        main_layout.addWidget(_widgest.create_text(u"* 此功能依赖第三方mGear节点"))
+        main_layout.addLayout(name_layout)
+        main_layout.addWidget(self.spring_distance)
+        main_layout.addWidget(self.spring_invert_direction)
+        main_layout.addWidget(_widgest.create_text(u"从根部按顺序fk链组运行"))
+        _widgest.separator(main_layout)
+        main_layout.addLayout(btn_layout)
+
+        main_layout.addLayout(bk_btn_layout)
+        sec.addLayout(main_layout)
+        frame.addWidget(sec)
+        help_btn.clicked.connect(partial(self.show_help, "按顺序选择添加的fk或fk grp"))
+        baker_help_btn.clicked.connect(
+            partial(self.show_help, "从根部按顺序选择控制器"))
+
+        return frame
 
     def add_ik_box(self):
         checkbox_layout = QtWidgets.QHBoxLayout()
@@ -518,7 +508,7 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         self.dyn_apply_btn.clicked.connect(self.dynamic_build)
         self.ikspline_rigging_btn.clicked.connect(self.splineik_build)
         self.variable_rigging_btn.clicked.connect(self.variable_fk_build)
-        self.rivet_apple_btn.clicked.connect(self.follicle_rivet_constrain)
+        # self.rivet_apple_btn.clicked.connect(self.follicle_rivet_constrain)
         self.ribbon_apple_btn.clicked.connect(self.ribbon_rig_build)
         self.ikspline_help_btn.clicked.connect(partial(self._show_img, 5))
         self.forward_help_btn.clicked.connect(partial(self._show_img,  6))
@@ -526,39 +516,25 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         self.zip_help_btn.clicked.connect(partial(self._show_img, 8))
         self.variable_help_btn.clicked.connect(partial(self._show_img, 9))
         self.ribbon_help_btn.clicked.connect(partial(self._show_img, 16))
-        self.ik_global_scale_btn.clicked.connect(
-            partial(SelectionLoader.load_lineedit, self, self.ik_global_scale_filed, "transform")
-        )
-
-        self.ik_add_attr_btn.clicked.connect(
-            partial(SelectionLoader.load_lineedit, self, self.ik_add_attr_filed, "transform")
-        )
-
-        self.dyn_attr_btn.clicked.connect(
-            partial(SelectionLoader.load_lineedit, self, self.dyn_attr_filed, "transform")
-        )
-
-        self.zip_mid_btn.clicked.connect(
-            partial(SelectionLoader.load_lineedit, self, self.zip_mid_filed, "joint")
-        )
-
-        self.zip_left_btn.clicked.connect(
-            partial(SelectionLoader.load_lineedit, self, self.zip_left_filed, "joint")
-        )
-
-        self.zip_right_btn.clicked.connect(
-            partial(SelectionLoader.load_lineedit, self, self.zip_right_filed, "joint")
-        )
-
-        self.zip_root_btn.clicked.connect(
-            partial(SelectionLoader.load_lineedit, self, self.zip_root_filed, "joint")
-        )
+        self.ik_global_scale_btn.clicked.connect(partial(SelectionLoader.load_lineedit, self, self.ik_global_scale_filed, "transform"))
+        self.ik_add_attr_btn.clicked.connect(partial(SelectionLoader.load_lineedit, self, self.ik_add_attr_filed, "transform"))
+        self.dyn_attr_btn.clicked.connect(partial(SelectionLoader.load_lineedit, self, self.dyn_attr_filed, "transform"))
+        self.zip_mid_btn.clicked.connect(partial(SelectionLoader.load_lineedit, self, self.zip_mid_filed, "joint"))
+        self.zip_left_btn.clicked.connect(partial(SelectionLoader.load_lineedit, self, self.zip_left_filed, "joint"))
+        self.zip_right_btn.clicked.connect(partial(SelectionLoader.load_lineedit, self, self.zip_right_filed, "joint"))
+        self.zip_root_btn.clicked.connect(partial(SelectionLoader.load_lineedit, self, self.zip_root_filed, "joint"))
+        self.spring_attr_btn.clicked.connect(self.spring_load_main)
+        self.spring_apply_btn.clicked.connect(self.build_spring)
+        self.spring_baker_apply_btn.clicked.connect(self.bake_spring)
 
     def get_menu_item(self, item):
         return item
 
     def _show_img(self, id, *args):
         self.dispatcher.execute("Show Help", id)
+
+    def show_help(self, text="", *args):
+        QtWidgets.QMessageBox.information(self, "information", text)
 
     def _on_dny_type_toggled(self, btn_id):
         self.dny_hint.setText(self.DNYM_HINT[btn_id])
@@ -609,10 +585,9 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
 
     def _on_type_toggled(self, id):
         custom_id = self.type_menu.currentData()
-        # print(id, custom_id)
         if custom_id == 1:
-            self.ribbon_animation_block.setEnabledByIds([1, 2, 5], True)
-            self.ribbon_animation_block.setEnabledByIds([3, 4], False)
+            self.ribbon_animation_block.setEnabledByIds([1, 2, 3, 4, 5], True)
+            # self.ribbon_animation_block.setEnabledByIds([3, 4], False)
         else:
             self.ribbon_animation_block.setEnabledByIds([1, 2, 3, 4], True)
             self.ribbon_animation_block.setEnabledByIds([5], False)
@@ -661,12 +636,15 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
 
         mayaPrint.log(" >>> Created successfully.")
 
-
     def dynamic_build(self):
+        from JointEdit.DynamicCoexist import DynamicCoexistRig
+        Dyn = DynamicCoexistRig()
         Dyn.dny_build(self.dny_type_block.checkedId(), self.dyn_attr_filed.text())
 
-
     def splineik_build(self):
+        from JointEdit.JointEditFun import EditJnt
+        EditJnt = EditJnt()
+
         MasterCtrl = self.ik_global_scale_filed.text()
         Add_attr = self.ik_add_attr_filed.text()
         Strech = self.strech_cbx.isChecked()
@@ -687,7 +665,6 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         else:
             EditJnt.splineik_ikfk_build(MasterCtrl, Add_attr, self.ikfk_select_count.value(), Strech, Unified, self.ikfk_type_block.checkedId())
 
-
     def variable_fk_build(self):
         sle_obj = mc.ls(sl=1)
         if not sle_obj:
@@ -695,7 +672,6 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
         else:
             if SelectionLoader.match_type(sle_obj[0], "curve"):
                 variable_FK.VarFk(sle_obj[0], self.variable_name_field.text(), self.variable_count.value())
-
 
     def follicle_rivet_constrain(self):
         obj = mc.ls(sl=1)
@@ -711,9 +687,43 @@ class PYFunctionalityLayout(QtWidgets.QDialog):
 
         self.dispatcher.execute("follicle rivet Rig", datas)
 
+    def showSurfaceUV(self):
+        if not mc.ls(sl=1):
+            mayaPrint.warning("you have select a surface!")
+        mc.ToggleSurfaceOrigin()
+
+    def spring_load_main(self):
+        sel = mc.ls(sl=1)
+        if sel:
+            self.spring_attr_field.setText("{}".format(sel[0]))
+    @undo
+    def build_spring(self, *args):
+        plugin_name = "mgear_solvers.mll"
+        try:
+            if mc.pluginInfo(plugin_name, q=True, loaded=True):
+                pass
+        except Exception:
+            mc.loadPlugin(plugin_name)
+
+        dist = self.spring_distance.value()
+        hostName = self.spring_attr_field.text()
+        try:
+            host = hostName
+        except TypeError:
+            host = False
+        invertX = self.spring_invert_direction.isChecked()
+
+        postSpring(dist, host, invertX)
+        mayaPrint.log(u"build complete.")
+        self.show_help("build complete.")
+
+    @undo
+    def bake_spring(self, *args):
+        """Shortcut fro the Maya's Bake Simulation Options"""
+        mc.BakeSimulationOptions()
+        mayaPrint.log("Bake complete.")
 
     def ribbon_rig_build(self):
-
         datas = {
             "cons": self.type_menu.currentData(),
             "name_filed": self.ribbon_name_filed.text(),

@@ -38,8 +38,6 @@ class FBXExportDialog(QtWidgets.QDialog):
 
     def init_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
-
-        # 几何体组设置行
         geo_layout = QtWidgets.QHBoxLayout()
         geo_label = QtWidgets.QLabel(u'几何体组名称:')
         geo_label.setFixedWidth(120)
@@ -52,7 +50,6 @@ class FBXExportDialog(QtWidgets.QDialog):
         geo_layout.addWidget(get_geo_btn)
         layout.addLayout(geo_layout)
 
-        # 根关节设置行
         joint_layout = QtWidgets.QHBoxLayout()
         joint_label = QtWidgets.QLabel(u'根关节名称:')
         joint_label.setFixedWidth(120)
@@ -65,13 +62,11 @@ class FBXExportDialog(QtWidgets.QDialog):
         joint_layout.addWidget(get_joint_btn)
         layout.addLayout(joint_layout)
 
-        # 提示信息
         info_label = QtWidgets.QLabel(u'提示：这些名称将在导出FBX时自动查找并导出')
         info_label.setStyleSheet('color: #666; font-size: 11px;')
         info_label.setWordWrap(True)
         layout.addWidget(info_label)
 
-        # 按钮行
         button_layout = QtWidgets.QHBoxLayout()
         test_btn = QtWidgets.QPushButton(u'测试对象')
         test_btn.clicked.connect(self.test_fbx_objects)
@@ -111,7 +106,6 @@ class FBXExportDialog(QtWidgets.QDialog):
 
         try:
             missing_objects = []
-            # 测试几何体组
             if geo_name:
                 if not cmds.objExists(geo_name):
                     missing_objects.append(geo_name)

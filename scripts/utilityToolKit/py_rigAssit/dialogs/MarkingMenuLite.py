@@ -15,6 +15,10 @@ class PYMarkingMenuLite(QtWidgets.QWidget):
         self.buttons = []
         self.hovered_button = None
 
+        # Maya风格方向线
+        self.center_pos = QtCore.QPoint()
+        self.mouse_pos = QtCore.QPoint()
+
         self.setWindowFlags(
             QtCore.Qt.Popup |
             QtCore.Qt.FramelessWindowHint |
@@ -71,6 +75,10 @@ class PYMarkingMenuLite(QtWidgets.QWidget):
             )
 
     def start(self, global_pos):
+
+        self.center_pos = QtCore.QPoint(self.RADIUS, self.RADIUS)
+        self.mouse_pos = self.center_pos
+
         self.setGeometry(
             global_pos.x() - self.RADIUS,
             global_pos.y() - self.RADIUS,
@@ -81,6 +89,7 @@ class PYMarkingMenuLite(QtWidgets.QWidget):
         self.show()
 
         self._update_hover(QtGui.QCursor.pos())
+        self.update()
 
     def _update_hover(self, global_pos):
         """根据鼠标全局坐标，高亮命中的按钮，清除其他按钮的高亮"""
@@ -101,9 +110,38 @@ class PYMarkingMenuLite(QtWidgets.QWidget):
             self.hovered_button = hit_button
 
     def mouseMoveEvent(self, event):
-        # 实时更新高亮（event.globalPos() 是鼠标全局位置）
+        # 实时更新高亮 + Maya方向线
+        self.mouse_pos = event.pos()
+
         self._update_hover(event.globalPos())
+        self.update()
+
         super(PYMarkingMenuLite, self).mouseMoveEvent(event)
+
+
+    def paintEvent(self, event):
+
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
+        # 方向线
+        pen = QtGui.QPen(
+            QtGui.QColor(0, 220, 220, 220),
+            2
+        )
+        painter.setPen(pen)
+
+        painter.drawLine(
+            self.center_pos,
+            self.mouse_pos
+        )
+
+        # 中心点
+        painter.setBrush(QtGui.QColor(0, 220, 220))
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.drawEllipse(self.center_pos, 4, 4)
+
+        painter.end()
 
     def mouseReleaseEvent(self, event):
         # 执行当前高亮按钮的命令

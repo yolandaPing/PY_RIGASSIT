@@ -1,9 +1,9 @@
 {
   "tip":[
-  "06.0.0",
+  "0.6.3.3",
   "2022-2026",
-  "https://pyrigassit.cn",
-  "https://github.com/yolandaPing/PY_RIGASSIT.git",
+  "https://github.com/yolandaPing/PY_RIGASSIT.get",
+  "https://github.com/yolandaPing/PY_RIGASSIT_update",
   "https://pan.quark.cn/s/fe8c6e815f8e"
 ],
 "description": [
@@ -42,7 +42,11 @@
   "2026-01-18. v 05.9.3   添加maya2024多个蒙皮节点权重拷贝和多个蒙皮对象传递给一个对象",
   "2026-03-06. v 05.9.5   添加模型数据导出和根据导入数据重新生成模型;优化bsEditor ui",
   "2026-03-19. v 05.9.6   joint模块里普通版权重导入导出速度提升8-10倍, 优化2023+蒙皮节点拷贝",
-  "2026-05-05. v 06.0.0   ui升级新版本， 添加热盒工具"
+  "2026-05-05. v 06.0.0   ui升级新版本， 添加热盒工具",
+  "2026-05-17. v 06.1.0   添加 UVPin 钉对象， RBF 添加新镜像",
+  "2026-06-11. v 06.2.0   添加 soft split 转权重（想学的去看萌芽的教程）",
+  "2026-06-28. v 06.3.0   IKFK System 内部使用uvpin， 新版模型生成关节链工具",
+  "2026-07-04. v 06.3.2   修复生长动画和履带绑定功能"
 ],
   "jointEdit":[
   "4.1.0",
@@ -90,8 +94,8 @@
   "https://www.bilibili.com/video/BV1tfz6YAE8D/?share_source=copy_web&vd_source=7b50d73ef3e3d9c8d5f26b106034eb71"
 ],
    "dirPosetool":[
-  "1.0.2",
-  "2025-2026",
+  "1.1.1",
+  "2023-2026",
   "https://www.bilibili.com/video/BV1WmwjzGE2m/?share_source=copy_web&vd_source=7b50d73ef3e3d9c8d5f26b106034eb71"
 ],
   "pyblendshapeEditor":[

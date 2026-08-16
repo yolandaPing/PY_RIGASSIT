@@ -16,63 +16,65 @@ import maya.cmds as cmds, maya.mel as mel
 PY_WIDGEAT = Widgets()
 
 
-class PYRivetFolliceUI(PyouPersistentWindow):
+class PYRivetFolliceLayout(QtWidgets.QWidget):
 
     def __init__(self, parent=None):
-        super(PYRivetFolliceUI, self).__init__("PYRivetFolliceUI", "PYRivetFolliceUI",parent=parent)
-        self.window_name = "Follicle/Rivet Tool"
-        self.setWindowTitle(self.window_name)
-        self.setMinimumWidth(260)
-        self.init_ui(True)
-        self.loadWindowSettings()
-        self.setFocusPolicy(QtCore.Qt.StrongFocus)
-        self.setFocus()
+        super(PYRivetFolliceLayout, self).__init__(parent)
+        self.window_name = "Follicle/Rivet/uvPin Tool"
 
-    def init_ui(self, copyright=False):
-
-        main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.addWidget(PY_WIDGEAT.create_title(self.window_name, 16, None))
+    def init_ui(self):
+        container = QtWidgets.QWidget()
+        main_layout = QtWidgets.QVBoxLayout(container)
         main_layout.addWidget(self.rivet_layout())
         main_layout.addStretch()
-        if copyright:
-            PY_WIDGEAT.create_copyrightText(main_layout, "2024-2026")
 
-        return main_layout
+        return container
 
     def rivet_layout(self):
-        frame = PY_WIDGEAT.create_collapsible_frame(u" Follicle/Rivet 钉子", True)
         group = QtWidgets.QGroupBox(u"Follicle/Rivet:")
         main_layout = QtWidgets.QVBoxLayout(group)
+
+        mayaMajorVersion = int(cmds.about(version=True)[0:4])
+        self.uv_pin_en = False
+
+        if mayaMajorVersion > 2019:
+            self.uv_pin_en = True
 
         self.rivet_rig_wtg = PY_WIDGEAT.create_section("Rig Type:")
         self.rivet_rig_block = PY_WIDGEAT.create_radiogroup(
             "",
             [
-                ("Parent", 1, None),
+                ("Parent", 1, ""),
                 ("Contrain", 2, u"约束"),
+                ("Input", 3, u"(无transform创建) uvpin矩阵直接输出给对象的offsetParentMatrix"),
+                ("connect", 4, u"(无transform创建) 拆解uvpin的矩阵,链接给对象位移旋转,且保持当前对象的数值")
             ],
-            default_id=1
+            default_id=1,
+            enabled_map={3: False, 4: False}
         )
         self.rivet_constrain_block = PY_WIDGEAT.create_radiogroup(
             "约束:",
             [
-                ("parentConstrain", 1, u"父约束"),
-                ("pointConstrain", 2, u"点约束"),
-                ("orientConstrain", 3, u"方向约束"),
+                ("parent", 1, u"父约束"),
+                ("point", 2, u"点约束"),
+                ("orient", 3, u"方向约束"),
             ],
             default_id=1,
             enabled_map={1: False, 2: False, 3: False}
         )
 
         self.rivet_cons_block = PY_WIDGEAT.create_radiogroup(
-            "Type:",
+            "",
             [
                 ("Follicle", 1, u"毛囊"),
-                ("Matrix", 2, u"locator"),
-                ("Constrain", 3, u"获取最近的权重关节创建约束"),
+                ("Rivet", 2, u"Rivet"),
+                ("UV Pin", 3, u"Maya2020+ UV Pin"),
+                ("Skin con", 4, u"获取对象到mesh最近的点权重关节创建约束"),
             ],
-            default_id=1
+            default_id=1,
+            enabled_map={3: self.uv_pin_en}
         )
+
         self.rivet_hint = PY_WIDGEAT.create_text("select objects and then Surface/Mesh\n选择需要钉的对象+Surface/Mesh")
         btn_layout, self.rivet_apple_btn, self.rivet_help_btn = PY_WIDGEAT.create_Qbuttons(" Apply ")
 
@@ -87,15 +89,20 @@ class PYRivetFolliceUI(PyouPersistentWindow):
         self.rivet_cons_block.idClicked.connect(self._rivet_cons_toggled)
         self.rivet_apple_btn.clicked.connect(self.follicle_rivet_constrain)
         self.rivet_help_btn.clicked.connect(partial(Help.HelpImage, "", "create_follicle_rivet"))
-        frame.addWidget(group)
-        return frame
+        # frame.addWidget(group)
+        return group
 
 
     def _rivet_cons_toggled(self, btn_id):
-        if btn_id == 3:
+
+        if btn_id == 4:
             self.rivet_rig_wtg.setEnabled(False)
         else:
             self.rivet_rig_wtg.setEnabled(True)
+            if btn_id in [3]:
+                self.rivet_rig_block.setEnabledByIds([1, 2, 3, 4], True)
+            else:
+                self.rivet_rig_block.setEnabledByIds([3, 4], False)
 
 
     def _rivet_rig_toggled(self, btn_id):
@@ -120,6 +127,42 @@ class PYRivetFolliceUI(PyouPersistentWindow):
         }
 
         dispatcher.execute("follicle rivet Rig", datas)
+
+
+class PYRivetFolliceUI(PyouPersistentWindow):
+
+    def __init__(self, parent=None):
+        super(PYRivetFolliceUI, self).__init__("PYRivetFolliceUI", "PYRivetFolliceUI", parent=parent)
+        self.window_name = "Follicle/Rivet/uvPin Tool"
+        self.setWindowTitle(self.window_name)
+        self.setMinimumWidth(220)
+        self._build_ui()
+        self.loadWindowSettings()
+
+
+    def _build_ui(self):
+        main = QtWidgets.QVBoxLayout(self)
+        main.setContentsMargins(4, 4, 4, 4)
+        main.setSpacing(4)
+        main.addWidget(PY_WIDGEAT.create_title(self.window_name, 18, None))
+
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setContentsMargins(0, 0, 0, 0)
+
+        cld_widget = QtWidgets.QWidget()
+        scroll_layout = QtWidgets.QVBoxLayout(cld_widget)
+        scroll_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_layout.setSpacing(4)
+
+        scroll.setWidget(cld_widget)
+        main.addWidget(scroll)
+
+        widget = PYRivetFolliceLayout(parent=self)
+        scroll_layout.addWidget(widget.init_ui())
+
+        PY_WIDGEAT.create_copyrightText(main, "2022-2026")
+        # main.addWidget(widget.init_ui())
 
 def main():
     global py_rivetfollice_ui

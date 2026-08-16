@@ -29,7 +29,8 @@ def show_img(ui, btn_id):
             17: "lock_curve_visibility",
             18: "mel_script_manager",
             19: "split_skin_weight",
-            20: "split_skin_weight_ng2"
+            20: "split_skin_weight_ng2",
+            21: "split_skin_weight_soft"
             }
 
     try:

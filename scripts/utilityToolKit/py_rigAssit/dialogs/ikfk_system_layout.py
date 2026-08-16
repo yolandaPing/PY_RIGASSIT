@@ -6,12 +6,16 @@
 # .Date....: 2026/4/11 18:13
 # .Finish time:
 from functools import partial
+try:
+    from importlib import reload
+except ImportError:
+    pass
+import ControllerTool.ikfk_ribbon_mod
+reload(ControllerTool.ikfk_ribbon_mod)
+
 from py_rigAssit import QtWidgets, QtCore, QtGui, Widgets, PyouPersistentWindow
 from py_rigAssit.dialogs import Help, decorator, mayaPrint
-from ControllerTool.ikfk_guide_mod import IKFK_GUIDE
 from ControllerTool.ikfk_ribbon_mod import IKFKRIGGING
-from ControllerTool.Joint_Chain_IKFK_System import Joint_Chain_Ribbon
-from ControllerTool.CurveEdit import CurvesEdit
 from py_rigAssit.dialogs.functionality_layout import PYFunctionalityLayout
 import user_defined as _AllowUsers
 import Utils.Util as _util
@@ -21,10 +25,7 @@ import Utils.json_info as json_info
 import maya.cmds as mc
 
 _widgest = Widgets()
-_JOINYS_CHAIN = Joint_Chain_Ribbon()
 _RIGGING_MOD = IKFKRIGGING()
-_IKFK_GUIDE = IKFK_GUIDE()
-_CURVE_EDIT = CurvesEdit()
 
 
 def _version_info(obj="ikfktool"):
@@ -52,6 +53,12 @@ class IKFKWidget(QtWidgets.QWidget):
 
 
     def init_ui(self, tbs=True):
+
+        self.uv_pin_en = False
+        mayaMajorVersion = int(mc.about(version=True)[0:4])
+        if mayaMajorVersion > 2019:
+            self.uv_pin_en = True
+
         container = QtWidgets.QWidget()
         container.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         main = QtWidgets.QVBoxLayout(container)
@@ -60,7 +67,7 @@ class IKFKWidget(QtWidgets.QWidget):
 
         if tbs:
             main.addWidget(self.build_tabs(), 1)
-            _widgest.create_copyrightText(main, "2024-2026")
+
         else:
             sec1 = _widgest.create_section("IKFK Rigging")
             sec2 = _widgest.create_section("Functionality Rigging")
@@ -151,10 +158,17 @@ class IKFKWidget(QtWidgets.QWidget):
 
     def chain_ikfk_lay(self):
         frame = _widgest.create_collapsible_frame("Joints Chain Quick Rigging")
-        main_layout = _widgest.create_section("ribbon")
+        main_layout = _widgest.create_section("chains")
+        fk_field_layout_main = QtWidgets.QHBoxLayout()
+        fk_field_layout, self.chain_fk_field = self.fk_count_layout()
+        count_layout, self.jnt_count_label = self.ik_joints_counts_hint()
+        fk_field_layout_main.addLayout(fk_field_layout)
+        fk_field_layout_main.addLayout(count_layout)
 
+        label = _widgest.create_text(u" > 设置间隔多少个ik生成一个fk， 默认间隔一个 ", 12, "left")
         checkbox_layout, self.chain_pri_ik_cbx, self.chain_over_cbx, self.chain_over_ik_field, = self.add_ik_box()
         self.chain_splineikrig_cbx = _widgest.add_checkbox('add splineik rig?')
+        self.chain_uvpin_cbx = _widgest.add_checkbox('uvpin?')
         btn_layout = QtWidgets.QHBoxLayout()
 
         self.chain_builda_btn = QtWidgets.QPushButton('Build A')
@@ -185,8 +199,11 @@ class IKFKWidget(QtWidgets.QWidget):
             _widgest.create_text(u"确定好关节轴向\n选择关节链的第一节Build"))
 
         _widgest.separator(main_layout, True)
+        main_layout.addLayout(fk_field_layout_main)
         main_layout.addLayout(checkbox_layout)
-        main_layout.addWidget(self.chain_splineikrig_cbx )
+        _widgest.separator(main_layout)
+        main_layout.addWidget(self.chain_splineikrig_cbx)
+        main_layout.addWidget(self.chain_uvpin_cbx )
         main_layout.addWidget(self.chain_constrain_type)
         main_layout.addWidget(_widgest.create_text(u" >>> 如果关节不是直的，请选择build B"))
 
@@ -200,6 +217,16 @@ class IKFKWidget(QtWidgets.QWidget):
         group = QtWidgets.QGroupBox(u"guide:")
         main_layout = QtWidgets.QVBoxLayout(group)
         name_layout, self.name_field = _widgest.create_QLineEdit_grp("Name:")
+
+        self.node_type_block = _widgest.create_radiogroup(
+            "node:",
+            [
+                ("Matrix", 1, None),
+                ("UVPin ", 2, None),
+            ],
+            default_id=1,
+            enabled_map={2: self.uv_pin_en}
+        )
 
         self.rig_type_block = _widgest.create_radiogroup(
             "Rig Type:",
@@ -221,7 +248,7 @@ class IKFKWidget(QtWidgets.QWidget):
 
 
         self.constrain_type_block = _widgest.create_radiogroup(
-            "Constrain:",
+            "Joints Constrain:",
             [
                 ("Parent ", 1, None),
                 ("Constraint ", 2, None),
@@ -246,10 +273,10 @@ class IKFKWidget(QtWidgets.QWidget):
         main_layout.addLayout(name_layout)
         _widgest.separator(main_layout)
         self.ikfk_count_lay(main_layout)
-
-        main_layout.addWidget(self.rig_type_block)
-        _widgest.separator(main_layout)
         main_layout.addLayout(axis_layout)
+        _widgest.separator(main_layout)
+        main_layout.addWidget(self.node_type_block)
+        main_layout.addWidget(self.rig_type_block)
 
         main_layout.addWidget(self.constrain_type_block)
 
@@ -265,30 +292,19 @@ class IKFKWidget(QtWidgets.QWidget):
 
         self.ik_field = QtWidgets.QSpinBox()
         self.ik_field.setValue(7)
-        self.ik_field.setFixedWidth(80)
+        self.ik_field.setFixedWidth(40)
         ik_field_layout = QtWidgets.QFormLayout()
 
         label = _widgest.create_bold_label('IK / Joint : ')
         ik_field_layout.addRow(label, self.ik_field)
 
-        self.ik_count_label = _widgest.create_text(u" > 设置 ik 的数量: 2n+1 ")
-
+        count_layout, self.ik_count_label = self.ik_joints_counts_hint()
         ik_field_layout_main.addLayout(ik_field_layout)
-        ik_field_layout_main.addWidget(self.ik_count_label)
+        ik_field_layout_main.addLayout(count_layout)
 
-        fk_field_layout_main = QtWidgets.QHBoxLayout()
-
-        self.fk_field = QtWidgets.QSpinBox()
-        self.fk_field.setValue(1)
-        self.fk_field.setFixedWidth(75)
-
-        fk_field_layout = QtWidgets.QFormLayout()
-        label = _widgest.create_text('FK Interval: ')
-        fk_field_layout.addRow(label, self.fk_field)
-
+        fk_field_layout_main, self.fk_field = self.fk_count_layout()
         label = _widgest.create_text(u" > 设置间隔多少个ik生成一个fk， 默认间隔一个 ", 12, "left")
 
-        fk_field_layout_main.addLayout(fk_field_layout)
         main_layout.addLayout(ik_field_layout_main)
         main_layout.addWidget(label)
         main_layout.addLayout(fk_field_layout_main)
@@ -298,15 +314,35 @@ class IKFKWidget(QtWidgets.QWidget):
         main_layout.addLayout(checkbox_layout)
         parent.addLayout(main_layout)
 
+    def ik_joints_counts_hint(self):
+        layout = QtWidgets.QHBoxLayout()
+        label = QtWidgets.QLabel('2n+1')
+        label.setStyleSheet(' color:yellow; ')
+        layout.addWidget(_widgest.create_text(u" > 关节的数量: "))
+        layout.addWidget(label)
+        return layout, label
+
+    def fk_count_layout(self):
+        fk_field_layout_main = QtWidgets.QHBoxLayout()
+        fk_field = QtWidgets.QSpinBox()
+        fk_field.setValue(1)
+        fk_field.setFixedWidth(40)
+        fk_field_layout = QtWidgets.QFormLayout()
+        label = _widgest.create_text('FK Interval: ')
+        fk_field_layout.addRow(label, fk_field)
+        fk_field_layout_main.addLayout(fk_field_layout)
+
+        return fk_field_layout_main, fk_field
 
     def add_ik_box(self):
-        checkbox_layout = QtWidgets.QHBoxLayout()
+        checkbox_layout = QtWidgets.QVBoxLayout()
+        over_ik_layout = QtWidgets.QHBoxLayout()
         pri_ik_cbx = _widgest.add_checkbox('Enable pri IK ?')
         over_cbx = _widgest.add_checkbox('Enable over IK ?')
 
         over_ik_field = QtWidgets.QSpinBox()
         over_ik_field.setValue(2)
-        over_ik_field.setFixedWidth(80)
+        over_ik_field.setFixedWidth(50)
 
         ik_count_layout = QtWidgets.QFormLayout()
         label = _widgest.create_text('Over IK : ')
@@ -314,33 +350,44 @@ class IKFKWidget(QtWidgets.QWidget):
         over_ik_field.setEnabled(False)
 
         checkbox_layout.addWidget(pri_ik_cbx)
-        checkbox_layout.addWidget(over_cbx)
-        checkbox_layout.addLayout(ik_count_layout)
+        over_ik_layout.addWidget(over_cbx)
+        over_ik_layout.addLayout(ik_count_layout)
+        checkbox_layout.addLayout(over_ik_layout)
 
         return checkbox_layout, pri_ik_cbx, over_cbx, over_ik_field
 
     def create_connection(self):
-        dispatcher = CommandDispatcher()
-
-        self.base_apply_btn.clicked.connect(self.basa_build)
-        self.fk_field.valueChanged.connect(self._calculate_number_ik)
+        self.base_apply_btn.clicked.connect(partial(self.basa_build))
+        self.chain_fk_field.valueChanged.connect(partial(self._calculate_number_ik, self.chain_fk_field, True))
+        self.fk_field.valueChanged.connect(partial(self._calculate_number_ik, self.fk_field, False))
         self.enable_over_cbx.stateChanged.connect(self._on_over_ik_Toggled)
         self.chain_over_cbx.stateChanged.connect(self._chain_over_ik_Toggled)
+        self.chain_splineikrig_cbx.stateChanged.connect(self._chain_splineik_Toggled)
         self.chain_builda_btn.clicked.connect(self.chain_build)
         self.chain_buildb_btn.clicked.connect(partial(self.chain_build, True))
+        self.rig_type_block.idClicked.connect(self._on_type_toggled)
         self.guide_btn.clicked.connect(self.create_guide)
         self.build_btn.clicked.connect(self.build_system)
         self.base_help_btn.clicked.connect(partial(self._show_img, 1))
         self.chain_help_btn.clicked.connect(partial(self._show_img, 2))
         self.adv_help_btn.clicked.connect(partial(self._show_img, 3))
 
-    def _calculate_number_ik(self):
-        num = self.fk_field.value()
-        # print(num)
+    def _calculate_number_ik(self, object, chain=False, *args):
+        num = object.value()
+        var = {True: self.jnt_count_label,
+               False: self.ik_count_label}
+
         if num == 0:
-            self.ik_count_label.setText(u"无需计算")
+            var[chain].setText(u"无需计算")
         else:
-            self.ik_count_label.setText(u" > 设置 ik 的数量: {}n+1 ".format(num + 1))
+            var[chain].setText("{}n+1 ".format(num + 1))
+
+    def _chain_splineik_Toggled(self, enabled):
+        if enabled:
+            self.chain_uvpin_cbx.setChecked(False)
+            self.chain_uvpin_cbx.setEnabled(False)
+        else:
+            self.chain_uvpin_cbx.setEnabled(True)
 
     def _chain_over_ik_Toggled(self, enabled):
         # print(enabled)
@@ -355,7 +402,13 @@ class IKFKWidget(QtWidgets.QWidget):
 
     def _show_img(self, id, *args):
         self.dispatcher.execute("Show Help", id)
-
+        
+    def _on_type_toggled(self, btn_id):
+        if btn_id == 1:
+            self.node_type_block.setEnabledByIds([1, 2], True)
+        else:
+            self.node_type_block.setEnabledByIds([2], False)
+            
     def get_adv_values(self):
         """获取界面上的所有设置值"""
         filed_name = self.name_field.text()
@@ -391,6 +444,8 @@ class IKFKWidget(QtWidgets.QWidget):
     def basa_build(self):
         objs = mc.ls(sl=True)
         if objs:
+            from ControllerTool.CurveEdit import CurvesEdit
+            _CURVE_EDIT = CurvesEdit()
             _CURVE_EDIT.create_base_ctrls(objs,self.cons_block.checkedId(),self.ctrl_type_block.checkedId(),self.ctrl_scale_slider.value()+1.0, bool(self.add_pri_cbx.isChecked()), self.hierachy_cbx.isChecked())
         return
 
@@ -399,14 +454,17 @@ class IKFKWidget(QtWidgets.QWidget):
         pri_ik_en = self.chain_pri_ik_cbx.isChecked()
         over_ik_en = self.chain_over_cbx.isChecked()
         over_ik_value = self.chain_over_ik_field.value() if over_ik_en else 0
-        add_spineik = self.chain_splineikrig_cbx.isChecked()
-        rigType = self.chain_constrain_type.checkedId()
-
-        if crooked:
-            _RIGGING_MOD.crooked_joints_chain_rigging_build(pri_ik_en, over_ik_en, add_spineik, over_ik_value, rigType=rigType - 1)
+        if self.chain_splineikrig_cbx.isChecked():
+            add_spineik = 2
         else:
-            _RIGGING_MOD.joints_chain_rigging_build(pri_ik_en, over_ik_en, add_spineik, over_ik_value, rigType=rigType - 1)
+            add_spineik = 1
 
+        uvpin = False
+        rigType = self.chain_constrain_type.checkedId()
+        if self.chain_uvpin_cbx.isChecked() and self.uv_pin_en:
+            uvpin = True
+
+        _RIGGING_MOD.joints_chain_rigging_build(pri_ik_en, over_ik_en, add_spineik, over_ik_value, rigType=rigType - 1,  uvpin=uvpin, crooked=crooked, fk_interval=self.chain_fk_field.value())
 
     def create_guide(self):
         """创建引导定位器"""
@@ -421,6 +479,10 @@ class IKFKWidget(QtWidgets.QWidget):
         print("Over IK Value: {}".format(over_ik_value))
         print("Aim Axis: {}".format(axis_value))
         print("Joints Rig Type: {}".format(rigType))
+
+        from ControllerTool.ikfk_guide_mod import IKFK_GUIDE
+        _IKFK_GUIDE = IKFK_GUIDE()
+
         self.joint_aixs = _IKFK_GUIDE.create_guide_system(filed_name, ik_value, fk_value, over_ik_value, axis_value)
 
     def is_aixsExists(self, filed_name):
@@ -450,17 +512,19 @@ class IKFKWidget(QtWidgets.QWidget):
     def build_system(self):
         """构建IKFK系统"""
         filed_name, ik_value, fk_value, pri_ik_en, over_ik_value, axis_value, add_spineik, rigType = self.get_adv_values()
+
+        uvpin = False
+        if self.node_type_block.checkedId() == 2:
+            uvpin = True
+
         if not filed_name:
             mayaPrint.error(u"请给予一个名称!!!")
             return
+
         if self.is_aixsExists(filed_name):
             trans_locs = [i.replace("_aixs", "_guide") for i in self.joint_aixs]
-            if _util.is_aixsCrooked(objects=trans_locs, aim_vector=axis_value):
-                _RIGGING_MOD.crooked_complex_rigging_build(filed_name, self.joint_aixs, fk_value, pri_ik_en,
-                                                           over_ik_value, spineik=add_spineik, rigType=rigType - 1)
-            else:
-                _RIGGING_MOD.complex_rigging_build(filed_name, self.joint_aixs, fk_value, pri_ik_en,
-                                                   over_ik_value, spineik=add_spineik, rigType=rigType - 1)
+            crooked =  _util.is_aixsCrooked(objects=trans_locs, aim_vector=axis_value)
+            _RIGGING_MOD.complex_rigging_build(filed_name, self.joint_aixs, fk_value, pri_ik_en, over_ik_value, spineik=add_spineik, rigType=rigType - 1, uvpin=uvpin, crooked=crooked)
 
 
 class PYIKFKLayout(PyouPersistentWindow):
@@ -476,9 +540,10 @@ class PYIKFKLayout(PyouPersistentWindow):
 
     def _build_ui(self):
         main = QtWidgets.QVBoxLayout(self)
-        main.setContentsMargins(0, 0, 0, 0)
+        main.setContentsMargins(4, 4, 4, 4)
         main.setSpacing(4)
 
+        main.addWidget(_widgest.create_title("IFKF Rigging", 15, None))
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setContentsMargins(0, 0, 0, 0)
@@ -491,11 +556,10 @@ class PYIKFKLayout(PyouPersistentWindow):
         scroll.setWidget(cld_widget)
         main.addWidget(scroll)
 
-        scroll_layout.addWidget(_widgest.create_title("IFKF Rigging", 15, None))
-
         self.widget = IKFKWidget(parent=self)
 
-        main.addWidget(self.widget)
+        scroll_layout.addWidget(self.widget.init_ui())
+        _widgest.create_copyrightText(main, "2023-2026")
 
 
 def main():

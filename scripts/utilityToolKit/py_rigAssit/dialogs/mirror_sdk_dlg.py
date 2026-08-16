@@ -8,13 +8,13 @@
 from functools import partial
 
 from py_rigAssit import QtWidgets, QtCore, QtGui, Widgets, PyouPersistentWindow
-from py_rigAssit.dialogs import base_dir, Help, decorator , mayaPrint
+from py_rigAssit.dialogs import Help, mayaPrint
 from Utils import sdk_info
-from Utils.attr_name import PyAttrUtils
+from Utils.undo import undo
+
 import maya.cmds as cmds
 
 PY_WIDGEAT = Widgets()
-_attr_name = PyAttrUtils()
 
 
 class AxisRow(QtWidgets.QWidget):
@@ -54,9 +54,9 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
 
     def __init__(self, parent=PY_WIDGEAT.maya_main_window()):
         super(PYMirrorSDKMainUI, self).__init__("MirrorSDKMainApp", "MirrorSDKMainUI",parent=parent)
-        self.window_name = "Mirror SDK Tool"
+        self.window_name = "SDK Manager"
         self.setWindowTitle(self.window_name)
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(280)
         self.init_ui(True)
         self.loadWindowSettings()
         self.setFocusPolicy(QtCore.Qt.StrongFocus)
@@ -64,9 +64,18 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
 
     def init_ui(self, copyright=False):
         main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setContentsMargins(8, 0, 8, 8)
+        main_layout.setSpacing(0)
         main_layout.addWidget(PY_WIDGEAT.create_title(self.window_name, 16, None))
+
+        frame_button_op = PY_WIDGEAT.create_collapsible_frame(u"Export/Import Node", True)
         group_node = QtWidgets.QGroupBox(u"Export/Import Node:")
+        _layout = QtWidgets.QVBoxLayout(group_node)
         btn_layout = QtWidgets.QHBoxLayout(group_node)
+        frame_button_op.addWidget(group_node)
+
+        self.time_ignore_chx = QtWidgets.QCheckBox(u' 忽略时间关键帧')
+        self.time_ignore_chx.setChecked(True)
 
         self.export_node_btn = QtWidgets.QPushButton('Export Node')
         self.import_node_btn = QtWidgets.QPushButton('Import/Create Node')
@@ -81,14 +90,18 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
         btn_layout.addWidget(self.import_node_btn, 5)
         btn_layout.addWidget(self.node_help_btn)
 
-        self.export_node_btn.clicked.connect(sdk_info.save_create_sdk_node)
+        _layout.addWidget(PY_WIDGEAT.create_text(u'文件路径 "C:/Users/Administrator/Documents/maya/Data_py/create_sdk_info_py.json"'))
+        _layout.addWidget(self.time_ignore_chx)
+        _layout.addLayout(btn_layout)
+
+        self.export_node_btn.clicked.connect(self.export_node_data)
         self.import_node_btn.clicked.connect(sdk_info.create_sdk_node)
 
         group = QtWidgets.QGroupBox(u"Search Name:")
         layout = QtWidgets.QVBoxLayout(group)
         search_layout = QtWidgets.QHBoxLayout()
 
-        self.type_block = PY_WIDGEAT.create_radiogroup(
+        self.search_type_group = PY_WIDGEAT.create_radiogroup(
             "Type:",
             [
                 ("prefix", 1, None),
@@ -97,10 +110,10 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
             ],
             default_id=1
         )
-        search_layout.addWidget(self.type_block)
+        search_layout.addWidget(self.search_type_group)
 
         layout.addLayout(search_layout)
-        self.type_block.idClicked.connect(self._optional_type_Toggled)
+        self.search_type_group.idClicked.connect(self._optional_type_Toggled)
 
         prefix_layout = QtWidgets.QHBoxLayout()
         self.search_label = QtWidgets.QLabel("Search prefix:")
@@ -109,14 +122,14 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
         prefix_layout.addWidget(self.search_le)
         self.replace_label = QtWidgets.QLabel("Replace prefix:")
         self.replace_le = QtWidgets.QLineEdit("R_")
-        prefix_layout.addWidget(self.replace_label )
+        prefix_layout.addWidget(self.replace_label)
         prefix_layout.addWidget(self.replace_le)
 
-        main_layout.addWidget(group_node)
+        main_layout.addWidget(frame_button_op)
         layout.addLayout(prefix_layout)
         layout.addWidget(PY_WIDGEAT.create_text("* 请确保驱动者和被驱动者查询的字符串一致"))
         main_layout.addWidget(PY_WIDGEAT.create_text("Mirror SDK Tool"))
-        main_layout.addWidget(group)
+        main_layout.addWidget(group, 1)
         PY_WIDGEAT.separator(main_layout, True)
 
         main_layout.addWidget(PY_WIDGEAT.create_text(">> same 是相同的值; reverse 是相反的值"))
@@ -173,7 +186,11 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
 
         return result
 
+    def export_node_data(self):
+        ignore = self.time_ignore_chx.isChecked()
+        sdk_info.save_create_sdk_node(ignore)
 
+    @undo
     def apply_mirror_sdk(self):
         data = self.get_flat_values()
         checked_type = self.search_type_group.checkedId()
@@ -183,6 +200,9 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
         sels = cmds.ls(sl=1)
 
         if sels:
+            from Utils.attr_name import PyAttrUtils
+            _attr_name = PyAttrUtils()
+
             for i in sels:
                 name = i.split(".")[0]
                 map = {search_field: replace_field}
@@ -196,7 +216,7 @@ class PYMirrorSDKMainUI(PyouPersistentWindow):
                     mayaPrint.warning("{} > The object does not exist, skip.".format(mirror_obj))
                     continue
 
-                for  attr, value in data.items():
+                for attr, value in data.items():
                     object_attr = "{}.{}".format(name, attr)
                     mirror_obj_attr = "{}.{}".format(mirror_obj, attr)
                     sdk_info.mirror_sdk(object_attr, mirror_obj_attr, value, search=search_field,replace=replace_field, replace_type=checked_type)

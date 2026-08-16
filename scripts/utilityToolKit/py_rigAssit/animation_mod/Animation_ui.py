@@ -8,7 +8,7 @@
 import os
 from py_rigAssit import QtWidgets, QtCore, QtGui, Widgets, PyouPersistentWindow
 import ConstrainEdit.anim_nodes_data as ani_info
-# import Utils.Decorator as Decorator
+import Utils.Decorator as Decorator
 import maya.cmds as cmds
 
 _widgest = Widgets()
@@ -119,12 +119,10 @@ class AnimationUI(PyouPersistentWindow):
         export_grp.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         export_layout = QtWidgets.QVBoxLayout(export_grp)
 
-        export_file_layout, self.export_namespace_field, export_load_btn = \
-            self.create_namespace_row("export Namespace:")
+        export_file_layout, self.export_namespace_field, export_load_btn = self.create_namespace_row("export Namespace:")
 
         # Export path
-        export_path_layout, self.export_path_field, export_browse_btn = \
-            self.create_file_input_row("Export Path:", "Browse")
+        export_path_layout, self.export_path_field, export_browse_btn = self.create_file_input_row("Export Path:", "Browse")
 
         export_btn = QtWidgets.QPushButton(u"Export Data")
         export_btn.setProperty("main", True)
@@ -132,17 +130,13 @@ class AnimationUI(PyouPersistentWindow):
         import_grp = QtWidgets.QGroupBox("> 导入模块:")
         import_grp.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
 
-        import_file_layout, self.import_file_field, import_browse_btn = \
-            self.create_file_input_row("Import File:", "Select File")
+        import_file_layout, self.import_file_field, import_browse_btn = self.create_file_input_row("Import File:", "Select File")
 
-        replace_layout, self.replace_namespace_field, replace_load_btn = \
-            self.create_namespace_row("replace Namespace:")
+        replace_layout, self.replace_namespace_field, replace_load_btn = self.create_namespace_row("replace Namespace:")
 
-        search_old_layout, self.search_old_name_field = \
-            self.create_input_row("search suffix:")
+        search_old_layout, self.search_old_name_field = self.create_input_row("search suffix:")
 
-        replace_new_layout, self.replace_new_name_field = \
-            self.create_input_row("replace suffix:")
+        replace_new_layout, self.replace_new_name_field = self.create_input_row("replace suffix:")
 
         import_btn = QtWidgets.QPushButton(u"Import Data")
         import_btn.setProperty("main", True)
@@ -226,7 +220,7 @@ class AnimationUI(PyouPersistentWindow):
         except Exception as e:
             QtWidgets.QMessageBox.critical(self, u"错误", u"导出失败：{}".format(str(e)))
 
-   
+
     def import_data(self):
         import_file = self.import_file_field.text()
         search_prx = self.get_search_prx_from_file(import_file)

@@ -2,12 +2,11 @@
 QWidget {
     font-family: "Segoe UI", "Microsoft YaHei", "Noto Sans CJK SC";
     font-size: 11px;
+    color:#e0e0e0;
 }
 
-
-
 QDialog{
-        background:#353535;
+        background: #353535;
         color:#e0e0e0;
         }
 
@@ -34,7 +33,7 @@ QDialog::title {
 
 #SectionTitle{
     font-weight:bold;
-    color:#8fc0dd;
+    color: #8fc0dd;
     padding-bottom:2px;
 }
 
@@ -51,12 +50,14 @@ QLabel[title="true"] {
 }
 
 QLabel[isText="true"] {
+    font-family: "Microsoft YaHei";
     font-size: 11px;
     font-weight: bold;
-    color: #629cbe;
+    color: #96c9e7;
 }
 
 QLabel[isText="false"] {
+    font-family: "Microsoft YaHei";
     font-size: 11px;
     font-weight: bold;
     color: #e68b86;
@@ -72,13 +73,26 @@ QLabel:!enabled {
     color: gray;
 }
 
+
+QTextEdit[isNotes="true"] {
+    color: #abc4d2;
+}
+
+QTextEdit[isInfos="true"] {
+                border: 2px solid #555;
+                color: #ffff00;
+                font-family: "Consolas", "Courier New", monospace;
+                font-size: 9pt;
+            }
+
 QPushButton {
-    background: #6e6e6e;
-    border:1px solid #707f95;
+    background: #5a5f68;
+    border:1px solid #696a6b;
     color: #ffffff;
     border-radius: 4px;
     min-height: 18px;    
     padding: 2px 4px;   
+    font-family: "Microsoft YaHei";
 }
 
 /*QPushButton[cld="true"] {
@@ -154,7 +168,7 @@ QPushButton[main="true"] {
     color: #000;
     font-weight: bold;
     font-size: 12px;
-    min-height: 20px;    
+    min-height: 18px;    
     padding: 2px 4px;   
     
 }
@@ -256,12 +270,30 @@ QLineEdit:focus, QDoubleSpinBox:focus {
 QListWidget {
     background-color: #272727;   
     border: 1px solid #444;
+    font-family: "Microsoft YaHei";
 }
 
 
 QListWidget::item:selected {
     background-color: #4dd0e1;
     color: black;
+}
+
+
+QTableWidget {
+    background-color: #353535;   
+    border: 1px solid #444;
+    font-family: "Microsoft YaHei";
+}
+
+
+QTableWidget::item:selected {
+    background-color: #4dd0e1;
+    color: black;
+}
+
+QComboBox {
+    font-family: "Microsoft YaHei";
 }
 
 
@@ -368,6 +400,7 @@ QCheckBox,
 QRadioButton {
     color: #ffffff;
     spacing: 4px;
+    font-family: "Microsoft YaHei";
     font-weight: 500;  
 }
 
@@ -419,6 +452,11 @@ QSpinBox QLineEdit {
     max-width: 100px;
 }
 
+QSpinBox:disabled {
+    color: rgb(120, 120, 120);
+    background-color: rgb(90, 90, 90);
+}
+
 /* ===== Tooltip ===== */
 
 QToolTip {
@@ -437,7 +475,8 @@ QTabBar::tab:selected{
 
 QMenuBar::item {
     background: transparent;
-    color: #e0e0e0;          
+    color: #e0e0e0;      
+    font-family: "Microsoft YaHei";    
 }
 
 QMenuBar::item:selected {
@@ -454,3 +493,23 @@ QMenu::item:selected {
     color: #000000;          
 }
 
+QMenu::item:disabled {
+    color: rgb(120,120,120);
+    background-color: rgb(90,90,90);
+}
+
+QMenu::item:disabled:selected {
+    background-color: transparent;
+}
+
+QMenu::item[yellow="true"] {
+        color: #fdfd00;    
+    }
+
+QMenu::item[red="true"] {
+        color: #ee684a;    
+    }
+
+QMenu::item[green="true"] {
+        color: #96ee4a;    
+    }

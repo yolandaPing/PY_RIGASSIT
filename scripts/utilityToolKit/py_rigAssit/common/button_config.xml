@@ -119,8 +119,8 @@
 
     <category name="joint_skin">
         <button>
-            <label>Soft to skin</label>
-            <tooltip><![CDATA[软选后加选权重关节（需要解锁分摊权重的关节）]]></tooltip>
+            <label>Tubes pro</label>
+            <tooltip><![CDATA[curves from tubes管道生成曲线/关节]]></tooltip>
             <color><![CDATA[cld]]></color>
         </button>
         <button>
@@ -159,7 +159,7 @@
         </button>
         <button>
             <label>Make Global</label>
-            <tooltip><![CDATA[添加Global]]></tooltip>
+            <tooltip><![CDATA[添加Global属性：仅适用于此工具添加的控制器层级和ADV 的FK控制器器]]></tooltip>
             <color><![CDATA[cld]]></color>
         </button>
         <button>
@@ -241,6 +241,19 @@ lastly select the source transform with attributes you want to duplicate and run
         <button>
             <label>Rename BsNode</label>
             <tooltip><![CDATA[重命名blendshape节点]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+    </category>
+
+    <category name="js_cutPlane">
+        <button>
+            <label>Create Cut Plan</label>
+            <tooltip><![CDATA[选择需要切割得模型，生成plan]]></tooltip>
+            <color><![CDATA[cld]]></color>
+        </button>
+        <button>
+            <label>Cut Mesh</label>
+            <tooltip><![CDATA[]]></tooltip>
             <color><![CDATA[cld]]></color>
         </button>
     </category>
