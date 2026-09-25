@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import inspect,os
+import inspect, os
 import sys
 import json
 import traceback
@@ -38,10 +38,11 @@ def default_config():
     return {
         "hotkey": False,
         "hotBox": False,
-        "shelfButton_New": True,    
+        "shelfButton_New": False,
         "Allow_users": True,
         "Allow_smooth": True,
         "Grp_prisec": False,
+        "skinPaint_hotkey": False,
 
         "suffix": "bind",
 
@@ -53,6 +54,7 @@ def default_config():
         "Blendshape_Editor_User": False,
         "Dirve_Pose_Mirror": False,
         "MotionPath_Enable": False,
+        "rbfMirrorManual": False,
 
         "prefix_map": {
             "l_": "r_",
@@ -132,8 +134,8 @@ def load_shelf():
 def load_hotkey():
     try:
         run_deferred(
-            'import CommonUse.yolanda_p_setHotKey as YHK\n'
-            'YHK.setHotkey()'
+            'from CommonUse.yolanda_p_setHotKey import setHotkey\n'
+            'setHotkey()'
         )
         log("Hotkey loaded")
     except:
@@ -143,8 +145,8 @@ def load_hotkey():
 def load_hotbox():
     try:
         run_deferred(
-            'import CommonUse.yolanda_p_setHotKey.hotBox as HB\n'
-            'HB.start()'
+            'from CommonUse.yolanda_p_setHotKey import build_hotbox_menu\n'
+            'build_hotbox_menu()'
         )
         log("HotBox loaded")
     except:
@@ -165,9 +167,6 @@ def startup():
         load_hotkey()
     else:
         print("HOTKEY OFF")
-
-    if bool(cfg.get("hotBox", False)) is True:
-        load_hotbox()
 
 
 startup()

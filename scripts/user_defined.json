@@ -5,6 +5,7 @@
     "Allow_users": true,
     "Allow_smooth": true,
     "Grp_prisec": false,
+    "skinPaint_hotkey": false,
     "suffix": "bind",
     "Chinese": true,
     "MotionPath_Enable": false,
@@ -28,5 +29,7 @@
     "Optional_Drive_UI_new": true,
     "Blendshape_Editor_User": false,
     "Dirve_Pose_Mirror": false,
-    "last_tab": 1
+    "last_tab": 1,
+    "rbfMirrorManual": false,
+    "hotbox": true
 }

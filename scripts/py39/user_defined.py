@@ -5,15 +5,13 @@
 # .@Author:You P
 # .
 # .Finish time:
-import inspect,os,json
+import inspect, os, json
 
 def get_current_dir():
     return os.path.dirname(
         os.path.abspath(inspect.getfile(inspect.currentframe()))
     )
 
-
-# THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 THIS_DIR = get_current_dir()
 ROOT_DIR = os.path.dirname(THIS_DIR)
 
@@ -88,6 +86,7 @@ Allow_users = _data.get("Allow_users", True)
 Allow_smooth = _data.get("Allow_smooth", True)
 
 Grp_prisec = _data.get("Grp_prisec", False)
+skinPaint_hotkey = _data.get("skinPaint_hotkey", False)
 
 suffix = _data.get("suffix", "bind")
 
